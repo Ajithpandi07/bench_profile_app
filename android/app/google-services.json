@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "1026841609191",
+    "firebase_url": "https://health-tracking-app-a0658-default-rtdb.firebaseio.com",
+    "project_id": "health-tracking-app-a0658",
+    "storage_bucket": "health-tracking-app-a0658.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026841609191:android:7cbd45937ac31a787df342",
+        "android_client_info": {
+          "package_name": "com.example.bench_profile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUn-FL2B5mNzx9FyIcKAali-UiH64aKas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026841609191:android:3367cf33f65125067df342",
+        "android_client_info": {
+          "package_name": "com.example.health_tracker_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUn-FL2B5mNzx9FyIcKAali-UiH64aKas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
