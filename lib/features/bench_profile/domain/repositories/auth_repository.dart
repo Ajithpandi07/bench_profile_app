@@ -10,4 +10,10 @@ abstract class AuthRepository {
 
   /// Signs out the current user.
   Future<void> signOut();
+
+  /// Create a new user account with email/password.
+  Future<Either<Failure, UserProfile>> signUpWithEmail({required String email, required String password});
+
+  /// Send a password reset email to the given address.
+  Future<Either<Failure, void>> sendPasswordReset(String email);
 }

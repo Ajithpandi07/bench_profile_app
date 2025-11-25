@@ -16,9 +16,34 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(user);
     } on FirebaseAuthException catch (e) {
       return Left(ServerFailure(e.message ?? 'An unknown error occurred.'));
+    } catch (e) {
+      // Convert any other exception into a Failure so callers always receive an Either
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
   Future<void> signOut() => remote.signOut();
+
+  @override
+  Future<Either<Failure, UserProfile>> signUpWithEmail({required String email, required String password}) async {
+    try {
+      final user = await remote.signUpWithEmail(email, password);
+      return Right(user);
+    } on FirebaseAuthException catch (e) {
+      return Left(ServerFailure(e.message ?? 'An unknown error occurred.'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> sendPasswordReset(String email) async {
+    try {
+      await remote.sendPasswordResetEmail(email);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

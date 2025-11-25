@@ -15,3 +15,20 @@ class SignInRequested extends AuthEvent {
 }
 
 class SignOutRequested extends AuthEvent {}
+
+class SignUpRequested extends AuthEvent {
+  final String email;
+  final String password;
+  SignUpRequested({required this.email, required this.password});
+
+  @override
+  List<Object?> get props => [email, password];
+}
+
+class ForgotPasswordRequested extends AuthEvent {
+  final String email;
+  ForgotPasswordRequested({required this.email});
+
+  @override
+  List<Object?> get props => [email];
+}

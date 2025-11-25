@@ -8,6 +8,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.repository}) : super(AuthInitial()) {
     on<SignInRequested>(_onSignInRequested);
     on<SignOutRequested>(_onSignOutRequested);
+    on<SignUpRequested>(_onSignUpRequested);
+    on<ForgotPasswordRequested>(_onForgotPasswordRequested);
   }
 
   Future<void> _onSignInRequested(SignInRequested event, Emitter<AuthState> emit) async {
@@ -26,6 +28,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e, st) {
       print('AuthBloc: unhandled signIn exception -> $e\n$st');
       emit(AuthFailure('An unexpected error occurred: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _onSignUpRequested(SignUpRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final res = await repository.signUpWithEmail(email: event.email, password: event.password);
+      res.fold((f) => emit(AuthFailure(f.message)), (user) => emit(AuthSignUpSuccess(user.uid)));
+    } catch (e) {
+      emit(AuthFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onForgotPasswordRequested(ForgotPasswordRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final res = await repository.sendPasswordReset(event.email);
+      res.fold((f) => emit(AuthFailure(f.message)), (_) => emit(AuthPasswordResetSent()));
+    } catch (e) {
+      emit(AuthFailure(e.toString()));
     }
   }
 

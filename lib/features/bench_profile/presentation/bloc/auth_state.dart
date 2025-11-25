@@ -25,3 +25,12 @@ class AuthFailure extends AuthState {
   @override
   List<Object?> get props => [message];
 }
+
+class AuthPasswordResetSent extends AuthState {}
+
+class AuthSignUpSuccess extends AuthState {
+  final String uid;
+  AuthSignUpSuccess(this.uid);
+  @override
+  List<Object?> get props => [uid];
+}

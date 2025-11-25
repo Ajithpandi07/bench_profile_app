@@ -4,6 +4,8 @@ import '../../presentation/bloc/auth_bloc.dart';
 import '../../presentation/bloc/auth_event.dart';
 import '../../presentation/bloc/auth_state.dart';
 // Auth repository and bloc are provided by the app root via BlocProvider.
+import 'sign_up_page.dart';
+import 'navigation_container.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,82 +15,136 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String? _error;
-  String _debugState = 'Unknown';
 
   void _submit() {
-    // Dispatch sign in request to the AuthBloc provided by the widget tree.
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    context.read<AuthBloc>().add(SignInRequested(email: email, password: password));
+    if (_formKey.currentState?.validate() ?? false) {
+      // Dispatch sign in request to the AuthBloc provided by the widget tree.
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      context.read<AuthBloc>().add(SignInRequested(email: email, password: password));
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        // update visible debug state for quick feedback in the UI
-        setState(() {
-          _debugState = state.runtimeType.toString();
-        });
-        if (state is Authenticated) {
-          // show an obvious SnackBar so auth success is visible on-device
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Authenticated: ${state.user.uid}')));
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => _LoggedInPage(userId: state.user.uid, email: state.user.email)));
-        }
-        if (state is AuthFailure) {
-          // surface the failure both inline and via SnackBar
-          setState(() {
-            _error = state.message;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Auth failed: ${state.message}')));
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Sign in')),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // small debug banner so state transitions are visible on device
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                color: Colors.yellow[100],
-                child: Text('Debug state: $_debugState', style: const TextStyle(fontSize: 12)),
-              ),
-              const SizedBox(height: 8),
-              TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
-              const SizedBox(height: 8),
-              TextField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
-              const SizedBox(height: 16),
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
-              BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) {
-                  final loading = state is AuthLoading;
-                  return ElevatedButton(onPressed: loading ? null : _submit, child: loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Sign in'));
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+  void _openForgotPassword() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        final _emailCtl = TextEditingController();
+        return AlertDialog(
+          title: const Text('Reset password'),
+          content: TextField(controller: _emailCtl, decoration: const InputDecoration(labelText: 'Email')),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+            TextButton(onPressed: () {
+              final email = _emailCtl.text.trim();
+              if (email.isNotEmpty) {
+                context.read<AuthBloc>().add(ForgotPasswordRequested(email: email));
+                Navigator.of(ctx).pop();
+              }
+            }, child: const Text('Send'))
+          ],
+        );
+      }
     );
   }
-}
-
-class _LoggedInPage extends StatelessWidget {
-  final String userId;
-  final String? email;
-  const _LoggedInPage({required this.userId, this.email});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: Center(child: Text('Welcome ${email ?? userId}')),
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is Authenticated) {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const NavigationContainer()));
+        } else if (state is AuthFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Auth failed: ${state.message}')));
+        } else if (state is AuthPasswordResetSent) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset email sent')));
+        }
+      },
+      builder: (context, state) {
+        return Scaffold(
+          body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Icon(
+                        Icons.fitness_center,
+                        size: 80,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Welcome Back!',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Log in to continue your fitness journey',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 40),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email_outlined, color: Theme.of(context).colorScheme.primary),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        validator: (value) => (value?.isEmpty ?? true) ? 'Please enter an email' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.primary),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        validator: (value) => (value?.isEmpty ?? true) ? 'Please enter a password' : null,
+                      ),
+                      Align(alignment: Alignment.centerRight, child: TextButton(onPressed: _openForgotPassword, child: const Text('Forgot?'))),
+                      const SizedBox(height: 8),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          final loading = state is AuthLoading;
+                          return ElevatedButton(
+                            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                            onPressed: loading ? null : _submit,
+                            child: loading
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Text('Log In', style: TextStyle(fontSize: 16)),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Text("Don't have an account?"),
+                        TextButton(
+                            onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignUpPage())),
+                            child: const Text('Sign Up'))
+                      ])
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        );
+      },
     );
   }
 }
