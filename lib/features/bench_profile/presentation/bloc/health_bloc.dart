@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../domain/usecases/fetch_stored_health_data.dart';
 import '../../../../core/usecase/usecase.dart';
 import '../../domain/usecases/fetch_health_data.dart';
 import '../../domain/usecases/upload_health_data.dart';
@@ -8,17 +9,20 @@ import 'health_state.dart';
 
 class HealthBloc extends Bloc<HealthEvent, HealthState> {
   final FetchHealthData fetchHealthData;
+  final FetchStoredHealthData fetchStoredHealthData;
   final UploadHealthData uploadHealthData;
   final String? Function()? _getCurrentUid;
 
   HealthBloc({
     required this.fetchHealthData,
+    required this.fetchStoredHealthData,
     required this.uploadHealthData,
     String? Function()? getCurrentUid,
   }) :
         _getCurrentUid = getCurrentUid,
         super(HealthInitial()) {
     on<FetchHealthRequested>(_onFetch);
+    on<FetchStoredHealthRequested>(_onFetchStored);
     on<UploadHealthRequested>(_onUpload);
   }
 
@@ -42,6 +46,19 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
             add(UploadHealthRequested(uid: uid, metrics: m));
           }
         },
+      );
+    } catch (e) {
+      emit(HealthFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onFetchStored(FetchStoredHealthRequested event, Emitter<HealthState> emit) async {
+    emit(HealthLoading());
+    try {
+      final result = await fetchStoredHealthData(FetchStoredHealthDataParams(uid: event.uid));
+      result.fold(
+            (f) => emit(HealthFailure(f.message)),
+            (m) => emit(HealthLoaded(m)),
       );
     } catch (e) {
       emit(HealthFailure(e.toString()));

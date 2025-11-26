@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  sdk: '>=3.4.0 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -35,37 +35,31 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   # Firebase
-  firebase_core: ^2.8.0
+  firebase_core: ^4.2.1
   # Simple DI / state helper for small apps
-  provider: ^6.0.5
+  provider: ^6.1.2
   equatable: ^2.0.5
   health: ^13.2.1
-  firebase_auth: ^4.16.0
+  firebase_auth: ^6.1.2
   dartz: ^0.10.1
-  bloc: ^9.1.0      # or the latest version
-  flutter_bloc: ^9.1.1   # if you are also using Flutter widgets
+  bloc: ^9.1.0
+  flutter_bloc: ^9.1.1
   permission_handler: ^12.0.1
-  cloud_firestore: ^4.11.0
-  shared_preferences: ^2.1.1
-  get_it: ^7.6.7
-  go_router: ^13.2.0
-
-  
-
-
+  cloud_firestore: ^6.1.0
+  shared_preferences: ^2.2.3
+  get_it: ^9.1.1
+  go_router: ^17.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-dependency_overrides:
-  firebase_auth_platform_interface: 7.3.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

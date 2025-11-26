@@ -27,13 +27,8 @@ class _DashboardPageState extends State<DashboardPage> {
           context.findAncestorWidgetOfExactType<BlocProvider<HealthBloc>>() !=
               null;
       if (providerExists) {
-        // First, try to load from DB by getting the current user's UID.
-        final uid = FirebaseAuth.instance.currentUser?.uid;
-        if (uid != null) {
-          context.read<HealthBloc>().add(FetchStoredHealthRequested(uid));
-        } else {
-          context.read<HealthBloc>().add(FetchHealthRequested());
-        }
+        // Always fetch fresh data from the device on initial load.
+        context.read<HealthBloc>().add(FetchHealthRequested());
       } else {
         debugPrint('HealthBloc provider not found during init; skipping fetch.');
       }
@@ -59,7 +54,8 @@ class _DashboardPageState extends State<DashboardPage> {
             if (state is HealthUploadSuccess) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text(state.message)));
+                ..showSnackBar(
+                    const SnackBar(content: Text('Metrics uploaded successfully!')));
             }
             if (state is HealthUploadFailure) {
               ScaffoldMessenger.of(context)

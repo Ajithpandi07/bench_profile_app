@@ -9,6 +9,7 @@ import 'package:dartz/dartz.dart';
 import 'package:bench_profile_app/features/bench_profile/domain/repositories/health_repository.dart';
 import 'package:bench_profile_app/features/bench_profile/domain/entities/health_metrics.dart';
 import 'package:bench_profile_app/features/bench_profile/domain/usecases/fetch_health_data.dart';
+import 'package:bench_profile_app/features/bench_profile/domain/usecases/fetch_stored_health_data.dart';
 import 'package:bench_profile_app/features/bench_profile/domain/usecases/upload_health_data.dart';
 import 'package:bench_profile_app/core/error/failures.dart';
 import 'package:bench_profile_app/features/bench_profile/data/models/health_model.dart';
@@ -45,8 +46,13 @@ void main() {
   testWidgets('DashboardPage shows loaded metrics when HealthBloc provides them', (WidgetTester tester) async {
     final fakeRepo = _FakeRepo();
     final fetchHealthData = FetchHealthData(fakeRepo);
+    final fetchStoredHealthData = FetchStoredHealthData(fakeRepo);
     final uploadHealthData = UploadHealthData(fakeRepo);
-    final fakeBloc = HealthBloc(fetchHealthData: fetchHealthData, uploadHealthData: uploadHealthData, getCurrentUid: () => null);
+    final fakeBloc = HealthBloc(
+        fetchHealthData: fetchHealthData,
+        fetchStoredHealthData: fetchStoredHealthData,
+        uploadHealthData: uploadHealthData,
+        getCurrentUid: () => null);
 
     await tester.pumpWidget(MaterialApp(
       home: BlocProvider<HealthBloc>.value(
