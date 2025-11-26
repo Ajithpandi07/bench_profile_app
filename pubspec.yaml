@@ -40,6 +40,7 @@ dependencies:
   provider: ^6.0.5
   equatable: ^2.0.5
   health: ^13.2.1
+  flutter_health_connect: ^1.2.3
   firebase_auth: ^4.16.0
   dartz: ^0.10.1
   bloc: ^9.1.0      # or the latest version

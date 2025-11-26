@@ -1,9 +1,36 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
-    <uses-permission android:name="android.permission.BODY_SENSORS"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <!-- Required for background sensor access on Android 13+ -->
-    <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
+    <!-- General Permissions -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Health Connect Permissions -->
+    <!-- Activity -->
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED"/>
+    <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <!-- Body Measurements -->
+    <uses-permission android:name="android.permission.health.READ_HEIGHT"/>
+    <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_MASS_INDEX"/>
+    <uses-permission android:name="android.permission.health.READ_WAIST_CIRCUMFERENCE"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE"/>
+    <!-- Vitals -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
+    <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION"/>
+    <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE"/>
+    <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_ELECTROCARDIOGRAM"/>
+    <!-- Nutrition -->
+    <uses-permission android:name="android.permission.health.READ_HYDRATION"/>
+    <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
+    <!-- Sleep -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+
     <application
         android:label="bench_profile_app"
         android:name="${applicationName}"
@@ -25,17 +52,13 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
-            <!-- Required for Health Connect integration -->
-            <meta-data
-              android:name="android.health.connect.sdk.client.app-id"
-              android:value="bench_profile_app"
-              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Add this intent filter to handle Health Connect permission rationale -->
             <intent-filter>
-                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+                <action android:name="androidx.health.connect.action.REQUEST_PERMISSIONS" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
@@ -43,6 +66,14 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Add this receiver for Health Connect data updates -->
+        <receiver
+            android:name="dev.flutter.plugins.health.HealthDataBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.connect.action.ACTION_DATA_ACCESS_CHANGED"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -54,7 +85,7 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Required to check if Health Connect is installed -->
         <package android:name="com.google.android.apps.healthdata" />
     </queries>
-    
 </manifest>
