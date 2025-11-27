@@ -135,6 +135,7 @@ class HealthAppState extends State<HealthApp> {
             HealthDataType.LOW_HEART_RATE_EVENT,
             HealthDataType.IRREGULAR_HEART_RATE_EVENT,
             HealthDataType.EXERCISE_TIME,
+            HealthDataType.HEART_RATE,
           ].contains(type)
               ? HealthDataAccess.READ
               : HealthDataAccess.READ_WRITE)
@@ -167,12 +168,9 @@ class HealthAppState extends State<HealthApp> {
     bool? hasPermissions =
         await health.hasPermissions(types, permissions: permissions);
 
-    // hasPermissions = false because the hasPermission cannot disclose if WRITE access exists.
-    // Hence, we have to request with WRITE as well.
-    hasPermissions = false;
-
     bool authorized = false;
-    if (!hasPermissions) {
+    // If permissions are not granted, request them.
+    if (hasPermissions != true) {
       // requesting access to the data types before reading them
       try {
         authorized =
@@ -186,6 +184,8 @@ class HealthAppState extends State<HealthApp> {
       } catch (error) {
         debugPrint("Exception in authorize: $error");
       }
+    } else {
+      authorized = true; // Permissions were already granted
     }
 
     setState(() => _state =
@@ -211,7 +211,7 @@ class HealthAppState extends State<HealthApp> {
 
     // get data within the last 24 hours
     final now = DateTime.now();
-    final yesterday = now.subtract(const Duration(hours: 24));
+    final yesterday = now.subtract(const Duration(hours: 136));
 
     // Clear old data points
     _healthDataList.clear();
