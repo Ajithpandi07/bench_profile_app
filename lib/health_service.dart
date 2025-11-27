@@ -92,72 +92,16 @@ class HealthService implements HealthDataSource {
       return HealthMetricsModel.empty(now);
     }
 
-       final health = Health();
-
-      // configure the health plugin before use.
-      await health.configure();
-
-
-      // define the types to get
-      var types = [
-        HealthDataType.STEPS,
-        HealthDataType.BLOOD_GLUCOSE,
-      ];
-
-      // requesting access to the data types before reading them
-      final requested = await health.requestAuthorization(types);
-
     // 2. Request permissions.
-    // final bool isAuthorized = await requestPermissions();
-    // if (!isAuthorized) {
-    //   debugPrint('Authorization denied.');
-    //   return HealthMetricsModel.empty(now);
-    // }
-
-    // 2a. Pre-emptively check if we have all permissions BEFORE fetching.
-    // This is crucial to prevent an internal crash in the health plugin,
-    // which incorrectly calls requestAuthorization if it thinks permissions are missing.
-    bool allPermissionsGranted = true;
-    for (var type in _types) {
-      final granted = await _health.hasPermissions([type], permissions: [HealthDataAccess.READ]);
-      if (granted == null || !granted) {
-        allPermissionsGranted = false;
-        break;
-      }
-    }
-
-    // If the pre-emptive check fails, do not proceed.
-    if (!allPermissionsGranted) {
-      debugPrint('Pre-emptive permission check failed. Not all permissions are granted.');
+    final bool isAuthorized = await requestPermissions();
+    if (!isAuthorized) {
+      debugPrint('Authorization denied.');
       return HealthMetricsModel.empty(now);
     }
 
     // 3. Fetch the data.
     List<HealthDataPoint> allRecords = [];
     try {
-
-      // await Permission.activityRecognition.request();
-      // await Permission.location.request();
-
-      // allRecords = await Permission.activityRecognition.request();
-      // allRecords = await Permission.location.request();
-
-      // Global Health instance
-      final health = Health();
-
-      // configure the health plugin before use.
-      await health.configure();
-
-
-      // define the types to get
-      var types = [
-        HealthDataType.STEPS,
-        HealthDataType.BLOOD_GLUCOSE,
-      ];
-
-      // requesting access to the data types before reading them
-      final requested = await health.requestAuthorization(types);
-
       allRecords = await _health.getHealthDataFromTypes(
         startTime: yesterday,
         endTime: now,
