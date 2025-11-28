@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:bench_profile_app/features/bench_profile/presentation/pages/dashboard_page.dart';
-import 'package:bench_profile_app/features/bench_profile/presentation/bloc/health_bloc.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/pages/dashboard_page.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_bloc.dart';
 // state/event/model types are referenced via the real HealthBloc and repo
 import 'package:dartz/dartz.dart';
-import 'package:bench_profile_app/features/bench_profile/domain/repositories/health_repository.dart';
-import 'package:bench_profile_app/features/bench_profile/domain/entities/health_metrics.dart';
-import 'package:bench_profile_app/features/bench_profile/domain/usecases/fetch_health_data.dart';
-import 'package:bench_profile_app/features/bench_profile/domain/usecases/fetch_stored_health_data.dart';
-import 'package:bench_profile_app/features/bench_profile/domain/usecases/upload_health_data.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/repositories/health_repository.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/usecases/fetch_health_data.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/usecases/fetch_stored_health_data.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/usecases/upload_health_data.dart';
 import 'package:bench_profile_app/core/error/failures.dart';
-import 'package:bench_profile_app/features/bench_profile/data/models/health_model.dart';
+import 'package:bench_profile_app/features/health_metrics/data/models/health_model.dart';
 
 // A minimal fake HealthBloc for tests. It responds to FetchHealthRequested
 // by emitting a HealthLoaded with deterministic data.
