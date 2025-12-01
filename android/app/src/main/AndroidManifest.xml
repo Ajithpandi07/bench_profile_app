@@ -22,7 +22,7 @@
   <!-- Add other permissions as required for your data types -->
 
   <application
-      android:label="bench_profile_app"
+      android:label="Bench Profile"
       android:icon="@mipmap/ic_launcher"
       tools:replace="android:label">
 

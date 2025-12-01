@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:bench_profile_app/features/bench_profile/data/repositories/health_repository_impl.dart';
-import 'package:bench_profile_app/features/bench_profile/data/datasources/health_uploader.dart';
-import 'package:bench_profile_app/health_service.dart';
-import 'package:bench_profile_app/features/bench_profile/data/models/health_model.dart';
+import 'package:bench_profile_app/features/health_metrics/data/repositories/health_repository_impl.dart';
+import 'package:bench_profile_app/features/health_metrics/data/datasources/health_uploader.dart';
+import 'package:bench_profile_app/features/health_metrics/data/datasources/health_service.dart';
+import 'package:bench_profile_app/features/health_metrics/data/models/health_model.dart';
 import 'package:bench_profile_app/core/error/failures.dart';
 
 void main() {
@@ -10,7 +10,7 @@ void main() {
     test('returns Right when uploader succeeds', () async {
       final healthService = HealthService();
       final uploader = _FakeUploaderSuccess();
-      final repo = HealthRepositoryImpl(healthService: healthService, uploader: uploader);
+      final repo = HealthMetricsRepositoryImpl(healthService: healthService, uploader: uploader);
 
       final model = HealthModel(source: 'test', steps: 123, heartRate: 60.0, timestamp: DateTime.now());
       final res = await repo.saveHealthMetrics('uid123', model);

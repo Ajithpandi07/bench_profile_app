@@ -11,3 +11,11 @@ class NoParams extends Equatable {
   @override
   List<Object?> get props => [];
 }
+
+class DateParams extends Equatable {
+  final DateTime date;
+  const DateParams(this.date);
+
+  @override
+  List<Object?> get props => [date];
+}
