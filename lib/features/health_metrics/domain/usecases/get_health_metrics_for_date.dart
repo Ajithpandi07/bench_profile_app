@@ -2,10 +2,10 @@ import 'package:dartz/dartz.dart';
 import 'package:bench_profile_app/core/error/failures.dart';
 import 'package:bench_profile_app/core/usecase/usecase.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/repositories/health_metrics_repository.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/repositories/health_repository.dart';
 
 class GetHealthMetricsForDate implements UseCase<HealthMetrics, DateParams> {
-  final HealthMetricsRepository repository;
+  final HealthRepository repository;
 
   GetHealthMetricsForDate(this.repository);
 

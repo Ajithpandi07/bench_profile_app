@@ -2,10 +2,10 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/usecase/usecase.dart';
 import '../entities/health_metrics.dart';
-import '../repositories/health_metrics_repository.dart';
+import '../repositories/health_repository.dart';
 
 class GetHealthMetrics implements UseCase<HealthMetrics, NoParams> {
-  final HealthMetricsRepository repository;
+  final HealthRepository repository;
   GetHealthMetrics(this.repository);
 
   @override

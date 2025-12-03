@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/health_metrics.dart';
 
 class HealthMetricsModel extends HealthMetrics {
-  const HealthMetricsModel({
+   HealthMetricsModel({
     String source = 'none',
     required DateTime timestamp,
     int steps = 0,
