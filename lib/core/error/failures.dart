@@ -15,3 +15,10 @@ class PermissionFailure extends Failure {
 class NetworkFailure extends Failure {
   const NetworkFailure(super.message);
 }
+class RepositoryFailure extends Failure {
+  const RepositoryFailure(String message) : super(message);
+}
+
+class CacheFailure extends Failure {
+  const CacheFailure(String message) : super(message);
+}

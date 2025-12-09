@@ -2,7 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../models/user_model.dart';
 
 class FirebaseAuthRemote {
-  final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
+  final fb.FirebaseAuth _auth;
+
+  FirebaseAuthRemote({required fb.FirebaseAuth firebaseAuth})
+      : _auth = firebaseAuth;
 
   Future<UserModel> signInWithEmail(String email, String password) async {
     final cred = await _auth.signInWithEmailAndPassword(email: email, password: password);

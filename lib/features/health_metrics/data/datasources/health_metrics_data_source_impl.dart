@@ -1,78 +1,106 @@
-import 'package:bench_profile_app/core/error/exceptions.dart';
-import 'package:bench_profile_app/core/util/metric_aggregator.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/health_metrics_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
-import 'package:flutter/foundation.dart';
+// lib/features/health_metrics/data/datasources/health_metrics_data_source_impl.dart
+
 import 'package:health/health.dart';
+import 'package:bench_profile_app/core/util/metric_aggregator.dart';
+import 'health_metrics_data_source.dart';
+import '../../domain/entities/health_metrics.dart';
 
-/// A centralized list of all the health data types the app requests.
-const requestedHealthTypes = [
-  HealthDataType.STEPS,
-  HealthDataType.HEART_RATE,
-  HealthDataType.WEIGHT,
-  HealthDataType.HEIGHT,
-  HealthDataType.ACTIVE_ENERGY_BURNED,
-  HealthDataType.BASAL_ENERGY_BURNED,
-  HealthDataType.SLEEP_ASLEEP,
-  HealthDataType.SLEEP_AWAKE,
-  HealthDataType.WATER,
-  HealthDataType.BLOOD_OXYGEN,
-  HealthDataType.FLIGHTS_CLIMBED,
-  HealthDataType.DISTANCE_WALKING_RUNNING,
-  HealthDataType.BODY_FAT_PERCENTAGE,
-  HealthDataType.BODY_MASS_INDEX,
-  HealthDataType.HEART_RATE_VARIABILITY_SDNN,
-  HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
-  HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
-  HealthDataType.BLOOD_GLUCOSE,
-  HealthDataType.DIETARY_ENERGY_CONSUMED,
-  HealthDataType.RESTING_HEART_RATE,
-];
-
+/// Concrete implementation of [HealthMetricsDataSource] that talks to the
+/// device/platform via the `health` package.
+///
+/// It expects an already-created [Health] instance (inject via DI) and an
+/// optional [MetricAggregator] if you want to pre-aggregate data.
 class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
-  final Health health;
-  final MetricAggregator aggregator;
+  final Health _health;
+  final MetricAggregator? _aggregator;
 
   HealthMetricsDataSourceImpl({
-    required this.health,
-    required this.aggregator,
-  });
+    required Health health,
+    MetricAggregator? aggregator,
+  })  : _health = health,
+        _aggregator = aggregator;
+
+  /// Helper to fetch raw HealthDataPoints for a set of types between start/end.
+  /// This uses `getHealthDataFromTypes` provided by the `health` package (common API).
+  /// If your `health` package version uses a different method name, replace the call here.
+  Future<List<HealthDataPoint>> _fetchPoints(
+    DateTime start,
+    DateTime end,
+    List<HealthDataType> types,
+  ) async {
+    final List<HealthDataPoint> allPoints = [];
+
+    if (types.isEmpty) return allPoints;
+
+    // The health package usually allows fetching multiple types at once:
+    try {
+      final points = await _health.getHealthDataFromTypes(
+        startTime: start,
+        endTime: end,
+        types: types,
+      );
+      allPoints.addAll(points);
+    } catch (e) {
+      // Some platforms or package versions may not support multi-type fetch;
+      // fallback to fetching per-type to be resilient.
+      for (final t in types) {
+        try {
+          final pts = await _health.getHealthDataFromTypes(
+                      startTime: start,
+                      endTime: end,
+                      types: [t],
+                    );
+
+          // final pts = await _health.getHealthDataFromTypes(start, end, [t]);
+          allPoints.addAll(pts);
+        } catch (_) {
+          // ignore errors for individual types and continue
+        }
+      }
+    }
+
+    return allPoints;
+  }
 
   @override
-  Future<HealthMetrics> getHealthMetricsForDate(DateTime date) async {
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
+  Future<List<HealthMetrics>> getHealthMetricsForDate(DateTime date) async {
+    final start = DateTime(date.year, date.month, date.day);
+    final end = start.add(const Duration(days: 1));
 
-    try {
-      // Request authorization for the data types.
-      final permissions = requestedHealthTypes.map((e) => HealthDataAccess.READ).toList();
-      bool requested = await health.requestAuthorization(requestedHealthTypes, permissions: permissions);
+    // Default set of types to fetch — change to suit your app.
+    final defaultTypes = <HealthDataType>[
+      HealthDataType.STEPS,
+      HealthDataType.HEART_RATE,
+      HealthDataType.ACTIVE_ENERGY_BURNED,
+      // add others you care about
+    ];
 
-      if (!requested) {
-        debugPrint('Authorization not granted for health data types.');
-        throw PermissionDeniedException();
-      }
+    final points = await _fetchPoints(start, end, defaultTypes);
 
-      // Fetch health data.
-      List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
-        startTime: startOfDay,
-        endTime: endOfDay,
-        types: requestedHealthTypes,
-      );
+    // Map each HealthDataPoint to your domain entity using the factory you already created.
+    final metrics = points.map((p) => HealthMetrics.fromHealthDataPoint(p)).toList();
 
-      // Delegate the complex aggregation logic to the injected aggregator.
-      final aggregatedData = aggregator.aggregateRecords(healthData);
+    return metrics;
+  }
 
-      // Use the new factory constructor to create the entity.
-      return HealthMetrics.fromAggregatedMap(aggregatedData, date);
-    } on PermissionDeniedException {
-      rethrow; // Allow the specific permission exception to pass through.
-    } catch (e, stackTrace) {
-      // Log the original error and stack trace for better debugging.
-      debugPrint('Failed to fetch health data: $e');
-      debugPrint(stackTrace.toString());
-      // Throw a generic but informative exception for the repository to handle.
-      throw ServerException();
-    }
+  @override
+  Future<List<HealthMetrics>> getHealthMetricsRange(
+    DateTime start,
+    DateTime end,
+    List<HealthDataType> types,
+  ) async {
+    final queryTypes = types.isEmpty
+        ? <HealthDataType>[
+            HealthDataType.STEPS,
+            HealthDataType.HEART_RATE,
+            HealthDataType.ACTIVE_ENERGY_BURNED,
+          ]
+        : types;
+
+    final points = await _fetchPoints(start, end, queryTypes);
+
+    final metrics = points.map((p) => HealthMetrics.fromHealthDataPoint(p)).toList();
+
+    return metrics;
   }
 }

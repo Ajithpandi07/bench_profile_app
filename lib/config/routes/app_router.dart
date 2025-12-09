@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'app_routes.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_page.dart';
 
+import '../../features/auth/presentation/pages/sign_in_page.dart';
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -18,7 +19,7 @@ class AppRouter {
 
       case AppRoutes.auth:
         return MaterialPageRoute(
-          builder: (_) => const Placeholder(), // TODO: replace
+          builder: (_) => const SignInPage(),
         );
 
       default:

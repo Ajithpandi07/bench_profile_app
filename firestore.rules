@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow write access to the health_metrics collection for any authenticated user
+    match /health_metrics/{date} {
+      allow write: if request.auth != null;
+      allow read: if request.auth != null;
+    }
+  }
+}

@@ -1,10 +1,18 @@
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
+// lib/features/health_metrics/data/datasources/health_metrics_data_source.dart
 
-/// Data source contract for fetching new health metrics from the primary source (e.g., health package).
+import 'package:health/health.dart';
+import '../../domain/entities/health_metrics.dart';
+
+/// Data source contract for fetching health metrics from the device/platform.
 abstract class HealthMetricsDataSource {
-  /// Fetches [HealthMetrics] for a specific date.
-  ///
-  /// Throws a [PermissionDeniedException] if permissions are not granted.
-  /// Throws a [ServerException] for other failures.
-  Future<HealthMetrics> getHealthMetricsForDate(DateTime date);
+  /// Return list of metrics captured for [date] (the implementation decides grouping).
+  Future<List<HealthMetrics>> getHealthMetricsForDate(DateTime date);
+
+  /// Return all health data points in the range [start]..[end] for the given types.
+  /// Implementations should return an empty list if nothing is available.
+  Future<List<HealthMetrics>> getHealthMetricsRange(
+    DateTime start,
+    DateTime end,
+    List<HealthDataType> types,
+  );
 }

@@ -1,136 +1,162 @@
-// lib/features/bench_profile/domain/entities/health_metrics.dart
+// lib/features/health_metrics/domain/entities/health_metrics.dart
+
 import 'package:equatable/equatable.dart';
 import 'package:isar/isar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Query;
 import 'package:health/health.dart';
+
 part 'health_metrics.g.dart';
 
-@Collection(ignore: {'props', 'stringify'}, inheritance: false)
+@Collection(accessor: 'healthMetrics', ignore: const {'props', 'stringify'})
 class HealthMetrics extends Equatable {
-  Id id = Isar.autoIncrement; // Make Id non-final
-  final String source;
-  final int steps;
-  final double? heartRate;
-  final double? weight;
-  final double? height;
-  final double? activeEnergyBurned;
-  final double? sleepAsleep;
-  final double? sleepAwake;
-  final double? water;
-  final double? bloodOxygen;
-  final double? basalEnergyBurned;
-  final int? flightsClimbed;
-  final double? distanceWalkingRunning;
-  final double? bodyFatPercentage;
-  final double? bodyMassIndex;
-  final double? heartRateVariabilitySdnn;
-  final double? bloodPressureSystolic;
-  final double? bloodPressureDiastolic;
-  final double? bloodGlucose;
-  final double? dietaryEnergyConsumed;
-  final double? sleepInBed;
-  final double? sleepDeep;
-  final double? sleepLight;
-  final double? sleepRem;
-  final double? restingHeartRate;
-  final double? caloriesBurned;
-  @Index() // Add an index for faster date-based queries
-  final DateTime timestamp;
+  /// Isar ID – must NOT be final so Isar can assign it
+  Id id = Isar.autoIncrement;
+
+  /// unique id from Health API (or generated)
+  // removed @Index for now to avoid generator issues
+  late String uuid;
+
+  /// metric info
+  late String type;
+  late double value;
+  late String unit;
+  late DateTime dateFrom;
+  late DateTime dateTo;
+  late String sourceName;
+  late String sourceId;
+
+  /// Sync metadata
+  bool synced = false;
+  DateTime? syncedAt;
+  DateTime? lastSyncedAt;
+
+  /// last local modification time (use for conflict resolution)
+  late DateTime lastModified;
 
   HealthMetrics({
-    required this.source,
-    this.steps = 0,
-    this.heartRate,
-    this.weight,
-    this.height,
-    this.activeEnergyBurned,
-    this.sleepAsleep,
-    this.sleepAwake,
-    this.water,
-    this.bloodOxygen,
-    this.basalEnergyBurned,
-    this.flightsClimbed,
-    this.distanceWalkingRunning,
-    this.bodyFatPercentage,
-    this.bodyMassIndex,
-    this.heartRateVariabilitySdnn,
-    this.bloodPressureSystolic,
-    this.bloodPressureDiastolic,
-    this.bloodGlucose,
-    this.dietaryEnergyConsumed,
-    this.sleepInBed,
-    this.sleepDeep,
-    this.sleepLight,
-    this.sleepRem,
-    this.restingHeartRate,
-    this.caloriesBurned,
-    required this.timestamp,
+    this.id = Isar.autoIncrement,
+    required this.uuid,
+    required this.type,
+    required this.value,
+    required this.unit,
+    required this.dateFrom,
+    required this.dateTo,
+    required this.sourceName,
+    required this.sourceId,
+    this.synced = false,
+    this.syncedAt,
+    this.lastModified = const _DefaultDateTime(),
   });
 
-  /// Factory constructor to create a HealthMetrics instance from an aggregated map.
-  factory HealthMetrics.fromAggregatedMap(Map<String, dynamic> map, DateTime date) {
+  /// Create from a Health package data point
+  factory HealthMetrics.fromHealthDataPoint(HealthDataPoint p) {
     return HealthMetrics(
-      source: 'health_package',
-      timestamp: date,
-      steps: (map[HealthDataType.STEPS.name] as double?)?.toInt() ?? 0,
-      heartRate: map[HealthDataType.HEART_RATE.name],
-      weight: map[HealthDataType.WEIGHT.name],
-      height: map[HealthDataType.HEIGHT.name],
-      activeEnergyBurned: map[HealthDataType.ACTIVE_ENERGY_BURNED.name],
-      basalEnergyBurned: map[HealthDataType.BASAL_ENERGY_BURNED.name],
-      sleepAsleep: map[HealthDataType.SLEEP_ASLEEP.name],
-      sleepAwake: map[HealthDataType.SLEEP_AWAKE.name],
-      water: map[HealthDataType.WATER.name],
-      bloodOxygen: map[HealthDataType.BLOOD_OXYGEN.name],
-      flightsClimbed: (map[HealthDataType.FLIGHTS_CLIMBED.name] as double?)?.toInt(),
-      distanceWalkingRunning: map[HealthDataType.DISTANCE_WALKING_RUNNING.name],
-      bodyFatPercentage: map[HealthDataType.BODY_FAT_PERCENTAGE.name],
-      bodyMassIndex: map[HealthDataType.BODY_MASS_INDEX.name],
-      heartRateVariabilitySdnn: map[HealthDataType.HEART_RATE_VARIABILITY_SDNN.name],
-      bloodPressureSystolic: map[HealthDataType.BLOOD_PRESSURE_SYSTOLIC.name],
-      bloodPressureDiastolic: map[HealthDataType.BLOOD_PRESSURE_DIASTOLIC.name],
-      bloodGlucose: map[HealthDataType.BLOOD_GLUCOSE.name],
-      dietaryEnergyConsumed: map[HealthDataType.DIETARY_ENERGY_CONSUMED.name],
-      restingHeartRate: map[HealthDataType.RESTING_HEART_RATE.name],
-      // Custom aggregated values
-      sleepDeep: map['sleepDeep'],
-      sleepLight: map['sleepLight'],
-      sleepRem: map['sleepRem'],
+      uuid: p.uuid,
+      value: (p.value as NumericHealthValue).numericValue.toDouble(),
+      unit: p.unit.name,
+      dateFrom: p.dateFrom,
+      dateTo: p.dateTo,
+      type: p.type.name,
+      sourceName: p.sourceName,
+      sourceId: p.sourceId,
+      lastModified: DateTime.now(),
     );
   }
 
-  @override
-  @ignore
-  List<Object?> get props => [
-        source,
-        steps,
-        heartRate,
-        weight,
-        height,
-        activeEnergyBurned,
-        sleepAsleep,
-        sleepAwake,
-        water,
-        bloodOxygen,
-        basalEnergyBurned,
-        flightsClimbed,
-        distanceWalkingRunning,
-        bodyFatPercentage,
-        bodyMassIndex,
-        heartRateVariabilitySdnn,
-        bloodPressureSystolic,
-        bloodPressureDiastolic,
-        bloodGlucose,
-        dietaryEnergyConsumed,
-        sleepInBed,
-        sleepDeep,
-        sleepLight,
-        sleepRem,
-        restingHeartRate,
-        caloriesBurned,
-        timestamp
-      ];
+  /// Create from Firestore map / document
+  factory HealthMetrics.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(dynamic v) {
+      if (v == null) throw ArgumentError('Missing date value in map');
+      if (v is Timestamp) return v.toDate();
+      if (v is DateTime) return v;
+      if (v is String) return DateTime.parse(v);
+      throw ArgumentError('Unsupported date type: ${v.runtimeType}');
+    }
+
+    return HealthMetrics(
+      uuid: map['uuid'] as String,
+      type: map['type'] as String,
+      value: (map['value'] as num).toDouble(),
+      unit: map['unit'] as String,
+      dateFrom: parseDate(map['dateFrom']),
+      dateTo: parseDate(map['dateTo']),
+      sourceName: map['sourceName'] as String,
+      sourceId: map['sourceId'] as String,
+      synced: (map['synced'] as bool?) ?? false,
+      syncedAt: map['syncedAt'] is Timestamp ? (map['syncedAt'] as Timestamp).toDate() : (map['syncedAt'] as DateTime?),
+      lastModified: map['lastModified'] is Timestamp
+          ? (map['lastModified'] as Timestamp).toDate()
+          : (map['lastModified'] as DateTime?) ?? DateTime.now(),
+    );
+  }
+
+  HealthMetrics copyWith({
+    Id? id,
+    String? uuid,
+    String? type,
+    double? value,
+    String? unit,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? sourceName,
+    String? sourceId,
+    bool? synced,
+    DateTime? syncedAt,
+    DateTime? lastModified,
+  }) {
+    return HealthMetrics(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      type: type ?? this.type,
+      value: value ?? this.value,
+      unit: unit ?? this.unit,
+      dateFrom: dateFrom ?? this.dateFrom,
+      dateTo: dateTo ?? this.dateTo,
+      sourceName: sourceName ?? this.sourceName,
+      sourceId: sourceId ?? this.sourceId,
+      synced: synced ?? this.synced,
+      syncedAt: syncedAt ?? this.syncedAt,
+      lastModified: lastModified ?? this.lastModified,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'uuid': uuid,
+      'type': type,
+      'value': value,
+      'unit': unit,
+      'dateFrom': Timestamp.fromDate(dateFrom),
+      'dateTo': Timestamp.fromDate(dateTo),
+      'sourceName': sourceName,
+      'sourceId': sourceId,
+      'synced': synced,
+      'syncedAt': syncedAt != null ? Timestamp.fromDate(syncedAt!) : null,
+      'lastModified': Timestamp.fromDate(lastModified),
+    };
+  }
 
   @override
-  @ignore
-  bool? get stringify => true;
+  List<Object?> get props => [
+        id,
+        uuid,
+        type,
+        value,
+        unit,
+        dateFrom,
+        dateTo,
+        sourceName,
+        sourceId,
+        synced,
+        syncedAt,
+        lastModified,
+      ];
+}
+
+/// Helper class to provide a default DateTime value in a const context.
+class _DefaultDateTime implements DateTime {
+  const _DefaultDateTime();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => DateTime.now();
 }

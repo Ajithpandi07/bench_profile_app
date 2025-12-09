@@ -1,14 +1,14 @@
+import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 
 /// Processes a raw list of health data records from Health Connect into a
 /// structured summary map.
 class MetricAggregator {
-  /// Aggregates a list of raw health records.
+  /// Aggregates a list of HealthMetrics entities into a summary map.
   ///
-  /// The [records] list is expected to contain `HealthDataPoint` objects from
-  /// the `health` package.
-  Map<String, dynamic> aggregateRecords(List<HealthDataPoint> records) {
+  /// The [records] list is expected to contain `HealthMetrics` domain entities.
+  Map<String, dynamic> aggregate(List<HealthMetrics> records) {
     final aggregated = <String, dynamic>{
       HealthDataType.STEPS.name: 0.0,
       HealthDataType.ACTIVE_ENERGY_BURNED.name: 0.0,
@@ -22,52 +22,45 @@ class MetricAggregator {
     };
 
     // Use a map to store the latest record for point-in-time metrics
-    final latestRecords = <HealthDataType, HealthDataPoint>{};
+    final latestRecords = <String, HealthMetrics>{};
 
     for (final record in records) {
-      final recordType = record.type;
-      final value = (record.value as NumericHealthValue).numericValue;
+      final recordTypeString = record.type;
+      final value = record.value;
 
       // --- AGGREGATION LOGIC ---
 
       // 1. Summation for cumulative types
-      switch (recordType) {
-        case HealthDataType.STEPS:
-        case HealthDataType.ACTIVE_ENERGY_BURNED:
-        case HealthDataType.FLIGHTS_CLIMBED:
-        case HealthDataType.WATER:
-        case HealthDataType.SLEEP_ASLEEP:
-        case HealthDataType.SLEEP_AWAKE:
-          aggregated[recordType.name] = (aggregated[recordType.name] ?? 0.0) + value;
+      switch (recordTypeString) {
+        case 'STEPS':
+        case 'ACTIVE_ENERGY_BURNED':
+        case 'FLIGHTS_CLIMBED':
+        case 'WATER':
+        case 'SLEEP_ASLEEP':
+        case 'SLEEP_AWAKE':
+          aggregated[recordTypeString] = (aggregated[recordTypeString] ?? 0.0) + value;
           break;
         // 2. Complex calculation for Sleep Stages (if available)
         // Note: The new API provides SLEEP_ASLEEP, SLEEP_AWAKE, etc directly.
         // If you were getting raw stage data, you would handle it here.
         // For now, we assume the direct values are sufficient.
-        // Example for custom stage aggregation:
-        // case HealthDataType.SLEEP_SESSION:
-        //   if (record.value is SleepHealthValue) {
-        //      final sleepValue = record.value as SleepHealthValue;
-        //      // aggregate sleepValue.level
-        //   }
-        //   break;
 
         // 3. Store latest record for point-in-time metrics
-        case HealthDataType.BASAL_ENERGY_BURNED:
-        case HealthDataType.HEIGHT:
-        case HealthDataType.WEIGHT:
-        case HealthDataType.BODY_FAT_PERCENTAGE:
-        case HealthDataType.BODY_TEMPERATURE:
-        case HealthDataType.HEART_RATE:
-        case HealthDataType.BLOOD_PRESSURE_SYSTOLIC:
-        case HealthDataType.BLOOD_PRESSURE_DIASTOLIC:
-        case HealthDataType.BLOOD_OXYGEN:
-        case HealthDataType.BLOOD_GLUCOSE:
-        case HealthDataType.RESPIRATORY_RATE:
-        case HealthDataType.RESTING_HEART_RATE:
-          final existingRecord = latestRecords[recordType];
+        case 'BASAL_ENERGY_BURNED':
+        case 'HEIGHT':
+        case 'WEIGHT':
+        case 'BODY_FAT_PERCENTAGE':
+        case 'BODY_TEMPERATURE':
+        case 'HEART_RATE':
+        case 'BLOOD_PRESSURE_SYSTOLIC':
+        case 'BLOOD_PRESSURE_DIASTOLIC':
+        case 'BLOOD_OXYGEN':
+        case 'BLOOD_GLUCOSE':
+        case 'RESPIRATORY_RATE':
+        case 'RESTING_HEART_RATE':
+          final existingRecord = latestRecords[recordTypeString];
           if (existingRecord == null || record.dateFrom.isAfter(existingRecord.dateFrom)) {
-            latestRecords[recordType] = record;
+            latestRecords[recordTypeString] = record;
           }
           break;
         default:
@@ -78,8 +71,8 @@ class MetricAggregator {
 
     // --- FINALIZATION ---
     // Extract values from the latest records and populate aggregated map
-    latestRecords.forEach((type, record) {
-      aggregated[type.name] = (record.value as NumericHealthValue).numericValue;
+    latestRecords.forEach((typeString, record) {
+      aggregated[typeString] = record.value;
     });
 
     // Note: The new API returns sleep data as total minutes for SLEEP_ASLEEP,

@@ -1,62 +1,147 @@
-// lib/features/health_metrics/data/datasources/local/health_metrics_local_data_source_isar_impl.dart
-
+import 'package:isar/isar.dart';
 import 'package:bench_profile_app/core/error/exceptions.dart';
 import 'package:bench_profile_app/features/health_metrics/data/datasources/local/health_metrics_local_data_source.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
 
+/// Isar-based local datasource which expects an already-open Isar instance.
+/// This implementation assumes your generated Isar accessor is `healthMetrics`
+/// as specified in the `@Collection(accessor: 'healthMetrics', ...)`.
 class HealthMetricsLocalDataSourceIsarImpl
     implements HealthMetricsLocalDataSource {
-  late final Future<Isar> _db;
+  final Isar _isar;
 
-  /// Primary constructor: if [isar] is provided it will be used (DI-friendly).
-  /// Otherwise the implementation will open an Isar instance itself.
-  HealthMetricsLocalDataSourceIsarImpl([Isar? isar]) {
-    if (isar != null) {
-      _db = Future.value(isar);
-    } else {
-      _db = _openDB();
-    }
-  }
+  /// Primary constructor - inject the opened Isar instance (from DI).
+  HealthMetricsLocalDataSourceIsarImpl(this._isar);
 
-  /// Convenience named constructor for tests (explicit).
-  HealthMetricsLocalDataSourceIsarImpl.test(Isar isar) : _db = Future.value(isar);
+  /// Named constructor for tests - allows injecting a pre-opened Isar instance.
+  HealthMetricsLocalDataSourceIsarImpl.test(Isar isar) : _isar = isar;
 
-  Future<Isar> _openDB() async {
-    if (Isar.instanceNames.isEmpty) {
-      final dir = await getApplicationDocumentsDirectory();
-      return await Isar.open(
-        [HealthMetricsSchema],
-        directory: dir.path,
-        name: 'health_metrics_db',
-      );
-    }
-    // Return existing instance if already opened (match the 'name' used above)
-    return Future.value(Isar.getInstance('health_metrics_db'));
-  }
-
+  /// Save/replace a HealthMetrics object in Isar.
   @override
   Future<void> cacheHealthMetrics(HealthMetrics metrics) async {
-    final isar = await _db;
-    await isar.writeTxn(() async {
-      await isar.healthMetrics.put(metrics);
-    });
+    try {
+      await _isar.writeTxn(() async {
+        // `put` will insert or update by id
+        await _isar.healthMetrics.put(metrics);
+      });
+    } catch (e, st) {
+      // Optionally log e/st for debugging
+      throw CacheException();
+    }
+  }
+
+  /// Return all HealthMetrics entries whose dateFrom lies on the given date.
+  @override
+  Future<List<HealthMetrics>> getAllHealthMetricsForDate(DateTime date) async {
+    try {
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      // Use the generated query methods for the `dateFrom` field.
+      final results = await _isar.healthMetrics
+          .filter()
+          .dateFromGreaterThan(startOfDay, include: true)
+          .dateFromLessThan(endOfDay, include: false)
+          .findAll();
+
+      // Return the results. If no metrics are found for the date, this will be an empty list.
+      return results;
+    } catch (_) {
+      throw CacheException();
+    }
+  }
+
+  /// Helper: return all metrics in DB (optional, remove if not part of the interface)
+  Future<List<HealthMetrics>> getAllMetrics() async {
+    try {
+      return await _isar.healthMetrics.where().findAll();
+    } catch (e) {
+      throw CacheException();
+    }
+  }
+
+    @override
+  Future<List<HealthMetrics>> getUnsyncedMetrics({int limit = 50}) async {
+    // Find metrics where syncedAt is null.
+    return await _isar.healthMetrics
+        .filter()
+        .syncedAtIsNull()
+        .limit(limit)
+        .findAll();
   }
 
   @override
-  Future<HealthMetrics> getHealthMetricsForDate(DateTime date) async {
-    final isar = await _db;
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-    // Use explicit range to be robust across Isar versions
-    final result = await isar.healthMetrics
-        .filter()
-        .timestampGreaterThan(startOfDay, include: true)
-        .timestampLessThan(endOfDay, include: false)
-        .findFirst();
+  Future<void> markAsSynced(List<String> uuids) async {
+    if (uuids.isEmpty) return;
 
-    if (result != null) return result;
-    throw CacheException();
+    try {
+      await _isar.writeTxn(() async {
+        // Find all the metrics that match the provided UUIDs.
+        // Use filter() because 'uuid' is not indexed.
+        final metricsToUpdate = await _isar.healthMetrics
+            .filter()
+            .group((q) {
+              // Start with the first uuid
+              var builder = q.uuidEqualTo(uuids.first);
+              // Chain subsequent uuids with .or()
+              for (var i = 1; i < uuids.length; i++) {
+                builder = builder.or().uuidEqualTo(uuids[i]);
+              }
+              return builder;
+            })
+            .findAll();
+
+        // Create updated copies with the current timestamp.
+        final now = DateTime.now();
+        final updatedMetrics = metricsToUpdate.map((m) => m.copyWith(syncedAt: now)).toList();
+
+        // Bulk-update the records in the database.
+        if (updatedMetrics.isNotEmpty) {
+          await _isar.healthMetrics.putAll(updatedMetrics);
+        }
+      });
+    } catch (e) {
+      throw CacheException('Failed to mark metrics as synced: $e');
+    }
+  }
+
+  @override
+  Future<HealthMetrics?> getLatestMetric() async {
+    try {
+      // Sort by `dateTo` descending and take the first one.
+      return await _isar.healthMetrics.where().sortByDateToDesc().findFirst();
+    } catch (e) {
+      throw CacheException('Failed to get the latest metric: $e');
+    }
+  }
+
+  @override
+  Future<void> cacheHealthMetricsBatch(List<HealthMetrics> metrics) async {
+    if (metrics.isEmpty) return;
+
+    try {
+      await _isar.writeTxn(() async {
+        // `putAll` will insert or update by id for the whole list.
+        await _isar.healthMetrics.putAll(metrics);
+      });
+    } catch (e) {
+      throw CacheException('Failed to batch cache metrics: $e');
+    }
+  }
+
+  @override
+  Future<List<HealthMetrics>> getMetricsForDateRange(DateTime start, DateTime end) async {
+    try {
+      // Use a query to find all metrics within the date range.
+      final results = await _isar.healthMetrics
+          .filter()
+          .dateFromGreaterThan(start, include: true)
+          .dateFromLessThan(end, include: false)
+          .findAll();
+
+      return results;
+    } catch (e) {
+      throw CacheException('Failed to get metrics for date range: $e');
+    }
   }
 }

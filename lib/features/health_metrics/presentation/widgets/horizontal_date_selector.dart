@@ -109,7 +109,7 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
                     _dayName(date),
                     style: TextStyle(
                       fontSize: 12,
-                      color: isSelected ? Colors.white : (isToday ? Theme.of(context).colorScheme.primary : Colors.black54),
+                      color: isSelected ? Colors.white : (isToday ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     ),
                   ),
@@ -118,7 +118,7 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
                     _dateShort(date),
                     style: TextStyle(
                       fontSize: 14,
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                       fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                     ),
                   ),

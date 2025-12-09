@@ -17,139 +17,69 @@ const HealthMetricsSchema = CollectionSchema(
   name: r'HealthMetrics',
   id: -3348921803634179751,
   properties: {
-    r'activeEnergyBurned': PropertySchema(
+    r'dateFrom': PropertySchema(
       id: 0,
-      name: r'activeEnergyBurned',
-      type: IsarType.double,
-    ),
-    r'basalEnergyBurned': PropertySchema(
-      id: 1,
-      name: r'basalEnergyBurned',
-      type: IsarType.double,
-    ),
-    r'bloodGlucose': PropertySchema(
-      id: 2,
-      name: r'bloodGlucose',
-      type: IsarType.double,
-    ),
-    r'bloodOxygen': PropertySchema(
-      id: 3,
-      name: r'bloodOxygen',
-      type: IsarType.double,
-    ),
-    r'bloodPressureDiastolic': PropertySchema(
-      id: 4,
-      name: r'bloodPressureDiastolic',
-      type: IsarType.double,
-    ),
-    r'bloodPressureSystolic': PropertySchema(
-      id: 5,
-      name: r'bloodPressureSystolic',
-      type: IsarType.double,
-    ),
-    r'bodyFatPercentage': PropertySchema(
-      id: 6,
-      name: r'bodyFatPercentage',
-      type: IsarType.double,
-    ),
-    r'bodyMassIndex': PropertySchema(
-      id: 7,
-      name: r'bodyMassIndex',
-      type: IsarType.double,
-    ),
-    r'caloriesBurned': PropertySchema(
-      id: 8,
-      name: r'caloriesBurned',
-      type: IsarType.double,
-    ),
-    r'dietaryEnergyConsumed': PropertySchema(
-      id: 9,
-      name: r'dietaryEnergyConsumed',
-      type: IsarType.double,
-    ),
-    r'distanceWalkingRunning': PropertySchema(
-      id: 10,
-      name: r'distanceWalkingRunning',
-      type: IsarType.double,
-    ),
-    r'flightsClimbed': PropertySchema(
-      id: 11,
-      name: r'flightsClimbed',
-      type: IsarType.long,
-    ),
-    r'heartRate': PropertySchema(
-      id: 12,
-      name: r'heartRate',
-      type: IsarType.double,
-    ),
-    r'heartRateVariabilitySdnn': PropertySchema(
-      id: 13,
-      name: r'heartRateVariabilitySdnn',
-      type: IsarType.double,
-    ),
-    r'height': PropertySchema(
-      id: 14,
-      name: r'height',
-      type: IsarType.double,
-    ),
-    r'restingHeartRate': PropertySchema(
-      id: 15,
-      name: r'restingHeartRate',
-      type: IsarType.double,
-    ),
-    r'sleepAsleep': PropertySchema(
-      id: 16,
-      name: r'sleepAsleep',
-      type: IsarType.double,
-    ),
-    r'sleepAwake': PropertySchema(
-      id: 17,
-      name: r'sleepAwake',
-      type: IsarType.double,
-    ),
-    r'sleepDeep': PropertySchema(
-      id: 18,
-      name: r'sleepDeep',
-      type: IsarType.double,
-    ),
-    r'sleepInBed': PropertySchema(
-      id: 19,
-      name: r'sleepInBed',
-      type: IsarType.double,
-    ),
-    r'sleepLight': PropertySchema(
-      id: 20,
-      name: r'sleepLight',
-      type: IsarType.double,
-    ),
-    r'sleepRem': PropertySchema(
-      id: 21,
-      name: r'sleepRem',
-      type: IsarType.double,
-    ),
-    r'source': PropertySchema(
-      id: 22,
-      name: r'source',
-      type: IsarType.string,
-    ),
-    r'steps': PropertySchema(
-      id: 23,
-      name: r'steps',
-      type: IsarType.long,
-    ),
-    r'timestamp': PropertySchema(
-      id: 24,
-      name: r'timestamp',
+      name: r'dateFrom',
       type: IsarType.dateTime,
     ),
-    r'water': PropertySchema(
-      id: 25,
-      name: r'water',
-      type: IsarType.double,
+    r'dateTo': PropertySchema(
+      id: 1,
+      name: r'dateTo',
+      type: IsarType.dateTime,
     ),
-    r'weight': PropertySchema(
-      id: 26,
-      name: r'weight',
+    r'hashCode': PropertySchema(
+      id: 2,
+      name: r'hashCode',
+      type: IsarType.long,
+    ),
+    r'lastModified': PropertySchema(
+      id: 3,
+      name: r'lastModified',
+      type: IsarType.dateTime,
+    ),
+    r'lastSyncedAt': PropertySchema(
+      id: 4,
+      name: r'lastSyncedAt',
+      type: IsarType.dateTime,
+    ),
+    r'sourceId': PropertySchema(
+      id: 5,
+      name: r'sourceId',
+      type: IsarType.string,
+    ),
+    r'sourceName': PropertySchema(
+      id: 6,
+      name: r'sourceName',
+      type: IsarType.string,
+    ),
+    r'synced': PropertySchema(
+      id: 7,
+      name: r'synced',
+      type: IsarType.bool,
+    ),
+    r'syncedAt': PropertySchema(
+      id: 8,
+      name: r'syncedAt',
+      type: IsarType.dateTime,
+    ),
+    r'type': PropertySchema(
+      id: 9,
+      name: r'type',
+      type: IsarType.string,
+    ),
+    r'unit': PropertySchema(
+      id: 10,
+      name: r'unit',
+      type: IsarType.string,
+    ),
+    r'uuid': PropertySchema(
+      id: 11,
+      name: r'uuid',
+      type: IsarType.string,
+    ),
+    r'value': PropertySchema(
+      id: 12,
+      name: r'value',
       type: IsarType.double,
     )
   },
@@ -158,21 +88,7 @@ const HealthMetricsSchema = CollectionSchema(
   deserialize: _healthMetricsDeserialize,
   deserializeProp: _healthMetricsDeserializeProp,
   idName: r'id',
-  indexes: {
-    r'timestamp': IndexSchema(
-      id: 1852253767416892198,
-      name: r'timestamp',
-      unique: false,
-      replace: false,
-      properties: [
-        IndexPropertySchema(
-          name: r'timestamp',
-          type: IndexType.value,
-          caseSensitive: false,
-        )
-      ],
-    )
-  },
+  indexes: {},
   links: {},
   embeddedSchemas: {},
   getId: _healthMetricsGetId,
@@ -187,7 +103,11 @@ int _healthMetricsEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.source.length * 3;
+  bytesCount += 3 + object.sourceId.length * 3;
+  bytesCount += 3 + object.sourceName.length * 3;
+  bytesCount += 3 + object.type.length * 3;
+  bytesCount += 3 + object.unit.length * 3;
+  bytesCount += 3 + object.uuid.length * 3;
   return bytesCount;
 }
 
@@ -197,33 +117,19 @@ void _healthMetricsSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDouble(offsets[0], object.activeEnergyBurned);
-  writer.writeDouble(offsets[1], object.basalEnergyBurned);
-  writer.writeDouble(offsets[2], object.bloodGlucose);
-  writer.writeDouble(offsets[3], object.bloodOxygen);
-  writer.writeDouble(offsets[4], object.bloodPressureDiastolic);
-  writer.writeDouble(offsets[5], object.bloodPressureSystolic);
-  writer.writeDouble(offsets[6], object.bodyFatPercentage);
-  writer.writeDouble(offsets[7], object.bodyMassIndex);
-  writer.writeDouble(offsets[8], object.caloriesBurned);
-  writer.writeDouble(offsets[9], object.dietaryEnergyConsumed);
-  writer.writeDouble(offsets[10], object.distanceWalkingRunning);
-  writer.writeLong(offsets[11], object.flightsClimbed);
-  writer.writeDouble(offsets[12], object.heartRate);
-  writer.writeDouble(offsets[13], object.heartRateVariabilitySdnn);
-  writer.writeDouble(offsets[14], object.height);
-  writer.writeDouble(offsets[15], object.restingHeartRate);
-  writer.writeDouble(offsets[16], object.sleepAsleep);
-  writer.writeDouble(offsets[17], object.sleepAwake);
-  writer.writeDouble(offsets[18], object.sleepDeep);
-  writer.writeDouble(offsets[19], object.sleepInBed);
-  writer.writeDouble(offsets[20], object.sleepLight);
-  writer.writeDouble(offsets[21], object.sleepRem);
-  writer.writeString(offsets[22], object.source);
-  writer.writeLong(offsets[23], object.steps);
-  writer.writeDateTime(offsets[24], object.timestamp);
-  writer.writeDouble(offsets[25], object.water);
-  writer.writeDouble(offsets[26], object.weight);
+  writer.writeDateTime(offsets[0], object.dateFrom);
+  writer.writeDateTime(offsets[1], object.dateTo);
+  writer.writeLong(offsets[2], object.hashCode);
+  writer.writeDateTime(offsets[3], object.lastModified);
+  writer.writeDateTime(offsets[4], object.lastSyncedAt);
+  writer.writeString(offsets[5], object.sourceId);
+  writer.writeString(offsets[6], object.sourceName);
+  writer.writeBool(offsets[7], object.synced);
+  writer.writeDateTime(offsets[8], object.syncedAt);
+  writer.writeString(offsets[9], object.type);
+  writer.writeString(offsets[10], object.unit);
+  writer.writeString(offsets[11], object.uuid);
+  writer.writeDouble(offsets[12], object.value);
 }
 
 HealthMetrics _healthMetricsDeserialize(
@@ -233,35 +139,21 @@ HealthMetrics _healthMetricsDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = HealthMetrics(
-    activeEnergyBurned: reader.readDoubleOrNull(offsets[0]),
-    basalEnergyBurned: reader.readDoubleOrNull(offsets[1]),
-    bloodGlucose: reader.readDoubleOrNull(offsets[2]),
-    bloodOxygen: reader.readDoubleOrNull(offsets[3]),
-    bloodPressureDiastolic: reader.readDoubleOrNull(offsets[4]),
-    bloodPressureSystolic: reader.readDoubleOrNull(offsets[5]),
-    bodyFatPercentage: reader.readDoubleOrNull(offsets[6]),
-    bodyMassIndex: reader.readDoubleOrNull(offsets[7]),
-    caloriesBurned: reader.readDoubleOrNull(offsets[8]),
-    dietaryEnergyConsumed: reader.readDoubleOrNull(offsets[9]),
-    distanceWalkingRunning: reader.readDoubleOrNull(offsets[10]),
-    flightsClimbed: reader.readLongOrNull(offsets[11]),
-    heartRate: reader.readDoubleOrNull(offsets[12]),
-    heartRateVariabilitySdnn: reader.readDoubleOrNull(offsets[13]),
-    height: reader.readDoubleOrNull(offsets[14]),
-    restingHeartRate: reader.readDoubleOrNull(offsets[15]),
-    sleepAsleep: reader.readDoubleOrNull(offsets[16]),
-    sleepAwake: reader.readDoubleOrNull(offsets[17]),
-    sleepDeep: reader.readDoubleOrNull(offsets[18]),
-    sleepInBed: reader.readDoubleOrNull(offsets[19]),
-    sleepLight: reader.readDoubleOrNull(offsets[20]),
-    sleepRem: reader.readDoubleOrNull(offsets[21]),
-    source: reader.readString(offsets[22]),
-    steps: reader.readLongOrNull(offsets[23]) ?? 0,
-    timestamp: reader.readDateTime(offsets[24]),
-    water: reader.readDoubleOrNull(offsets[25]),
-    weight: reader.readDoubleOrNull(offsets[26]),
+    dateFrom: reader.readDateTime(offsets[0]),
+    dateTo: reader.readDateTime(offsets[1]),
+    id: id,
+    lastModified:
+        reader.readDateTimeOrNull(offsets[3]) ?? const _DefaultDateTime(),
+    sourceId: reader.readString(offsets[5]),
+    sourceName: reader.readString(offsets[6]),
+    synced: reader.readBoolOrNull(offsets[7]) ?? false,
+    syncedAt: reader.readDateTimeOrNull(offsets[8]),
+    type: reader.readString(offsets[9]),
+    unit: reader.readString(offsets[10]),
+    uuid: reader.readString(offsets[11]),
+    value: reader.readDouble(offsets[12]),
   );
-  object.id = id;
+  object.lastSyncedAt = reader.readDateTimeOrNull(offsets[4]);
   return object;
 }
 
@@ -273,59 +165,32 @@ P _healthMetricsDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 1:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 2:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 3:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 4:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 5:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 6:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 7:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 8:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 9:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 10:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 11:
-      return (reader.readLongOrNull(offset)) as P;
-    case 12:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 13:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 14:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 15:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 16:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 17:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 18:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 19:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 20:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 21:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 22:
-      return (reader.readString(offset)) as P;
-    case 23:
-      return (reader.readLongOrNull(offset) ?? 0) as P;
-    case 24:
       return (reader.readDateTime(offset)) as P;
-    case 25:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 26:
-      return (reader.readDoubleOrNull(offset)) as P;
+    case 1:
+      return (reader.readDateTime(offset)) as P;
+    case 2:
+      return (reader.readLong(offset)) as P;
+    case 3:
+      return (reader.readDateTimeOrNull(offset) ?? const _DefaultDateTime())
+          as P;
+    case 4:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 8:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 9:
+      return (reader.readString(offset)) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -349,14 +214,6 @@ extension HealthMetricsQueryWhereSort
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterWhere> anyTimestamp() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'timestamp'),
-      );
     });
   }
 }
@@ -431,1093 +288,58 @@ extension HealthMetricsQueryWhere
       ));
     });
   }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterWhereClause>
-      timestampEqualTo(DateTime timestamp) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'timestamp',
-        value: [timestamp],
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterWhereClause>
-      timestampNotEqualTo(DateTime timestamp) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
-              lower: [],
-              upper: [timestamp],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
-              lower: [timestamp],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
-              lower: [timestamp],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
-              lower: [],
-              upper: [timestamp],
-              includeUpper: false,
-            ));
-      }
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterWhereClause>
-      timestampGreaterThan(
-    DateTime timestamp, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'timestamp',
-        lower: [timestamp],
-        includeLower: include,
-        upper: [],
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterWhereClause>
-      timestampLessThan(
-    DateTime timestamp, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'timestamp',
-        lower: [],
-        upper: [timestamp],
-        includeUpper: include,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterWhereClause>
-      timestampBetween(
-    DateTime lowerTimestamp,
-    DateTime upperTimestamp, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'timestamp',
-        lower: [lowerTimestamp],
-        includeLower: includeLower,
-        upper: [upperTimestamp],
-        includeUpper: includeUpper,
-      ));
-    });
-  }
 }
 
 extension HealthMetricsQueryFilter
     on QueryBuilder<HealthMetrics, HealthMetrics, QFilterCondition> {
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      activeEnergyBurnedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'activeEnergyBurned',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      activeEnergyBurnedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'activeEnergyBurned',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      activeEnergyBurnedEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
+      dateFromEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'activeEnergyBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      activeEnergyBurnedGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'activeEnergyBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      activeEnergyBurnedLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'activeEnergyBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      activeEnergyBurnedBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'activeEnergyBurned',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      basalEnergyBurnedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'basalEnergyBurned',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      basalEnergyBurnedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'basalEnergyBurned',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      basalEnergyBurnedEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'basalEnergyBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      basalEnergyBurnedGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'basalEnergyBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      basalEnergyBurnedLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'basalEnergyBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      basalEnergyBurnedBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'basalEnergyBurned',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodGlucoseIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'bloodGlucose',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodGlucoseIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'bloodGlucose',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodGlucoseEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'bloodGlucose',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodGlucoseGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'bloodGlucose',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodGlucoseLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'bloodGlucose',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodGlucoseBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'bloodGlucose',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodOxygenIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'bloodOxygen',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodOxygenIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'bloodOxygen',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodOxygenEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'bloodOxygen',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodOxygenGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'bloodOxygen',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodOxygenLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'bloodOxygen',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodOxygenBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'bloodOxygen',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureDiastolicIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'bloodPressureDiastolic',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureDiastolicIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'bloodPressureDiastolic',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureDiastolicEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'bloodPressureDiastolic',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureDiastolicGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'bloodPressureDiastolic',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureDiastolicLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'bloodPressureDiastolic',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureDiastolicBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'bloodPressureDiastolic',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureSystolicIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'bloodPressureSystolic',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureSystolicIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'bloodPressureSystolic',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureSystolicEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'bloodPressureSystolic',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureSystolicGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'bloodPressureSystolic',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureSystolicLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'bloodPressureSystolic',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bloodPressureSystolicBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'bloodPressureSystolic',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyFatPercentageIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'bodyFatPercentage',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyFatPercentageIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'bodyFatPercentage',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyFatPercentageEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'bodyFatPercentage',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyFatPercentageGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'bodyFatPercentage',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyFatPercentageLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'bodyFatPercentage',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyFatPercentageBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'bodyFatPercentage',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyMassIndexIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'bodyMassIndex',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyMassIndexIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'bodyMassIndex',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyMassIndexEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'bodyMassIndex',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyMassIndexGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'bodyMassIndex',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyMassIndexLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'bodyMassIndex',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      bodyMassIndexBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'bodyMassIndex',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      caloriesBurnedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'caloriesBurned',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      caloriesBurnedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'caloriesBurned',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      caloriesBurnedEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'caloriesBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      caloriesBurnedGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'caloriesBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      caloriesBurnedLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'caloriesBurned',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      caloriesBurnedBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'caloriesBurned',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      dietaryEnergyConsumedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'dietaryEnergyConsumed',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      dietaryEnergyConsumedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'dietaryEnergyConsumed',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      dietaryEnergyConsumedEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'dietaryEnergyConsumed',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      dietaryEnergyConsumedGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'dietaryEnergyConsumed',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      dietaryEnergyConsumedLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'dietaryEnergyConsumed',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      dietaryEnergyConsumedBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'dietaryEnergyConsumed',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      distanceWalkingRunningIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'distanceWalkingRunning',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      distanceWalkingRunningIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'distanceWalkingRunning',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      distanceWalkingRunningEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'distanceWalkingRunning',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      distanceWalkingRunningGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'distanceWalkingRunning',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      distanceWalkingRunningLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'distanceWalkingRunning',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      distanceWalkingRunningBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'distanceWalkingRunning',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      flightsClimbedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'flightsClimbed',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      flightsClimbedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'flightsClimbed',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      flightsClimbedEqualTo(int? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'flightsClimbed',
+        property: r'dateFrom',
         value: value,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      flightsClimbedGreaterThan(
-    int? value, {
+      dateFromGreaterThan(
+    DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'flightsClimbed',
+        property: r'dateFrom',
         value: value,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      flightsClimbedLessThan(
-    int? value, {
+      dateFromLessThan(
+    DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'flightsClimbed',
+        property: r'dateFrom',
         value: value,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      flightsClimbedBetween(
-    int? lower,
-    int? upper, {
+      dateFromBetween(
+    DateTime lower,
+    DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'flightsClimbed',
+        property: r'dateFrom',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -1527,253 +349,113 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'heartRate',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'heartRate',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
+      dateToEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'heartRate',
+        property: r'dateTo',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateGreaterThan(
-    double? value, {
+      dateToGreaterThan(
+    DateTime value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'heartRate',
+        property: r'dateTo',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateLessThan(
-    double? value, {
+      dateToLessThan(
+    DateTime value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'heartRate',
+        property: r'dateTo',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateBetween(
-    double? lower,
-    double? upper, {
+      dateToBetween(
+    DateTime lower,
+    DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'heartRate',
+        property: r'dateTo',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateVariabilitySdnnIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'heartRateVariabilitySdnn',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateVariabilitySdnnIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'heartRateVariabilitySdnn',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateVariabilitySdnnEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
+      hashCodeEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'heartRateVariabilitySdnn',
+        property: r'hashCode',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateVariabilitySdnnGreaterThan(
-    double? value, {
+      hashCodeGreaterThan(
+    int value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'heartRateVariabilitySdnn',
+        property: r'hashCode',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateVariabilitySdnnLessThan(
-    double? value, {
+      hashCodeLessThan(
+    int value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'heartRateVariabilitySdnn',
+        property: r'hashCode',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heartRateVariabilitySdnnBetween(
-    double? lower,
-    double? upper, {
+      hashCodeBetween(
+    int lower,
+    int upper, {
     bool includeLower = true,
     bool includeUpper = true,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'heartRateVariabilitySdnn',
+        property: r'hashCode',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heightIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'height',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heightIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'height',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heightEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'height',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heightGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'height',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heightLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'height',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      heightBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'height',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
       ));
     });
   }
@@ -1833,601 +515,143 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      restingHeartRateIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'restingHeartRate',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      restingHeartRateIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'restingHeartRate',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      restingHeartRateEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
+      lastModifiedEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'restingHeartRate',
+        property: r'lastModified',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      restingHeartRateGreaterThan(
-    double? value, {
+      lastModifiedGreaterThan(
+    DateTime value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'restingHeartRate',
+        property: r'lastModified',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      restingHeartRateLessThan(
-    double? value, {
+      lastModifiedLessThan(
+    DateTime value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'restingHeartRate',
+        property: r'lastModified',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      restingHeartRateBetween(
-    double? lower,
-    double? upper, {
+      lastModifiedBetween(
+    DateTime lower,
+    DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'restingHeartRate',
+        property: r'lastModified',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAsleepIsNull() {
+      lastSyncedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'sleepAsleep',
+        property: r'lastSyncedAt',
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAsleepIsNotNull() {
+      lastSyncedAtIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'sleepAsleep',
+        property: r'lastSyncedAt',
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAsleepEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
+      lastSyncedAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'sleepAsleep',
+        property: r'lastSyncedAt',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAsleepGreaterThan(
-    double? value, {
+      lastSyncedAtGreaterThan(
+    DateTime? value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'sleepAsleep',
+        property: r'lastSyncedAt',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAsleepLessThan(
-    double? value, {
+      lastSyncedAtLessThan(
+    DateTime? value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'sleepAsleep',
+        property: r'lastSyncedAt',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAsleepBetween(
-    double? lower,
-    double? upper, {
+      lastSyncedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'sleepAsleep',
+        property: r'lastSyncedAt',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAwakeIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'sleepAwake',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAwakeIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'sleepAwake',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAwakeEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'sleepAwake',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAwakeGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'sleepAwake',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAwakeLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'sleepAwake',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepAwakeBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'sleepAwake',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepDeepIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'sleepDeep',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepDeepIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'sleepDeep',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepDeepEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'sleepDeep',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepDeepGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'sleepDeep',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepDeepLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'sleepDeep',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepDeepBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'sleepDeep',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepInBedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'sleepInBed',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepInBedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'sleepInBed',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepInBedEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'sleepInBed',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepInBedGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'sleepInBed',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepInBedLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'sleepInBed',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepInBedBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'sleepInBed',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepLightIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'sleepLight',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepLightIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'sleepLight',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepLightEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'sleepLight',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepLightGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'sleepLight',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepLightLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'sleepLight',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepLightBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'sleepLight',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepRemIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'sleepRem',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepRemIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'sleepRem',
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepRemEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'sleepRem',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepRemGreaterThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'sleepRem',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepRemLessThan(
-    double? value, {
-    bool include = false,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'sleepRem',
-        value: value,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sleepRemBetween(
-    double? lower,
-    double? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    double epsilon = Query.epsilon,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'sleepRem',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        epsilon: epsilon,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceEqualTo(
+      sourceIdEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'source',
+        property: r'sourceId',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -2435,7 +659,7 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceGreaterThan(
+      sourceIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -2443,7 +667,7 @@ extension HealthMetricsQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'source',
+        property: r'sourceId',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -2451,7 +675,7 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceLessThan(
+      sourceIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -2459,7 +683,7 @@ extension HealthMetricsQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'source',
+        property: r'sourceId',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -2467,7 +691,7 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceBetween(
+      sourceIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -2476,7 +700,7 @@ extension HealthMetricsQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'source',
+        property: r'sourceId',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -2487,13 +711,13 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceStartsWith(
+      sourceIdStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'source',
+        property: r'sourceId',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -2501,13 +725,13 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceEndsWith(
+      sourceIdEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'source',
+        property: r'sourceId',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -2515,10 +739,10 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceContains(String value, {bool caseSensitive = true}) {
+      sourceIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
-        property: r'source',
+        property: r'sourceId',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -2526,10 +750,10 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceMatches(String pattern, {bool caseSensitive = true}) {
+      sourceIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
-        property: r'source',
+        property: r'sourceId',
         wildcard: pattern,
         caseSensitive: caseSensitive,
       ));
@@ -2537,247 +761,658 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceIsEmpty() {
+      sourceIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'source',
+        property: r'sourceId',
         value: '',
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      sourceIsNotEmpty() {
+      sourceIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'source',
+        property: r'sourceId',
         value: '',
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      stepsEqualTo(int value) {
+      sourceNameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'steps',
+        property: r'sourceName',
         value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      stepsGreaterThan(
-    int value, {
+      sourceNameGreaterThan(
+    String value, {
     bool include = false,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'steps',
+        property: r'sourceName',
         value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      stepsLessThan(
-    int value, {
+      sourceNameLessThan(
+    String value, {
     bool include = false,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'steps',
+        property: r'sourceName',
         value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      stepsBetween(
-    int lower,
-    int upper, {
+      sourceNameBetween(
+    String lower,
+    String upper, {
     bool includeLower = true,
     bool includeUpper = true,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'steps',
+        property: r'sourceName',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      timestampEqualTo(DateTime value) {
+      sourceNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'sourceName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      sourceNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'sourceName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      sourceNameContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'sourceName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      sourceNameMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'sourceName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      sourceNameIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'timestamp',
-        value: value,
+        property: r'sourceName',
+        value: '',
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      timestampGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+      sourceNameIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'timestamp',
+        property: r'sourceName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      syncedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'synced',
         value: value,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      timestampLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'timestamp',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      timestampBetween(
-    DateTime lower,
-    DateTime upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'timestamp',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      waterIsNull() {
+      syncedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'water',
+        property: r'syncedAt',
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      waterIsNotNull() {
+      syncedAtIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'water',
+        property: r'syncedAt',
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      waterEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
-  }) {
+      syncedAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'water',
+        property: r'syncedAt',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      waterGreaterThan(
-    double? value, {
+      syncedAtGreaterThan(
+    DateTime? value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'water',
+        property: r'syncedAt',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      waterLessThan(
-    double? value, {
+      syncedAtLessThan(
+    DateTime? value, {
     bool include = false,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'water',
+        property: r'syncedAt',
         value: value,
-        epsilon: epsilon,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      waterBetween(
-    double? lower,
-    double? upper, {
+      syncedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
-    double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'water',
+        property: r'syncedAt',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        epsilon: epsilon,
       ));
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      weightIsNull() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> typeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'weight',
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'type',
+        value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      weightIsNotNull() {
+      typeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'weight',
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'type',
+        value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      weightEqualTo(
-    double? value, {
+      typeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'type',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> typeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'type',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      typeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'type',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      typeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'type',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      typeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'type',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> typeMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'type',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      typeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'type',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      typeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'type',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> unitEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'unit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      unitGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'unit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      unitLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'unit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> unitBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'unit',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      unitStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'unit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      unitEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'unit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      unitContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'unit',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> unitMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'unit',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      unitIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'unit',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      unitIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'unit',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> uuidEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      uuidGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      uuidLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> uuidBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'uuid',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      uuidStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      uuidEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      uuidContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> uuidMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'uuid',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      uuidIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'uuid',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      uuidIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'uuid',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      valueEqualTo(
+    double value, {
     double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'weight',
+        property: r'value',
         value: value,
         epsilon: epsilon,
       ));
@@ -2785,15 +1420,15 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      weightGreaterThan(
-    double? value, {
+      valueGreaterThan(
+    double value, {
     bool include = false,
     double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'weight',
+        property: r'value',
         value: value,
         epsilon: epsilon,
       ));
@@ -2801,15 +1436,15 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      weightLessThan(
-    double? value, {
+      valueLessThan(
+    double value, {
     bool include = false,
     double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'weight',
+        property: r'value',
         value: value,
         epsilon: epsilon,
       ));
@@ -2817,16 +1452,16 @@ extension HealthMetricsQueryFilter
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
-      weightBetween(
-    double? lower,
-    double? upper, {
+      valueBetween(
+    double lower,
+    double upper, {
     bool includeLower = true,
     bool includeUpper = true,
     double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'weight',
+        property: r'value',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -2845,571 +1480,209 @@ extension HealthMetricsQueryLinks
 
 extension HealthMetricsQuerySortBy
     on QueryBuilder<HealthMetrics, HealthMetrics, QSortBy> {
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByActiveEnergyBurned() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByDateFrom() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'activeEnergyBurned', Sort.asc);
+      return query.addSortBy(r'dateFrom', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByActiveEnergyBurnedDesc() {
+      sortByDateFromDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'activeEnergyBurned', Sort.desc);
+      return query.addSortBy(r'dateFrom', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByDateTo() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateTo', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByDateToDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateTo', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByHashCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hashCode', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBasalEnergyBurned() {
+      sortByHashCodeDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'basalEnergyBurned', Sort.asc);
+      return query.addSortBy(r'hashCode', Sort.desc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBasalEnergyBurnedDesc() {
+      sortByLastModified() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'basalEnergyBurned', Sort.desc);
+      return query.addSortBy(r'lastModified', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBloodGlucose() {
+      sortByLastModifiedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodGlucose', Sort.asc);
+      return query.addSortBy(r'lastModified', Sort.desc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBloodGlucoseDesc() {
+      sortByLastSyncedAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodGlucose', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByBloodOxygen() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodOxygen', Sort.asc);
+      return query.addSortBy(r'lastSyncedAt', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBloodOxygenDesc() {
+      sortByLastSyncedAtDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodOxygen', Sort.desc);
+      return query.addSortBy(r'lastSyncedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySourceId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceId', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBloodPressureDiastolic() {
+      sortBySourceIdDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureDiastolic', Sort.asc);
+      return query.addSortBy(r'sourceId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySourceName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceName', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBloodPressureDiastolicDesc() {
+      sortBySourceNameDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureDiastolic', Sort.desc);
+      return query.addSortBy(r'sourceName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'synced', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySyncedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'synced', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'syncedAt', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBloodPressureSystolic() {
+      sortBySyncedAtDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureSystolic', Sort.asc);
+      return query.addSortBy(r'syncedAt', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBloodPressureSystolicDesc() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByType() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureSystolic', Sort.desc);
+      return query.addSortBy(r'type', Sort.asc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBodyFatPercentage() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByTypeDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyFatPercentage', Sort.asc);
+      return query.addSortBy(r'type', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBodyFatPercentageDesc() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByUnit() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyFatPercentage', Sort.desc);
+      return query.addSortBy(r'unit', Sort.asc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBodyMassIndex() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByUnitDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyMassIndex', Sort.asc);
+      return query.addSortBy(r'unit', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByBodyMassIndexDesc() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByUuid() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyMassIndex', Sort.desc);
+      return query.addSortBy(r'uuid', Sort.asc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByCaloriesBurned() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByUuidDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'caloriesBurned', Sort.asc);
+      return query.addSortBy(r'uuid', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByCaloriesBurnedDesc() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByValue() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'caloriesBurned', Sort.desc);
+      return query.addSortBy(r'value', Sort.asc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByDietaryEnergyConsumed() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByValueDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'dietaryEnergyConsumed', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByDietaryEnergyConsumedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'dietaryEnergyConsumed', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByDistanceWalkingRunning() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'distanceWalkingRunning', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByDistanceWalkingRunningDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'distanceWalkingRunning', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByFlightsClimbed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'flightsClimbed', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByFlightsClimbedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'flightsClimbed', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByHeartRate() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRate', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByHeartRateDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRate', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByHeartRateVariabilitySdnn() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRateVariabilitySdnn', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByHeartRateVariabilitySdnnDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRateVariabilitySdnn', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByHeight() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'height', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByHeightDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'height', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByRestingHeartRate() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'restingHeartRate', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByRestingHeartRateDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'restingHeartRate', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySleepAsleep() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAsleep', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortBySleepAsleepDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAsleep', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySleepAwake() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAwake', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortBySleepAwakeDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAwake', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySleepDeep() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepDeep', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortBySleepDeepDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepDeep', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySleepInBed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepInBed', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortBySleepInBedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepInBed', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySleepLight() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepLight', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortBySleepLightDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepLight', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySleepRem() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepRem', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortBySleepRemDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepRem', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySource() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'source', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySourceDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'source', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortBySteps() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'steps', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByStepsDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'steps', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByTimestamp() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      sortByTimestampDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByWater() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'water', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByWaterDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'water', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByWeight() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'weight', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByWeightDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'weight', Sort.desc);
+      return query.addSortBy(r'value', Sort.desc);
     });
   }
 }
 
 extension HealthMetricsQuerySortThenBy
     on QueryBuilder<HealthMetrics, HealthMetrics, QSortThenBy> {
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByActiveEnergyBurned() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByDateFrom() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'activeEnergyBurned', Sort.asc);
+      return query.addSortBy(r'dateFrom', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByActiveEnergyBurnedDesc() {
+      thenByDateFromDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'activeEnergyBurned', Sort.desc);
+      return query.addSortBy(r'dateFrom', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByDateTo() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateTo', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByDateToDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'dateTo', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByHashCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hashCode', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBasalEnergyBurned() {
+      thenByHashCodeDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'basalEnergyBurned', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBasalEnergyBurnedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'basalEnergyBurned', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBloodGlucose() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodGlucose', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBloodGlucoseDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodGlucose', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByBloodOxygen() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodOxygen', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBloodOxygenDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodOxygen', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBloodPressureDiastolic() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureDiastolic', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBloodPressureDiastolicDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureDiastolic', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBloodPressureSystolic() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureSystolic', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBloodPressureSystolicDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bloodPressureSystolic', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBodyFatPercentage() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyFatPercentage', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBodyFatPercentageDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyFatPercentage', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBodyMassIndex() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyMassIndex', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByBodyMassIndexDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'bodyMassIndex', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByCaloriesBurned() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'caloriesBurned', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByCaloriesBurnedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'caloriesBurned', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByDietaryEnergyConsumed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'dietaryEnergyConsumed', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByDietaryEnergyConsumedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'dietaryEnergyConsumed', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByDistanceWalkingRunning() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'distanceWalkingRunning', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByDistanceWalkingRunningDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'distanceWalkingRunning', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByFlightsClimbed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'flightsClimbed', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByFlightsClimbedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'flightsClimbed', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByHeartRate() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRate', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByHeartRateDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRate', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByHeartRateVariabilitySdnn() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRateVariabilitySdnn', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByHeartRateVariabilitySdnnDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'heartRateVariabilitySdnn', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByHeight() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'height', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByHeightDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'height', Sort.desc);
+      return query.addSortBy(r'hashCode', Sort.desc);
     });
   }
 
@@ -3426,336 +1699,217 @@ extension HealthMetricsQuerySortThenBy
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByRestingHeartRate() {
+      thenByLastModified() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'restingHeartRate', Sort.asc);
+      return query.addSortBy(r'lastModified', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByRestingHeartRateDesc() {
+      thenByLastModifiedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'restingHeartRate', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySleepAsleep() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAsleep', Sort.asc);
+      return query.addSortBy(r'lastModified', Sort.desc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenBySleepAsleepDesc() {
+      thenByLastSyncedAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAsleep', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySleepAwake() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAwake', Sort.asc);
+      return query.addSortBy(r'lastSyncedAt', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenBySleepAwakeDesc() {
+      thenByLastSyncedAtDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepAwake', Sort.desc);
+      return query.addSortBy(r'lastSyncedAt', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySleepDeep() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySourceId() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepDeep', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenBySleepDeepDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepDeep', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySleepInBed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepInBed', Sort.asc);
+      return query.addSortBy(r'sourceId', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenBySleepInBedDesc() {
+      thenBySourceIdDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepInBed', Sort.desc);
+      return query.addSortBy(r'sourceId', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySleepLight() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySourceName() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepLight', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenBySleepLightDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepLight', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySleepRem() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepRem', Sort.asc);
+      return query.addSortBy(r'sourceName', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenBySleepRemDesc() {
+      thenBySourceNameDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'sleepRem', Sort.desc);
+      return query.addSortBy(r'sourceName', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySource() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySynced() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'source', Sort.asc);
+      return query.addSortBy(r'synced', Sort.asc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySourceDesc() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySyncedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'source', Sort.desc);
+      return query.addSortBy(r'synced', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySteps() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenBySyncedAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'steps', Sort.asc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByStepsDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'steps', Sort.desc);
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByTimestamp() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.asc);
+      return query.addSortBy(r'syncedAt', Sort.asc);
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
-      thenByTimestampDesc() {
+      thenBySyncedAtDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.desc);
+      return query.addSortBy(r'syncedAt', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByWater() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByType() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'water', Sort.asc);
+      return query.addSortBy(r'type', Sort.asc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByWaterDesc() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByTypeDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'water', Sort.desc);
+      return query.addSortBy(r'type', Sort.desc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByWeight() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByUnit() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'weight', Sort.asc);
+      return query.addSortBy(r'unit', Sort.asc);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByWeightDesc() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByUnitDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'weight', Sort.desc);
+      return query.addSortBy(r'unit', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByUuid() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByUuidDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByValue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'value', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByValueDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'value', Sort.desc);
     });
   }
 }
 
 extension HealthMetricsQueryWhereDistinct
     on QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> {
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByActiveEnergyBurned() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByDateFrom() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'activeEnergyBurned');
+      return query.addDistinctBy(r'dateFrom');
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByDateTo() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'dateTo');
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByHashCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hashCode');
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByBasalEnergyBurned() {
+      distinctByLastModified() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'basalEnergyBurned');
+      return query.addDistinctBy(r'lastModified');
     });
   }
 
   QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByBloodGlucose() {
+      distinctByLastSyncedAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'bloodGlucose');
+      return query.addDistinctBy(r'lastSyncedAt');
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByBloodOxygen() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'bloodOxygen');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByBloodPressureDiastolic() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'bloodPressureDiastolic');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByBloodPressureSystolic() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'bloodPressureSystolic');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByBodyFatPercentage() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'bodyFatPercentage');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByBodyMassIndex() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'bodyMassIndex');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByCaloriesBurned() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'caloriesBurned');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByDietaryEnergyConsumed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'dietaryEnergyConsumed');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByDistanceWalkingRunning() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'distanceWalkingRunning');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByFlightsClimbed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'flightsClimbed');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByHeartRate() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'heartRate');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByHeartRateVariabilitySdnn() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'heartRateVariabilitySdnn');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByHeight() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'height');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctByRestingHeartRate() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'restingHeartRate');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct>
-      distinctBySleepAsleep() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'sleepAsleep');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySleepAwake() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'sleepAwake');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySleepDeep() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'sleepDeep');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySleepInBed() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'sleepInBed');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySleepLight() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'sleepLight');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySleepRem() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'sleepRem');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySource(
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySourceId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'source', caseSensitive: caseSensitive);
+      return query.addDistinctBy(r'sourceId', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySteps() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySourceName(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'steps');
+      return query.addDistinctBy(r'sourceName', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByTimestamp() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySynced() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'timestamp');
+      return query.addDistinctBy(r'synced');
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByWater() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctBySyncedAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'water');
+      return query.addDistinctBy(r'syncedAt');
     });
   }
 
-  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByWeight() {
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByType(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'weight');
+      return query.addDistinctBy(r'type', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByUnit(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'unit', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByUuid(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'uuid', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByValue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'value');
     });
   }
 }
@@ -3768,177 +1922,83 @@ extension HealthMetricsQueryProperty
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      activeEnergyBurnedProperty() {
+  QueryBuilder<HealthMetrics, DateTime, QQueryOperations> dateFromProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'activeEnergyBurned');
+      return query.addPropertyName(r'dateFrom');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      basalEnergyBurnedProperty() {
+  QueryBuilder<HealthMetrics, DateTime, QQueryOperations> dateToProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'basalEnergyBurned');
+      return query.addPropertyName(r'dateTo');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      bloodGlucoseProperty() {
+  QueryBuilder<HealthMetrics, int, QQueryOperations> hashCodeProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'bloodGlucose');
+      return query.addPropertyName(r'hashCode');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> bloodOxygenProperty() {
+  QueryBuilder<HealthMetrics, DateTime, QQueryOperations>
+      lastModifiedProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'bloodOxygen');
+      return query.addPropertyName(r'lastModified');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      bloodPressureDiastolicProperty() {
+  QueryBuilder<HealthMetrics, DateTime?, QQueryOperations>
+      lastSyncedAtProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'bloodPressureDiastolic');
+      return query.addPropertyName(r'lastSyncedAt');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      bloodPressureSystolicProperty() {
+  QueryBuilder<HealthMetrics, String, QQueryOperations> sourceIdProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'bloodPressureSystolic');
+      return query.addPropertyName(r'sourceId');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      bodyFatPercentageProperty() {
+  QueryBuilder<HealthMetrics, String, QQueryOperations> sourceNameProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'bodyFatPercentage');
+      return query.addPropertyName(r'sourceName');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      bodyMassIndexProperty() {
+  QueryBuilder<HealthMetrics, bool, QQueryOperations> syncedProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'bodyMassIndex');
+      return query.addPropertyName(r'synced');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      caloriesBurnedProperty() {
+  QueryBuilder<HealthMetrics, DateTime?, QQueryOperations> syncedAtProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'caloriesBurned');
+      return query.addPropertyName(r'syncedAt');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      dietaryEnergyConsumedProperty() {
+  QueryBuilder<HealthMetrics, String, QQueryOperations> typeProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'dietaryEnergyConsumed');
+      return query.addPropertyName(r'type');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      distanceWalkingRunningProperty() {
+  QueryBuilder<HealthMetrics, String, QQueryOperations> unitProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'distanceWalkingRunning');
+      return query.addPropertyName(r'unit');
     });
   }
 
-  QueryBuilder<HealthMetrics, int?, QQueryOperations> flightsClimbedProperty() {
+  QueryBuilder<HealthMetrics, String, QQueryOperations> uuidProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'flightsClimbed');
+      return query.addPropertyName(r'uuid');
     });
   }
 
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> heartRateProperty() {
+  QueryBuilder<HealthMetrics, double, QQueryOperations> valueProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'heartRate');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      heartRateVariabilitySdnnProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'heartRateVariabilitySdnn');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> heightProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'height');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations>
-      restingHeartRateProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'restingHeartRate');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> sleepAsleepProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'sleepAsleep');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> sleepAwakeProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'sleepAwake');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> sleepDeepProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'sleepDeep');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> sleepInBedProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'sleepInBed');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> sleepLightProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'sleepLight');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> sleepRemProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'sleepRem');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, String, QQueryOperations> sourceProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'source');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, int, QQueryOperations> stepsProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'steps');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, DateTime, QQueryOperations> timestampProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'timestamp');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> waterProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'water');
-    });
-  }
-
-  QueryBuilder<HealthMetrics, double?, QQueryOperations> weightProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'weight');
+      return query.addPropertyName(r'value');
     });
   }
 }
