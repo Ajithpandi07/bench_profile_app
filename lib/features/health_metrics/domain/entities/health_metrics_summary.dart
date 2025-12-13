@@ -47,26 +47,33 @@ class HealthMetricsSummary extends Equatable {
   });
 
   factory HealthMetricsSummary.fromMap(Map<String, dynamic> map, DateTime date) {
+    // Helper to safely convert int/double/num to double?
+    double? toDouble(dynamic val) {
+      if (val == null) return null;
+      if (val is num) return val.toDouble();
+      return null;
+    }
+
     return HealthMetricsSummary(
       timestamp: date,
       source: map['source'] ?? 'health_package',
-      steps: map[HealthDataType.STEPS.name],
-      heartRate: map[HealthDataType.HEART_RATE.name],
-      weight: map[HealthDataType.WEIGHT.name],
-      height: map[HealthDataType.HEIGHT.name],
-      activeEnergyBurned: map[HealthDataType.ACTIVE_ENERGY_BURNED.name],
-      sleepAsleep: map[HealthDataType.SLEEP_ASLEEP.name],
-      sleepAwake: map[HealthDataType.SLEEP_AWAKE.name],
-      water: map[HealthDataType.WATER.name],
-      bloodOxygen: map[HealthDataType.BLOOD_OXYGEN.name],
-      basalEnergyBurned: map[HealthDataType.BASAL_ENERGY_BURNED.name],
-      flightsClimbed: map[HealthDataType.FLIGHTS_CLIMBED.name],
-      sleepDeep: map['sleepDeep'],
-      sleepLight: map['sleepLight'],
-      sleepRem: map['sleepRem'],
-      bodyFatPercentage: map[HealthDataType.BODY_FAT_PERCENTAGE.name],
-      bloodPressureSystolic: map[HealthDataType.BLOOD_PRESSURE_SYSTOLIC.name],
-      bloodPressureDiastolic: map[HealthDataType.BLOOD_PRESSURE_DIASTOLIC.name],
+      steps: toDouble(map[HealthDataType.STEPS.name]),
+      heartRate: toDouble(map[HealthDataType.HEART_RATE.name]),
+      weight: toDouble(map[HealthDataType.WEIGHT.name]),
+      height: toDouble(map[HealthDataType.HEIGHT.name]),
+      activeEnergyBurned: toDouble(map[HealthDataType.ACTIVE_ENERGY_BURNED.name]),
+      sleepAsleep: toDouble(map[HealthDataType.SLEEP_ASLEEP.name]),
+      sleepAwake: toDouble(map[HealthDataType.SLEEP_AWAKE.name]),
+      water: toDouble(map[HealthDataType.WATER.name]),
+      bloodOxygen: toDouble(map[HealthDataType.BLOOD_OXYGEN.name]),
+      basalEnergyBurned: toDouble(map[HealthDataType.BASAL_ENERGY_BURNED.name]),
+      flightsClimbed: toDouble(map[HealthDataType.FLIGHTS_CLIMBED.name]),
+      sleepDeep: toDouble(map['sleepDeep']),
+      sleepLight: toDouble(map['sleepLight']),
+      sleepRem: toDouble(map['sleepRem']),
+      bodyFatPercentage: toDouble(map[HealthDataType.BODY_FAT_PERCENTAGE.name]),
+      bloodPressureSystolic: toDouble(map[HealthDataType.BLOOD_PRESSURE_SYSTOLIC.name]),
+      bloodPressureDiastolic: toDouble(map[HealthDataType.BLOOD_PRESSURE_DIASTOLIC.name]),
     );
   }
 

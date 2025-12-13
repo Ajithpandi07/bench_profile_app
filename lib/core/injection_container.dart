@@ -16,11 +16,11 @@ import 'package:bench_profile_app/features/health_metrics/data/datasources/local
 import 'package:bench_profile_app/features/health_metrics/data/datasources/local/health_metrics_local_data_source_isar_impl.dart';
 import 'package:bench_profile_app/features/health_metrics/data/datasources/remote/health_metrics_remote_data_source.dart';
 import 'package:bench_profile_app/features/health_metrics/data/datasources/remote/health_metrics_remote_data_source_impl.dart';
-import 'package:bench_profile_app/features/health_metrics/data/repositories/health_metrics_repository_impl.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/repositories/isar_health_metrics_repository.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/repositories/health_repository.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/usecases/get_health_metrics.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/usecases/get_health_metrics_for_date.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart' hide SyncManager;
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
 import 'package:bench_profile_app/core/network/network_info_impl.dart';
 
@@ -89,11 +89,10 @@ Future<void> init() async {
   // Repository
   if (!sl.isRegistered<HealthRepository>()) {
     sl.registerLazySingleton<HealthRepository>(
-      () => HealthMetricsRepositoryImpl(
-        dataSource: sl<HealthMetricsDataSource>(),
-        localDataSource: sl<HealthMetricsLocalDataSource>(),
+      () => IsarHealthMetricsRepository(
+        isar: sl<Isar>(),
+        healthDataSource: sl<HealthMetricsDataSource>(),
         remoteDataSource: sl<HealthMetricsRemoteDataSource>(),
-        networkInfo: sl<NetworkInfo>(),
       ),
     );
   }
@@ -112,7 +111,7 @@ Future<void> init() async {
           getHealthMetrics: sl<GetHealthMetrics>(),
           getHealthMetricsForDate: sl<GetHealthMetricsForDate>(),
           aggregator: sl<MetricAggregator>(),
-          auth: sl<FirebaseAuth>(),
+          repository: sl<HealthRepository>(),
         ));
   }
 
@@ -198,11 +197,10 @@ Future<void> initForBackground() async {
 
   // Repository
   if (!sl.isRegistered<HealthRepository>()) {
-    sl.registerLazySingleton<HealthRepository>(() => HealthMetricsRepositoryImpl(
-          dataSource: sl<HealthMetricsDataSource>(),
-          localDataSource: sl<HealthMetricsLocalDataSource>(),
+    sl.registerLazySingleton<HealthRepository>(() => IsarHealthMetricsRepository(
+          isar: sl<Isar>(),
+          healthDataSource: sl<HealthMetricsDataSource>(),
           remoteDataSource: sl<HealthMetricsRemoteDataSource>(),
-          networkInfo: sl<NetworkInfo>(),
         ));
   }
 

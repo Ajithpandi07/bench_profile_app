@@ -21,8 +21,15 @@ class HealthMetricsLocalDataSourceIsarImpl
   Future<void> cacheHealthMetrics(HealthMetrics metrics) async {
     try {
       await _isar.writeTxn(() async {
-        // `put` will insert or update by id
-        await _isar.healthMetrics.put(metrics);
+        // Check for existing record by UUID to prevent duplicates
+        final existing = await _isar.healthMetrics
+            .filter()
+            .uuidEqualTo(metrics.uuid)
+            .findFirst();
+        
+        if (existing == null) {
+          await _isar.healthMetrics.put(metrics);
+        }
       });
     } catch (e, st) {
       // Optionally log e/st for debugging
@@ -121,8 +128,21 @@ class HealthMetricsLocalDataSourceIsarImpl
 
     try {
       await _isar.writeTxn(() async {
-        // `putAll` will insert or update by id for the whole list.
-        await _isar.healthMetrics.putAll(metrics);
+        final metricsToSave = <HealthMetrics>[];
+        for (final metric in metrics) {
+          // Check for existing record by UUID
+          final existing = await _isar.healthMetrics
+              .filter()
+              .uuidEqualTo(metric.uuid)
+              .findFirst();
+
+          if (existing == null) {
+            metricsToSave.add(metric);
+          }
+        }
+        if (metricsToSave.isNotEmpty) {
+          await _isar.healthMetrics.putAll(metricsToSave);
+        }
       });
     } catch (e) {
       throw CacheException('Failed to batch cache metrics: $e');
@@ -144,4 +164,20 @@ class HealthMetricsLocalDataSourceIsarImpl
       throw CacheException('Failed to get metrics for date range: $e');
     }
   }
+
+  // In lib/features/health_metrics/data/datasources/local/health_metrics_local_data_source_isar_impl.dart
+// Add these methods to your existing Isar impl (adjust imports & class name accordingly).
+
+  @override
+  Future<void> clearAllLocalMetrics() async {
+    final isar = _isar;
+    try {
+      await isar.writeTxn(() async {
+        await isar.healthMetrics.clear();
+      });
+    } catch (e) {
+      throw CacheException();
+    }
+  }
+
 }

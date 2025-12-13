@@ -10,7 +10,7 @@ class AppTheme {
 
   // The seed color that will be used to generate the color schemes.
   // Using a shade of blue as it's often associated with health and trust.
-  static const _seedColor = Colors.pink;
+  static const _seedColor = Color(0xFF1447E6);
 
   /// Defines the base text theme for the application.
   /// These styles will be adapted with appropriate colors by the ColorScheme.

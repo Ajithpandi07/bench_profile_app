@@ -9,4 +9,7 @@ abstract class HealthMetricsRemoteDataSource {
   /// Fetches a list of [HealthMetrics] for a specific date from the remote store.
   /// Throws a [ServerException] for all errors.
   Future<List<HealthMetrics>> getHealthMetricsForDate(DateTime date);
+
+  /// NEW: return *all* remote points for the current user
+  Future<List<HealthMetrics>> getAllHealthMetricsForUser();
 }

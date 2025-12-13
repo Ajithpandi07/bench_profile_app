@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:isar/isar.dart';
 import '../../../../core/error/failures.dart';
 import '../../data/datasources/health_metrics_data_source.dart';
+import '../../data/datasources/remote/health_metrics_remote_data_source.dart';
 import '../entities/health_metrics.dart';
 import '../../domain/repositories/health_repository.dart';
 import 'package:health/health.dart';
@@ -15,10 +16,12 @@ class RepositoryFailure extends Failure {
 class IsarHealthMetricsRepository implements HealthRepository {
   final Isar isar;
   final HealthMetricsDataSource healthDataSource;
+  final HealthMetricsRemoteDataSource remoteDataSource;
 
   IsarHealthMetricsRepository({
     required this.isar,
     required this.healthDataSource,
+    required this.remoteDataSource,
   });
 
   @override
@@ -82,17 +85,28 @@ class IsarHealthMetricsRepository implements HealthRepository {
           .sortByDateFrom()
           .findAll();
 
-      // Return an empty list when no results found (consumer can decide how to handle)
-      return Right(results);
       // If we found metrics in the local DB, return them immediately.
       if (results.isNotEmpty) {
         return Right(results);
       }
 
-      // If local DB is empty for this date, fetch from the device's health API.
+      // 2. If local DB is empty, try fetching from Remote (Firestore).
+      try {
+        final remoteMetrics = await remoteDataSource.getHealthMetricsForDate(date);
+        if (remoteMetrics.isNotEmpty) {
+          // Save remote data to local DB for next time
+          await isar.writeTxn(() async {
+            await isar.healthMetrics.putAll(remoteMetrics);
+          });
+          return Right(remoteMetrics);
+        }
+      } catch (e) {
+        // Ignore remote errors and proceed to device fetch
+      }
+
+      // 3. If Remote is also empty/failed, fetch from the device's health API.
       final deviceMetrics = await healthDataSource.getHealthMetricsForDate(date);
 
-      // If we got new metrics from the device, save them to the local DB.
       if (deviceMetrics.isNotEmpty) {
         await isar.writeTxn(() async {
           await isar.healthMetrics.putAll(deviceMetrics);
@@ -103,7 +117,6 @@ class IsarHealthMetricsRepository implements HealthRepository {
       return Right(deviceMetrics);
     } catch (e) {
       return Left(RepositoryFailure('Failed to query metrics for date $date: $e'));
-      return Left(RepositoryFailure('Failed to get metrics for date $date: $e'));
     }
   }
 

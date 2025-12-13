@@ -47,11 +47,9 @@ class _NavigationContainerState extends State<NavigationContainer> {
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () {
-                // The HealthMetricsPage's state holds the currently selected date.
-                // A better approach would be to manage the selected date in the BLoC.
-                // For now, we will just refetch for today.
-                context.read<HealthMetricsBloc>().add(GetMetricsForDate(DateTime.now()));
-              },
+                // Refresh the currently selected date logic via BLoC
+                context.read<HealthMetricsBloc>().add(const RefreshMetrics());
+              }
             ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -99,7 +97,7 @@ class _ProfileTab extends StatelessWidget {
     return BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
       builder: (context, state) {
         if (state is HealthMetricsLoaded) {
-          return ProfilePage(metrics: state.metrics);
+          return ProfilePage(metrics: state.summary);
         }
         if (state is HealthMetricsLoading) {
           return const Center(child: CircularProgressIndicator());
@@ -113,4 +111,3 @@ class _ProfileTab extends StatelessWidget {
     );
   }
 }
-

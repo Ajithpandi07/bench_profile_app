@@ -31,6 +31,9 @@ class _CircularScoreCardState extends State<CircularScoreCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  
+  late Paint _backgroundPaint;
+  late Paint _foregroundPaint;
 
   @override
   void initState() {
@@ -46,6 +49,12 @@ class _CircularScoreCardState extends State<CircularScoreCard>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updatePaints();
+  }
+
+  @override
   void didUpdateWidget(CircularScoreCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.metrics?.steps != oldWidget.metrics?.steps) {
@@ -56,6 +65,25 @@ class _CircularScoreCardState extends State<CircularScoreCard>
         ..value = 0
         ..forward();
     }
+    if (widget.size != oldWidget.size || widget.fullCircle != oldWidget.fullCircle) {
+      _updatePaints();
+    }
+  }
+
+  void _updatePaints() {
+    final theme = Theme.of(context);
+    final strokeWidth = widget.size / 12;
+
+    _backgroundPaint = Paint()
+      ..color = theme.colorScheme.surface.withOpacity(0.3)
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    _foregroundPaint = Paint()
+      ..color = theme.colorScheme.primary
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
   }
 
   @override
@@ -83,31 +111,33 @@ class _CircularScoreCardState extends State<CircularScoreCard>
         height: widget.size,
         child: AnimatedBuilder(
           animation: _animation,
+          // Optimization: Build static child once
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${steps.toInt()}',
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'of ${widget.goalSteps} steps',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
           builder: (context, child) {
             return CustomPaint(
               painter: _CirclePainter(
                 progress: _animation.value,
                 fullCircle: widget.fullCircle,
-                backgroundColor: theme.colorScheme.surface,
-                foregroundColor: theme.colorScheme.primary,
+                backgroundPaint: _backgroundPaint,
+                foregroundPaint: _foregroundPaint,
               ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${steps.toInt()}',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'of ${widget.goalSteps} steps',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
+              child: child,
             );
           },
         ),
@@ -119,32 +149,21 @@ class _CircularScoreCardState extends State<CircularScoreCard>
 class _CirclePainter extends CustomPainter {
   final double progress;
   final bool fullCircle;
-  final Color backgroundColor;
-  final Color foregroundColor;
+  final Paint backgroundPaint;
+  final Paint foregroundPaint;
 
   _CirclePainter({
     required this.progress,
     required this.fullCircle,
-    required this.backgroundColor,
-    required this.foregroundColor,
+    required this.backgroundPaint,
+    required this.foregroundPaint,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokeWidth = size.width / 12;
+    final strokeWidth = backgroundPaint.strokeWidth;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
-
-    final backgroundPaint = Paint()
-      ..color = backgroundColor.withOpacity(0.3)
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final foregroundPaint = Paint()
-      ..color = foregroundColor
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
 
     canvas.drawCircle(center, radius, backgroundPaint);
     canvas.drawArc(
@@ -160,6 +179,6 @@ class _CirclePainter extends CustomPainter {
   bool shouldRepaint(_CirclePainter oldDelegate) =>
       progress != oldDelegate.progress ||
       fullCircle != oldDelegate.fullCircle ||
-      backgroundColor != oldDelegate.backgroundColor ||
-      foregroundColor != oldDelegate.foregroundColor;
+      backgroundPaint != oldDelegate.backgroundPaint ||
+      foregroundPaint != oldDelegate.foregroundPaint;
 }

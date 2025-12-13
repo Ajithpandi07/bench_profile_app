@@ -1,5 +1,4 @@
 // lib/features/health_metrics/presentation/pages/health_metrics_page.dart
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,91 +19,91 @@ class HealthMetricsPage extends StatefulWidget {
 
 class _HealthMetricsPageState extends State<HealthMetricsPage> {
   late DateTime selectedDate;
-  DateTime? _lastUpdated;
 
   @override
   void initState() {
     super.initState();
     selectedDate = DateTime.now();
+    // Dispatch initial load for today's date
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchForDate(selectedDate);
+      context.read<HealthMetricsBloc>().add(GetMetricsForDate(selectedDate));
     });
   }
 
-  void _fetchForDate(DateTime date) {
-    selectedDate = date;
-    context.read<HealthMetricsBloc>().add(GetMetricsForDate(date));
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BlocConsumer<HealthMetricsBloc, HealthMetricsState>(
+        listener: (context, state) {
+          // Optional: show snackbars for errors
+          if (state is HealthMetricsError) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          }
+        },
+        builder: (context, state) {
+          return Column(
+            children: [
+              // Horizontal date selector
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: HorizontalDateSelector(
+                  key: ValueKey(selectedDate),
+                  initialDate: selectedDate,
+                  daysBefore: 60,
+                  daysAfter: DateTime.now().difference(selectedDate).inDays.abs(),
+                  onDateSelected: (d) {
+                    setState(() => selectedDate = d);
+                    // UI event + load data for date
+                    context.read<HealthMetricsBloc>().add(SelectDate(d));
+                  },
+                ),
+              ),
+
+              // Main content with pull-to-refresh
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => _handleRefresh(context),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: _buildStateContent(context, state),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
-  Future<void> _onRefresh() async {
-    // trigger reload and wait for state change (with timeout fallback)
+  Future<void> _handleRefresh(BuildContext context) async {
     final bloc = context.read<HealthMetricsBloc>();
+
+    // Create a completer that completes when the bloc emits a non-loading state.
     final completer = Completer<void>();
-    final sub = bloc.stream.listen((state) {
-      if (state is HealthMetricsLoaded || state is HealthMetricsError) {
+    late final StreamSubscription sub;
+    sub = bloc.stream.listen((s) {
+      if (s is! HealthMetricsLoading) {
         if (!completer.isCompleted) completer.complete();
       }
     });
+
+    // Trigger refresh (this will add GetMetrics with forceRefresh in the bloc)
+    bloc.add(const RefreshMetrics());
+
     try {
-      bloc.add(GetMetricsForDate(selectedDate));
-      await completer.future.timeout(const Duration(seconds: 8), onTimeout: () {});
+      // wait for the completer, with a timeout to avoid hanging UI
+      await completer.future.timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // ignore timeout but ensure we clean up subscription
     } finally {
       await sub.cancel();
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      body: Column(
-        children: [
-          // Horizontal date selector — keeps existing UI element
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: HorizontalDateSelector(
-              initialDate: selectedDate,
-              daysBefore: 60,
-              daysAfter: 0,
-              onDateSelected: (d) {
-                setState(() => selectedDate = d);
-                _fetchForDate(d);
-              },
-            ),
-          ),
-
-          // Main content with pull-to-refresh
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              child: BlocConsumer<HealthMetricsBloc, HealthMetricsState>(
-                listener: (context, state) {
-                  if (state is HealthMetricsLoaded) {
-                    setState(() {
-                      _lastUpdated = DateTime.now();
-                    });
-                  }
-                },
-                builder: (context, state) {
-                  return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: _buildStateContent(context, state),
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStateContent(BuildContext context, HealthMetricsState state) {
-    final theme = Theme.of(context);
-
     if (state is HealthMetricsLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -118,8 +117,24 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
     }
 
     if (state is HealthMetricsLoaded) {
-      final metrics = state.metrics;
-      return _buildMetricsView(context, metrics);
+      if (state.summary != null) {
+        return _buildMetricsView(context, state.summary!);
+      }
+      // If loaded but no summary, show empty
+      return _buildEmpty();
+    }
+
+    if (state is HealthMetricsCachedLoaded) {
+      // show cached then allow refresh
+      final summary = HealthMetricsSummary.fromMap(
+        // If you have MetricAggregator elsewhere, you can compute summary; here we just build minimal
+        // For safety, create a simple summary from available metrics (mock/light)
+        // But if you prefer to wait for live data, simply show the cached metrics list
+        // We'll show empty summary placeholder
+        <String, dynamic>{},
+        selectedDate,
+      );
+      return _buildMetricsView(context, summary);
     }
 
     // fallback
@@ -150,7 +165,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.refresh),
             label: const Text('Fetch now'),
-            onPressed: () => _fetchForDate(selectedDate),
+            onPressed: () => context.read<HealthMetricsBloc>().add(GetMetricsForDate(selectedDate)),
           ),
         ),
       ],
@@ -173,7 +188,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.replay),
             label: const Text('Try again'),
-            onPressed: () => _fetchForDate(selectedDate),
+            onPressed: () => context.read<HealthMetricsBloc>().add(GetMetricsForDate(selectedDate)),
           ),
         ),
       ],
@@ -201,13 +216,8 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
           ),
         ),
         const SizedBox(height: 18),
-
-        // Small summary grid
         _buildSummaryGrid(metrics),
-
         const SizedBox(height: 18),
-
-        // Detail card
         Card(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 2,
@@ -232,10 +242,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
             ),
           ),
         ),
-
         const SizedBox(height: 18),
-
-        // Placeholder for charts or more detailed data
         Card(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 1,
@@ -246,7 +253,6 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
             ),
           ),
         ),
-
         const SizedBox(height: 40),
       ],
     );
@@ -257,7 +263,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
       _SummaryTileData('Steps', metrics.steps.toString(), Icons.directions_walk, Colors.blue),
       _SummaryTileData('Calories', metrics.activeEnergyBurned?.toStringAsFixed(0) ?? 'N/A', Icons.local_fire_department, Colors.orange),
       _SummaryTileData('Sleep', 'N/A', Icons.hotel, Colors.indigo),
-      _SummaryTileData('Water', 'N/A', Icons.local_drink, Colors.teal),
+      _SummaryTileData('Water', metrics.water?.toString() ?? 'N/A', Icons.local_drink, Colors.teal),
     ];
 
     return GridView.builder(

@@ -22,4 +22,7 @@ abstract class HealthMetricsLocalDataSource {
 
   /// Caches a list of [HealthMetrics] in a single transaction.
   Future<void> cacheHealthMetricsBatch(List<HealthMetrics> metrics);
+
+  /// (Optional) delete all local data — useful for a "Clear local" button
+  Future<void> clearAllLocalMetrics();
 }
