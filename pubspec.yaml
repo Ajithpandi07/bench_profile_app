@@ -78,6 +78,30 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
+  # ... existing dev_dependencies
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.1
+
+# Configuration for App Logo (Launcher Icon)
+flutter_launcher_icons:
+  name: "Bench Profile"
+  android: "launcher_icon"
+  ios: true
+  image_path: "lib/assets/images/bench_profile_logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#AB47BC"
+  adaptive_icon_foreground: "lib/assets/images/bench_profile_logo.png"
+
+# Configuration for Loading Logo (Native Splash Screen)
+flutter_native_splash:
+  color: "#AB47BC" # Background color of the loading screen
+  image: "lib/assets/images/bench_profile_logo.png"
+  branding: "lib/assets/images/bench_profile_logo.png" # Optional: Branding image at bottom
+  color_dark: "#000000" # Optional: Dark mode background
+  android_12:
+    image: "lib/assets/images/bench_profile_logo.png"
+    color: "#AB47BC"
+
 # The following section is specific to Flutter packages.
 flutter:
 

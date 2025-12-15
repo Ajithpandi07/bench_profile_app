@@ -216,63 +216,66 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
 
   @override
   Future<Either<Failure, void>> syncPastHealthData({int days = 30}) async {
-    try {
-      final today = DateTime.now();
-      final startDate = DateTime(today.year, today.month, today.day).subtract(Duration(days: days));
-      final types = HealthDataType.values;
 
-      final deviceMaybe = await dataSource.getHealthMetricsRange(startDate, today, types);
-      final deviceList = _normalizeToList(deviceMaybe);
+      return Left(RepositoryFailure('Sync error:'));
+     
+    // try {
+    //   final today = DateTime.now();
+    //   final startDate = DateTime(today.year, today.month, today.day).subtract(Duration(days: days));
+    //   final types = HealthDataType.values;
 
-      if (deviceList.isEmpty) {
-        debugPrint('No device metrics found for range $startDate..$today');
-        return const Right(null);
-      }
+    //   final deviceMaybe = await dataSource.getHealthMetricsRange(startDate, today, types);
+    //   final deviceList = _normalizeToList(deviceMaybe);
 
-      // Group device points by day
-      final Map<String, List<HealthMetrics>> byDate = {};
-      for (final p in deviceList) {
-        final key = '${p.dateFrom.year}-${p.dateFrom.month.toString().padLeft(2, '0')}-${p.dateFrom.day.toString().padLeft(2, '0')}';
-        byDate.putIfAbsent(key, () => []).add(p);
-      }
+    //   if (deviceList.isEmpty) {
+    //     debugPrint('No device metrics found for range $startDate..$today');
+    //     return const Right(null);
+    //   }
 
-      for (final entry in byDate.entries) {
-        final parts = entry.key.split('-');
-        final d = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
-        final deviceForDay = entry.value;
+    //   // Group device points by day
+    //   final Map<String, List<HealthMetrics>> byDate = {};
+    //   for (final p in deviceList) {
+    //     final key = '${p.dateFrom.year}-${p.dateFrom.month.toString().padLeft(2, '0')}-${p.dateFrom.day.toString().padLeft(2, '0')}';
+    //     byDate.putIfAbsent(key, () => []).add(p);
+    //   }
 
-        // fetch remote points for that day (best-effort)
-        List<HealthMetrics> remoteForDay = [];
-        try {
-          final remoteMaybe = await remoteDataSource.getHealthMetricsForDate(d);
-          remoteForDay = _normalizeToList(remoteMaybe);
-        } catch (e) {
-          debugPrint('Failed to fetch remote metrics for $d: $e');
-        }
+    //   for (final entry in byDate.entries) {
+    //     final parts = entry.key.split('-');
+    //     final d = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    //     final deviceForDay = entry.value;
 
-        final remoteUuids = remoteForDay.map((e) => e.uuid).toSet();
-        final toUpload = deviceForDay.where((p) => !remoteUuids.contains(p.uuid)).toList();
+    //     // fetch remote points for that day (best-effort)
+    //     List<HealthMetrics> remoteForDay = [];
+    //     try {
+    //       final remoteMaybe = await remoteDataSource.getHealthMetricsForDate(d);
+    //       remoteForDay = _normalizeToList(remoteMaybe);
+    //     } catch (e) {
+    //       debugPrint('Failed to fetch remote metrics for $d: $e');
+    //     }
 
-        if (toUpload.isNotEmpty) {
-          try {
-            await remoteDataSource.uploadHealthMetrics(toUpload);
-            debugPrint('Uploaded ${toUpload.length} missing points for $d');
-          } catch (e, st) {
-            debugPrint('Upload failed for $d: $e\n$st');
-          }
-        } else {
-          debugPrint('No missing points to upload for $d');
-        }
-      }
+    //     final remoteUuids = remoteForDay.map((e) => e.uuid).toSet();
+    //     final toUpload = deviceForDay.where((p) => !remoteUuids.contains(p.uuid)).toList();
 
-      return const Right(null);
-    } on PermissionDeniedException {
-      return const Left(PermissionFailure('Health permissions were not granted.'));
-    } on ServerException catch (e) {
-      return Left(ServerFailure('Remote server error during sync: ${e.message}'));
-    } catch (e) {
-      return Left(RepositoryFailure('Sync error: ${e.toString()}'));
-    }
+    //     if (toUpload.isNotEmpty) {
+    //       try {
+    //         await remoteDataSource.uploadHealthMetrics(toUpload);
+    //         debugPrint('Uploaded ${toUpload.length} missing points for $d');
+    //       } catch (e, st) {
+    //         debugPrint('Upload failed for $d: $e\n$st');
+    //       }
+    //     } else {
+    //       debugPrint('No missing points to upload for $d');
+    //     }
+    //   }
+
+    //   return const Right(null);
+    // } on PermissionDeniedException {
+    //   return const Left(PermissionFailure('Health permissions were not granted.'));
+    // } on ServerException catch (e) {
+    //   return Left(ServerFailure('Remote server error during sync: ${e.message}'));
+    // } catch (e) {
+    //   return Left(RepositoryFailure('Sync error: ${e.toString()}'));
+    // }
   }
 
   @override

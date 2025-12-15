@@ -8,6 +8,21 @@ import 'package:bench_profile_app/core/error/exceptions.dart';
 import 'health_metrics_data_source.dart';
 import '../../domain/entities/health_metrics.dart';
 
+/// Simple global guard to avoid Health Connect rate limits
+class _HealthConnectRateGuard {
+  static DateTime? _lastCall;
+
+  static Future<void> wait() async {
+    if (_lastCall != null) {
+      final diff = DateTime.now().difference(_lastCall!);
+      if (diff.inSeconds < 10) {
+        await Future.delayed(Duration(seconds: 10 - diff.inSeconds));
+      }
+    }
+    _lastCall = DateTime.now();
+  }
+}
+
 class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   final Health _health;
   final MetricAggregator? _aggregator;
@@ -18,53 +33,94 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   })  : _health = health,
         _aggregator = aggregator;
 
-  /// Try to fetch points using the named-parameter form that recent `health`
-  /// package versions provide. Always supplies `types`.
-  Future<List<HealthDataPoint>> _fetchPoints(
+  // ---------------------------------------------------------------------------
+  // TIER DEFINITIONS (CRITICAL FOR RATE-LIMIT SAFETY)
+  // ---------------------------------------------------------------------------
+
+  // Tier 1: Core Daily Activity, Vitals & Sleep (High Frequency Fetch)
+  List<HealthDataType> _tier1CoreTypes() => [
+    // Activity
+    HealthDataType.STEPS,
+    HealthDataType.HEART_RATE,
+    HealthDataType.ACTIVE_ENERGY_BURNED,
+    HealthDataType.FLIGHTS_CLIMBED,
+    HealthDataType.WORKOUT, // New - Represents sessions like Running, etc.
+
+    // Sleep
+    // HealthDataType.SLEEP_IN_BED, // New - Total sleep session duration
+    HealthDataType.SLEEP_ASLEEP,
+    HealthDataType.SLEEP_AWAKE,
+  ];
+
+  // Tier 2: Body Measurements & Vitals (Medium Frequency / Lower Volatility)
+  List<HealthDataType> _tier2BodyAndVitals() => [
+    // Body Measurement
+    HealthDataType.HEIGHT,
+    HealthDataType.WEIGHT,
+    HealthDataType.BODY_FAT_PERCENTAGE,
+    HealthDataType.BODY_MASS_INDEX, // New
+
+    // Vitals
+    HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
+    HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
+    HealthDataType.RESPIRATORY_RATE,
+    HealthDataType.BODY_TEMPERATURE,
+
+    // Nutrition
+    HealthDataType.WATER,
+    HealthDataType.BASAL_ENERGY_BURNED,
+  ];
+
+  // Tier 3: Sensitive Medical & Detailed Nutrition (Low Frequency Fetch)
+  List<HealthDataType> _tier3MedicalAndNutrition() => [
+    HealthDataType.BLOOD_GLUCOSE,
+    HealthDataType.NUTRITION, // New - For detailed macro/micronutrients
+    // Add other sensitive types like MENSTRUATION_FLOW if needed...
+  ];
+
+  // ---------------------------------------------------------------------------
+  // SAFE BATCH FETCH (NO PER-TYPE LOOPS)
+  // ---------------------------------------------------------------------------
+
+  Future<List<HealthDataPoint>> _fetchBatch(
     DateTime start,
     DateTime end,
     List<HealthDataType> types,
   ) async {
-    final List<HealthDataPoint> allPoints = [];
-    if (types.isEmpty) return allPoints;
+    if (types.isEmpty) return [];
+
+    await _HealthConnectRateGuard.wait();
 
     try {
-      // Preferred: named-parameter API (most common in modern health package)
-      final points = await _health.getHealthDataFromTypes(
+      dev.log(
+        'Fetching batch: ${types.map((e) => e.name).toList()}',
+        name: 'HealthDataSource',
+      );
+
+      return await _health.getHealthDataFromTypes(
         startTime: start,
         endTime: end,
         types: types,
       );
-      allPoints.addAll(points);
-      return allPoints;
     } catch (e) {
-      dev.log('Primary getHealthDataFromTypes(named) failed: $e', name: 'HealthDataSource');
-
-      // Fallback: try per-type using the named API (still passes 'types')
-      for (final t in types) {
-        try {
-          final pts = await _health.getHealthDataFromTypes(
-            startTime: start,
-            endTime: end,
-            types: [t],
-          );
-          allPoints.addAll(pts);
-        } catch (e2) {
-          dev.log('Per-type named fetch failed for $t: $e2', name: 'HealthDataSource');
-          // ignore this type and continue with others
-        }
-      }
-
-      return allPoints;
+      dev.log(
+        'Batch fetch failed (${types.length} types): $e',
+        name: 'HealthDataSource',
+      );
+      return [];
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // MAPPING + DEDUPLICATION
+  // ---------------------------------------------------------------------------
 
   List<HealthMetrics> _mapAndDeduplicate(List<HealthDataPoint> points) {
     final mapped = points.map((p) {
       try {
         return HealthMetrics.fromHealthDataPoint(p);
       } catch (e, st) {
-        dev.log('Failed mapping point to HealthMetrics: $e\n$st', name: 'HealthDataSource');
+        dev.log('Mapping failed: $e\n$st', name: 'HealthDataSource');
         return null;
       }
     }).whereType<HealthMetrics>().toList();
@@ -79,69 +135,48 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
     return byUuid.values.toList();
   }
 
-  List<HealthDataType> _platformDefaultTypes() {
-    final common = <HealthDataType>[
-      HealthDataType.STEPS,
-      HealthDataType.HEART_RATE,
-      HealthDataType.ACTIVE_ENERGY_BURNED,
-      HealthDataType.WATER,
-      HealthDataType.FLIGHTS_CLIMBED,
-      HealthDataType.RESTING_HEART_RATE,
-      HealthDataType.BLOOD_OXYGEN,
-      HealthDataType.SLEEP_ASLEEP,
-      HealthDataType.SLEEP_AWAKE,
-    ];
-
-    final androidSpecific = <HealthDataType>[
-      HealthDataType.BASAL_ENERGY_BURNED,
-      HealthDataType.HEIGHT,
-      HealthDataType.WEIGHT,
-      HealthDataType.BODY_FAT_PERCENTAGE,
-      HealthDataType.BODY_TEMPERATURE,
-      HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
-      HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
-      HealthDataType.BLOOD_GLUCOSE,
-      HealthDataType.RESPIRATORY_RATE,
-    ];
-
-    final iosSpecific = <HealthDataType>[
-      HealthDataType.BASAL_ENERGY_BURNED,
-      HealthDataType.HEIGHT,
-      HealthDataType.WEIGHT,
-      HealthDataType.BODY_FAT_PERCENTAGE,
-      HealthDataType.BODY_TEMPERATURE,
-      HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
-      HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
-      // Sleep stage enums may not exist in some versions; remove if you get errors.
-      // HealthDataType.SLEEP_IN_BED,
-      // HealthDataType.SLEEP_LIGHT,
-      // HealthDataType.SLEEP_DEEP,
-      // HealthDataType.SLEEP_REM,
-    ];
-
-    final merged = <HealthDataType>{...common};
-    if (Platform.isAndroid) merged.addAll(androidSpecific);
-    if (Platform.isIOS) merged.addAll(iosSpecific);
-    return merged.toList();
-  }
+  // ---------------------------------------------------------------------------
+  // PUBLIC API
+  // ---------------------------------------------------------------------------
 
   @override
   Future<List<HealthMetrics>> getHealthMetricsForDate(DateTime date) async {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
-    final defaultTypes = _platformDefaultTypes();
 
     try {
-      final points = await _fetchPoints(start, end, defaultTypes);
-      final metrics = _mapAndDeduplicate(points);
-      return metrics;
-    } on Exception catch (e) {
+      final allPoints = <HealthDataPoint>[];
+
+      // Tier 1 – Core Daily Activity & Sleep (1-day lookback)
+      allPoints.addAll(
+        await _fetchBatch(start, end, _tier1CoreTypes()),
+      );
+
+      // Tier 2 – Body Measurements & Vitals (90-day lookback)
+      allPoints.addAll(
+        await _fetchBatch(
+          start.subtract(const Duration(days: 90)),
+          end,
+          _tier2BodyAndVitals(),
+        ),
+      );
+
+      // Tier 3 – Sensitive/Detailed (180-day lookback)
+      allPoints.addAll(
+        await _fetchBatch(
+          start.subtract(const Duration(days: 180)),
+          end,
+          _tier3MedicalAndNutrition(),
+        ),
+      );
+
+      return _mapAndDeduplicate(allPoints);
+    } catch (e) {
       dev.log('Error in getHealthMetricsForDate: $e', name: 'HealthDataSource');
-      if (e.toString().toLowerCase().contains('permission') ||
-          e.toString().toLowerCase().contains('denied')) {
+      if (e.toString().toLowerCase().contains('permission')) {
         throw PermissionDeniedException();
       }
-      return <HealthMetrics>[];
+      return [];
     }
   }
 
@@ -151,19 +186,38 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
     DateTime end,
     List<HealthDataType> types,
   ) async {
-    final queryTypes = types.isEmpty ? _platformDefaultTypes() : types;
-
     try {
-      final points = await _fetchPoints(start, end, queryTypes);
-      final metrics = _mapAndDeduplicate(points);
-      return metrics;
-    } on Exception catch (e) {
+      final allPoints = <HealthDataPoint>[];
+
+      // If specific types requested → fetch once
+      if (types.isNotEmpty) {
+        allPoints.addAll(await _fetchBatch(start, end, types));
+      } else {
+        // Otherwise use tiered strategy
+        allPoints.addAll(await _fetchBatch(start, end, _tier1CoreTypes()));
+        allPoints.addAll(
+          await _fetchBatch(
+            start.subtract(const Duration(days: 90)),
+            end,
+            _tier2BodyAndVitals(),
+          ),
+        );
+        allPoints.addAll(
+          await _fetchBatch(
+            start.subtract(const Duration(days: 180)),
+            end,
+            _tier3MedicalAndNutrition(),
+          ),
+        );
+      }
+
+      return _mapAndDeduplicate(allPoints);
+    } catch (e) {
       dev.log('Error in getHealthMetricsRange: $e', name: 'HealthDataSource');
-      if (e.toString().toLowerCase().contains('permission') ||
-          e.toString().toLowerCase().contains('denied')) {
+      if (e.toString().toLowerCase().contains('permission')) {
         throw PermissionDeniedException();
       }
-      return <HealthMetrics>[];
+      return [];
     }
   }
 }

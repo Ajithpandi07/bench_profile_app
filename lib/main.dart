@@ -40,35 +40,35 @@ void main() async {
   // Initialize Workmanager AFTER di.init() and Firebase.
   await Workmanager().initialize(callbackDispatcher);
 
-  // Register a one-off task to test background execution quickly (debug only).
-  await Workmanager().registerOneOffTask(
-    'debug-sync-once',
-    healthDataSyncTask,
-    initialDelay: const Duration(seconds: 10), // runs ~10s after app start
-    inputData: {'debug': '1'},
-  );
+  // // Register a one-off task to test background execution quickly (debug only).
+  // await Workmanager().registerOneOffTask(
+  //   'debug-sync-once',
+  //   healthDataSyncTask,
+  //   initialDelay: const Duration(seconds: 10), // runs ~10s after app start
+  //   inputData: {'debug': '1'},
+  // );
 
-  // Also register periodic task if you want
-  await Workmanager().registerPeriodicTask(
-    "periodic-sync-id",
-    healthDataSyncTask,
-    // initialDelay: const Duration(seconds: 10),
-    frequency: const Duration(minutes: 15),
-    constraints: Constraints(networkType: NetworkType.connected),
-  );
+  // // Also register periodic task if you want
+  // await Workmanager().registerPeriodicTask(
+  //   "periodic-sync-id",
+  //   healthDataSyncTask,
+  //   // initialDelay: const Duration(seconds: 10),
+  //   frequency: const Duration(minutes: 15),
+  //   constraints: Constraints(networkType: NetworkType.connected),
+  // );
 
-  // DEBUG: run one-shot sync immediately on startup (only in debug)
-  if (kDebugMode) {
-    Future.delayed(const Duration(seconds: 2), () async {
-      try {
-        debugPrint('DEBUG: Triggering startup sync...');
-        final ok = await di.sl<SyncManager>().performSyncOnce();
-        debugPrint('DEBUG: Startup sync result: $ok');
-      } catch (e, st) {
-        debugPrint('DEBUG: Startup sync FAILED: $e\n$st');
-      }
-    });
-  }
+  // // DEBUG: run one-shot sync immediately on startup (only in debug)
+  // if (kDebugMode) {
+  //   Future.delayed(const Duration(seconds: 2), () async {
+  //     try {
+  //       debugPrint('DEBUG: Triggering startup sync...');
+  //       final ok = await di.sl<SyncManager>().performSyncOnce();
+  //       debugPrint('DEBUG: Startup sync result: $ok');
+  //     } catch (e, st) {
+  //       debugPrint('DEBUG: Startup sync FAILED: $e\n$st');
+  //     }
+  //   });
+  // }
 
   runApp(const MyApp());
 }

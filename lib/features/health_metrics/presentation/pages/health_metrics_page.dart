@@ -210,8 +210,8 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
               goalSteps: 10000,
               fullCircle: false,
               showQuickActions: true,
-              animateDuration: const Duration(milliseconds: 700),
-              size: 150,
+              animateDuration: const Duration(milliseconds: 500),
+              size: 250,
             ),
           ),
         ),
@@ -262,7 +262,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
     final entries = <_SummaryTileData>[
       _SummaryTileData('Steps', metrics.steps.toString(), Icons.directions_walk, Colors.blue),
       _SummaryTileData('Calories', metrics.activeEnergyBurned?.toStringAsFixed(0) ?? 'N/A', Icons.local_fire_department, Colors.orange),
-      _SummaryTileData('Sleep', 'N/A', Icons.hotel, Colors.indigo),
+      _SummaryTileData('Heart Rate', metrics.heartRate != null ? '${metrics.heartRate!.round()} bpm' : 'N/A', Icons.favorite, Colors.red),
       _SummaryTileData('Water', metrics.water?.toString() ?? 'N/A', Icons.local_drink, Colors.teal),
     ];
 

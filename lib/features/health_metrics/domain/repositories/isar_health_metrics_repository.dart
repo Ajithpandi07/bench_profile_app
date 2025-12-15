@@ -75,6 +75,14 @@ class IsarHealthMetricsRepository implements HealthRepository {
   @override
   Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(DateTime date) async {
     try {
+ 
+ 
+       // Trigger sync if fetching for today (app opening scenario)
+      final now = DateTime.now();
+      // if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      //   await syncPastHealthData();
+      // }
+
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
 
@@ -130,34 +138,51 @@ class IsarHealthMetricsRepository implements HealthRepository {
   Future<Either<Failure, void>> syncPastHealthData({int days = 30}) async {
     try {
       final now = DateTime.now();
-      final start = now.subtract(Duration(days: days));
 
-      // For this implementation, we'll sync all available data types.
-      // You could make this configurable if needed.
-      final types = HealthDataType.values;
+      // Iterate through each day to check data availability individually
+      for (int i = 0; i <= days; i++) {
+        final date = now.subtract(Duration(days: i));
+        final startOfDay = DateTime(date.year, date.month, date.day);
+        final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      // 1. Fetch all metrics from the device's Health API for the date range.
-      final deviceMetrics = await healthDataSource.getHealthMetricsRange(start, now, types);
+        // Check if we have data in local DB for this specific day
+        final localCount = await isar.healthMetrics
+            .filter()
+            .dateFromGreaterThan(startOfDay, include: true)
+            .dateFromLessThan(endOfDay, include: false)
+            .count();
 
-      if (deviceMetrics.isEmpty) {
-        return const Right(null); // Nothing to do
-      }
+        if (localCount == 0) {
+          // Case 1: No local data -> Sync from REMOTE only (Restore)
+          try {
+            final remoteMetrics = await remoteDataSource.getHealthMetricsForDate(startOfDay);
+            if (remoteMetrics.isNotEmpty) {
+              await isar.writeTxn(() async => await isar.healthMetrics.putAll(remoteMetrics));
+            }
+          } catch (_) {}
+        } else {
+          // Case 2: Local data exists -> Sync from DEVICE (Update)
+          // We fetch from device to ensure we have the latest data for this day
+          try {
+            final deviceMetrics = await healthDataSource.getHealthMetricsForDate(startOfDay);
+            if (deviceMetrics.isNotEmpty) {
+              // Deduplicate: Get existing UUIDs for this day
+              final existingUuids = await isar.healthMetrics
+                  .filter()
+                  .dateFromGreaterThan(startOfDay, include: true)
+                  .dateFromLessThan(endOfDay, include: false)
+                  .uuidProperty()
+                  .findAll();
+              
+              final existingSet = existingUuids.toSet();
+              final newMetrics = deviceMetrics.where((m) => !existingSet.contains(m.uuid)).toList();
 
-      // 2. Fetch existing metric UUIDs from the local database for the same range to avoid duplicates.
-      final existingUuids = await isar.healthMetrics
-          .filter()
-          .dateFromBetween(start, now)
-          .uuidProperty()
-          .findAll();
-
-      final existingUuidsSet = existingUuids.toSet();
-
-      // 3. Filter out device metrics that are already in the local database.
-      final newMetricsToSave = deviceMetrics.where((m) => !existingUuidsSet.contains(m.uuid)).toList();
-
-      // 4. If there are new metrics, save them to the local Isar database.
-      if (newMetricsToSave.isNotEmpty) {
-        await isar.writeTxn(() async => await isar.healthMetrics.putAll(newMetricsToSave));
+              if (newMetrics.isNotEmpty) {
+                await isar.writeTxn(() async => await isar.healthMetrics.putAll(newMetrics));
+              }
+            }
+          } catch (_) {}
+        }
       }
 
       return const Right(null);
