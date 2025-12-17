@@ -53,7 +53,7 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard> {
                     isActive: _activeTab == 'heart',
                     onTap: () => setState(() => _activeTab = 'heart'),
                   ),
-                    // Center Add Button
+                  // Center Add Button
                   GestureDetector(
                     onTap: () => setState(() => _activeTab = 'add'),
                     child: Container(
@@ -78,7 +78,8 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard> {
                             color: Colors.white,
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
-                            fontFamily: 'serif', // Trying to match the H style roughly
+                            fontFamily:
+                                'serif', // Trying to match the H style roughly
                             letterSpacing: -1,
                           ),
                         ),
@@ -165,208 +166,265 @@ class _HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFFEE374D);
+    final size = MediaQuery.of(context).size;
+
+    // Calculate Vertical Center of the Card to align background
+    // StatusBar + HeaderPadding(16) + HeaderHeight(56 approx) + Spacing(20) + CardRadius(240/2)
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    final double cardCenterY = statusBarHeight + 16 + 56 + 20 + (240 / 2);
 
     return BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
       builder: (context, state) {
         HealthMetricsSummary? metrics;
         if (state is HealthMetricsLoaded) {
           metrics = state.summary;
-        } else if (state is HealthMetricsCachedLoaded) {
-          // Try to construct a summary or use cached data if available in state
-          // For now, we'll just use null or empty
         }
 
-        return SafeArea(
-          bottom: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Home',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                      ),
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.grey.shade200,
-                        backgroundImage: const NetworkImage('https://i.pravatar.cc/150?img=32'),
-                      ),
+        return Stack(
+          children: [
+            // Massive Background Single Circle - Concentric with Card
+            Positioned(
+              top: cardCenterY - size.width, // CenterY - Radius
+              left: -size.width * 0.5,
+              right: -size.width * 0.5,
+              height: size.width * 2.0, // Radius = width
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: primaryColor.withOpacity(0.08),
+                    width: 1.5,
+                  ),
+                  gradient: RadialGradient(
+                    colors: [
+                      primaryColor.withOpacity(0.04),
+                      Colors.white.withOpacity(0.0),
                     ],
+                    stops: const [0.7, 1.0],
                   ),
                 ),
+              ),
+            ),
 
-                const SizedBox(height: 20),
-
-                // Circular Progress
-                CircularScoreCard(
-                  metrics: metrics,
-                  goalSteps: 10000,
-                  size: 280,
-                ),
-
-                const SizedBox(height: 32),
-
-                // Stats Grid
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _StatItem(
-                        icon: Icons.restaurant,
-                        sub: '+',
-                        val: '0/3',
-                        unit: '',
-                      ),
-                      _StatItem(
-                        icon: Icons.water_drop,
-                        sub: '+',
-                        val: '${metrics?.water?.toStringAsFixed(1) ?? 0}/3.2',
-                        unit: 'l',
-                      ),
-                      _StatItem(
-                        icon: Icons.directions_run,
-                        sub: '+',
-                        val: '0/${(metrics?.activeEnergyBurned ?? 60).toInt()}',
-                        unit: 'min',
-                      ),
-                      _StatItem(
-                        icon: Icons.calendar_today,
-                        sub: '+',
-                        val: 'In 3',
-                        unit: 'h',
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Check-in Card
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+            // Main Scrollable Content
+            SafeArea(
+              bottom: false,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
+                          const Text(
+                            'Home',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
                               color: primaryColor,
-                              shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'CHECK-IN',
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.0,
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor:
+                                const Color.fromRGBO(226, 146, 146, 1),
+                            backgroundImage: const NetworkImage(
+                                'https://i.pravatar.cc/150?img=32'),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Circular Progress (Now smaller and tighter)
+                    CircularScoreCard(
+                      metrics: metrics,
+                      goalSteps: 10000,
+                      size:
+                          240, // Reduced from 360 to wrap tightly around 160 button
+                    ),
+
+                    const SizedBox(height: 40), // Spacing to grid
+
+                    // Stats Grid
+                    // Stats Grid - Arced Layout
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                top: 0), // Highest point (outer)
+                            child: _StatItem(
+                              icon: Icons.restaurant,
+                              sub: '+',
+                              val: '0/3',
+                              unit: '',
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                top: 40), // Lower point (inner)
+                            child: _StatItem(
+                              icon: Icons.water_drop,
+                              sub: '+',
+                              val:
+                                  '${metrics?.water?.toStringAsFixed(1) ?? 0}/3.2',
+                              unit: 'l',
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                top: 40), // Lower point (inner)
+                            child: _StatItem(
+                              icon: Icons.directions_run,
+                              sub: '+',
+                              val:
+                                  '0/${(metrics?.activeEnergyBurned ?? 60).toInt()}',
+                              unit: 'min',
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                                top: 0), // Highest point (outer)
+                            child: _StatItem(
+                              icon: Icons.calendar_today,
+                              sub: '+',
+                              val: 'In 3',
+                              unit: 'h',
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      RichText(
-                        text: const TextSpan(
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 14,
-                            height: 1.5,
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Check-in Card
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          children: [
-                            TextSpan(
-                              text: 'Unlock your daily plan',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            TextSpan(
-                              text: ' — built to work for you, without the stress or struggles. Enjoy easy progress every day and ',
-                            ),
-                            TextSpan(
-                              text: 'reach your goals faster',
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            TextSpan(text: '.'),
-                          ],
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 0,
-                          ),
-                          onPressed: () {},
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Text('🔓', style: TextStyle(fontSize: 18)),
-                              SizedBox(width: 8),
-                              Text(
-                                'Unlock with Premium',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'CHECK-IN',
+                                style: TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          RichText(
+                            text: const TextSpan(
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Unlock your daily plan',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                TextSpan(
+                                  text:
+                                      ' — built to work for you, without the stress or struggles. Enjoy easy progress every day and ',
+                                ),
+                                TextSpan(
+                                  text: 'reach your goals faster',
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextSpan(text: '.'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                elevation: 0,
+                              ),
+                              onPressed: () {},
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text('🔓', style: TextStyle(fontSize: 18)),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Unlock with Premium',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
 
-                const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                // Today's Plan
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Today's Plan",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
+                    // Today's Plan
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Today's Plan",
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                
-                const SizedBox(height: 40),
-              ],
+              ),
             ),
-          ),
+          ],
         );
       },
     );
@@ -424,7 +482,7 @@ class _StatItem extends StatelessWidget {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                         BoxShadow(
+                        BoxShadow(
                           color: Colors.black12,
                           blurRadius: 2,
                           offset: Offset(0, 1),
@@ -491,14 +549,16 @@ class CircularScoreCard extends StatefulWidget {
   State<CircularScoreCard> createState() => _CircularScoreCardState();
 }
 
-class _CircularScoreCardState extends State<CircularScoreCard> with SingleTickerProviderStateMixin {
+class _CircularScoreCardState extends State<CircularScoreCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _progressAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: widget.animateDuration, vsync: this);
+    _controller =
+        AnimationController(duration: widget.animateDuration, vsync: this);
     _progressAnimation = Tween<double>(begin: 0, end: _progress).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
@@ -509,7 +569,9 @@ class _CircularScoreCardState extends State<CircularScoreCard> with SingleTicker
   void didUpdateWidget(CircularScoreCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.metrics?.steps != oldWidget.metrics?.steps) {
-      _progressAnimation = Tween<double>(begin: _progressAnimation.value, end: _progress).animate(
+      _progressAnimation =
+          Tween<double>(begin: _progressAnimation.value, end: _progress)
+              .animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
       );
       _controller
@@ -526,8 +588,8 @@ class _CircularScoreCardState extends State<CircularScoreCard> with SingleTicker
 
   double get _progress {
     final steps = widget.metrics?.steps;
-    if (steps == null || steps <= 0) return 0.0;
-    return math.min(steps / widget.goalSteps, 1.0);
+    // if (steps == null || steps <= 0) return 0.0;
+    return math.min(7000 / widget.goalSteps, 1.0);
   }
 
   @override
@@ -543,39 +605,18 @@ class _CircularScoreCardState extends State<CircularScoreCard> with SingleTicker
           children: [
             // Background Gradient Circle (Larger than container to match design)
             // Background Ripples
-            ...List.generate(4, (index) {
-              final scale = 1.0 + (index * 0.25);
-              final opacity = 0.05 - (index * 0.01);
-              return Positioned(
-                width: widget.size * scale,
-                height: widget.size * scale,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFFFCED8).withOpacity(opacity > 0 ? opacity : 0.01),
-                      width: 1,
-                    ),
-                    gradient: index == 0 ? RadialGradient(
-                      colors: [
-                        const Color(0xFFFFCED8).withOpacity(0.4),
-                        Colors.white.withOpacity(0.0),
-                      ],
-                    ) : null,
-                  ),
-                ),
-              );
-            }),
-            
+            // Background Ripples
+            // Background Gradient Circle (Larger than container to match design)
+            // Background Ripples removed - now handled in parent Stack
+
             // White Container Background for progress
+
             Container(
-              width: widget.size,
-              height: widget.size,
+              width: widget.size * 0.5,
+              height: widget.size * 0.5,
               decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-               ),
-             ),
+                  color: Color(0x99FFCED8), shape: BoxShape.circle),
+            ),
 
             // Dashed Progress Circle
             SizedBox(
@@ -587,34 +628,68 @@ class _CircularScoreCardState extends State<CircularScoreCard> with SingleTicker
                   return CustomPaint(
                     painter: _DashedCirclePainter(
                       progress: _progressAnimation.value,
-                      color: Colors.grey.shade300,
-                      activeColor: primaryColor,
-                      strokeWidth: 3,
+                      color: Colors.grey.shade200, // Lighter background
+                      activeGradient: const LinearGradient(
+                        colors: [Color(0xFFEE374D), Color(0xFFFF8A65)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      strokeWidth: 14, // Height of the pipe bars
                     ),
                   );
                 },
               ),
             ),
 
-            // Center Content
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Start', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-                const Text(
-                  'Logging',
-                  style: TextStyle(color: Colors.black87, fontSize: 24, fontWeight: FontWeight.w500),
-                ),
-                Text('to score', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-                if ((widget.metrics?.steps ?? 0) > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      '${widget.metrics!.steps}',
-                      style: const TextStyle(color: primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+            // Center Content - Circular Button
+            Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.15),
+                    blurRadius: 20,
+                    spreadRadius: 4,
+                    offset: const Offset(0, 8),
                   ),
-              ],
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Start',
+                      style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500)),
+                  const Text(
+                    'Logging',
+                    style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  Text('to score',
+                      style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500)),
+                  if ((widget.metrics?.steps ?? 0) > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        '${widget.metrics!.steps}',
+                        style: const TextStyle(
+                            color: primaryColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -626,13 +701,13 @@ class _CircularScoreCardState extends State<CircularScoreCard> with SingleTicker
 class _DashedCirclePainter extends CustomPainter {
   final double progress;
   final Color color;
-  final Color activeColor;
-  final double strokeWidth;
+  final Gradient? activeGradient;
+  final double strokeWidth; // Length of the pipe (radial height)
 
   _DashedCirclePainter({
     required this.progress,
     required this.color,
-    required this.activeColor,
+    this.activeGradient,
     required this.strokeWidth,
   });
 
@@ -641,46 +716,51 @@ class _DashedCirclePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    // Dashed pattern: 8px dash, 6px gap
-    const dashWidth = 8.0;
-    const dashSpace = 6.0;
+    // Config for "Pipes"
+    const int totalPipes = 50; // Total number of bars in the gauge
+    const double pipeThickness = 3.0; // Width of each pipe
 
-    // Draw background
-    _drawDashedArc(canvas, center, radius, 0, 2 * math.pi, color, dashWidth, dashSpace);
+    // Geometry
+    final double startAngleRad = 125 * (math.pi / 180);
+    final double sweepAngle = 290 * (math.pi / 180);
 
-    // Draw progress
-    if (progress > 0) {
-      final sweepAngle = 2 * math.pi * progress;
-      // Start from top (-pi/2)
-      _drawDashedArc(canvas, center, radius, -math.pi / 2, sweepAngle, activeColor, dashWidth, dashSpace);
-    }
-  }
+    final double stepAngle = sweepAngle / (totalPipes - 1);
 
-  void _drawDashedArc(Canvas canvas, Offset center, double radius, double startAngle, double sweepAngle, Color color,
-      double dashWidth, double dashSpace) {
-    final paint = Paint()
+    // Paint Setup
+    final backgroundPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
+      ..strokeWidth = pipeThickness
       ..strokeCap = StrokeCap.round;
 
-    double currentAngle = startAngle;
-    final endAngle = startAngle + sweepAngle;
+    final activePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = pipeThickness
+      ..strokeCap = StrokeCap.round;
 
-    // Convert dash width/space to radians
-    final dashRad = dashWidth / radius;
-    final spaceRad = dashSpace / radius;
+    if (activeGradient != null) {
+      activePaint.shader = activeGradient!
+          .createShader(Rect.fromCircle(center: center, radius: radius));
+    } else {
+      activePaint.color = const Color(0xFFEE374D);
+    }
 
-    while (currentAngle < endAngle) {
-      final drawLen = math.min(dashRad, endAngle - currentAngle);
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        currentAngle,
-        drawLen,
-        false,
-        paint,
-      );
-      currentAngle += drawLen + spaceRad;
+    // Draw Loop
+    for (int i = 0; i < totalPipes; i++) {
+      final double currentAngle = startAngleRad + (i * stepAngle);
+      final bool isActive = (i / (totalPipes - 1)) <= progress;
+
+      // Calculate radial line segment
+      // We want the pipe to be centered on 'radius' circle, with length 'strokeWidth'
+      final double innerR = radius - (strokeWidth / 2);
+      final double outerR = radius + (strokeWidth / 2);
+
+      final p1 = Offset(center.dx + innerR * math.cos(currentAngle),
+          center.dy + innerR * math.sin(currentAngle));
+      final p2 = Offset(center.dx + outerR * math.cos(currentAngle),
+          center.dy + outerR * math.sin(currentAngle));
+
+      canvas.drawLine(p1, p2, isActive ? activePaint : backgroundPaint);
     }
   }
 
