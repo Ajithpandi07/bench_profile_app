@@ -6,9 +6,9 @@ import 'package:intl/intl.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_state.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/circular_score_card.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/widgets/horizontal_date_selector.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/widgets/metric_card.dart';
 
 class HealthMetricsPage extends StatefulWidget {
   const HealthMetricsPage({super.key});
@@ -33,47 +33,84 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocConsumer<HealthMetricsBloc, HealthMetricsState>(
-        listener: (context, state) {
-          // Optional: show snackbars for errors
-          if (state is HealthMetricsError) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-          }
-        },
-        builder: (context, state) {
-          return Column(
-            children: [
-              // Horizontal date selector
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: HorizontalDateSelector(
-                  key: ValueKey(selectedDate),
-                  initialDate: selectedDate,
-                  daysBefore: 60,
-                  daysAfter: DateTime.now().difference(selectedDate).inDays.abs(),
-                  onDateSelected: (d) {
-                    setState(() => selectedDate = d);
-                    // UI event + load data for date
-                    context.read<HealthMetricsBloc>().add(SelectDate(d));
-                  },
-                ),
-              ),
-
-              // Main content with pull-to-refresh
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => _handleRefresh(context),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: _buildStateContent(context, state),
+      body: SafeArea(
+        child: BlocConsumer<HealthMetricsBloc, HealthMetricsState>(
+          listener: (context, state) {
+            // Optional: show snackbars for errors
+            if (state is HealthMetricsError) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(state.message)));
+            }
+          },
+          builder: (context, state) {
+            return Column(
+              children: [
+                // Custom Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: () => Navigator.of(context).pop(),
+                        borderRadius: BorderRadius.circular(50),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: Colors.grey.withOpacity(0.2)),
+                          ),
+                          child: const Icon(Icons.arrow_back, size: 24),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Text(
+                        'Health Metrics',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+
+                // Horizontal date selector
+                Padding(
+                  padding: const EdgeInsets.only(
+                      top:
+                          0.0), // Removed top padding as header provides spacing
+                  child: HorizontalDateSelector(
+                    key: ValueKey(selectedDate),
+                    initialDate: selectedDate,
+                    daysBefore: 60,
+                    daysAfter:
+                        DateTime.now().difference(selectedDate).inDays.abs(),
+                    onDateSelected: (d) {
+                      setState(() => selectedDate = d);
+                      // UI event + load data for date
+                      context.read<HealthMetricsBloc>().add(SelectDate(d));
+                    },
+                  ),
+                ),
+
+                // Main content with pull-to-refresh
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () => _handleRefresh(context),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: _buildStateContent(context, state),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -147,7 +184,8 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
       padding: const EdgeInsets.all(20),
       children: [
         const SizedBox(height: 40),
-        Icon(Icons.health_and_safety_outlined, size: 64, color: Colors.grey.shade400),
+        Icon(Icons.health_and_safety_outlined,
+            size: 64, color: Colors.grey.shade400),
         const SizedBox(height: 20),
         Text(
           'No health data yet',
@@ -165,7 +203,9 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
           child: ElevatedButton.icon(
             icon: const Icon(Icons.refresh),
             label: const Text('Fetch now'),
-            onPressed: () => context.read<HealthMetricsBloc>().add(GetMetricsForDate(selectedDate)),
+            onPressed: () => context
+                .read<HealthMetricsBloc>()
+                .add(GetMetricsForDate(selectedDate)),
           ),
         ),
       ],
@@ -180,15 +220,21 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
         const SizedBox(height: 40),
         Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
         const SizedBox(height: 20),
-        Text('Failed to load metrics', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
+        Text('Failed to load metrics',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Text(message, textAlign: TextAlign.center, style: TextStyle(color: Colors.red.shade300)),
+        Text(message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.red.shade300)),
         const SizedBox(height: 24),
         Center(
           child: ElevatedButton.icon(
             icon: const Icon(Icons.replay),
             label: const Text('Try again'),
-            onPressed: () => context.read<HealthMetricsBloc>().add(GetMetricsForDate(selectedDate)),
+            onPressed: () => context
+                .read<HealthMetricsBloc>()
+                .add(GetMetricsForDate(selectedDate)),
           ),
         ),
       ],
@@ -196,96 +242,39 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
   }
 
   Widget _buildMetricsView(BuildContext context, HealthMetricsSummary metrics) {
-    final theme = Theme.of(context);
-
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       children: [
-        // Big circular progress / score card centered
-        Center(
-          child: SizedBox(
-            height: 240,
-            child: CircularScoreCard(
-              metrics: metrics,
-              goalSteps: 10000,
-              fullCircle: false,
-              showQuickActions: true,
-              animateDuration: const Duration(milliseconds: 500),
-              size: 250,
-            ),
-          ),
+        MetricCard(
+          title: 'Steps',
+          value: '${metrics.steps}',
+          icon: Icons.directions_walk,
         ),
-        const SizedBox(height: 18),
-        _buildSummaryGrid(metrics),
-        const SizedBox(height: 18),
-        Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Details', style: theme.textTheme.titleMedium),
-                const Divider(),
-                const SizedBox(height: 6),
-                _infoRow(Icons.directions_walk, 'Steps', metrics.steps.toString(), context),
-                const SizedBox(height: 8),
-                _infoRow(Icons.favorite, 'Resting heart rate', metrics.heartRate != null ? '${metrics.heartRate!.toStringAsFixed(1)} bpm' : 'N/A', context),
-                const SizedBox(height: 8),
-                _infoRow(Icons.line_weight, 'Weight', metrics.weight != null ? '${metrics.weight!.toStringAsFixed(1)} kg' : 'N/A', context),
-                const SizedBox(height: 8),
-                _infoRow(Icons.height, 'Height', metrics.height != null ? '${metrics.height!.toStringAsFixed(1)} cm' : 'N/A', context),
-                const SizedBox(height: 8),
-                _infoRow(Icons.local_fire_department, 'Active energy', metrics.activeEnergyBurned != null ? '${metrics.activeEnergyBurned!.toStringAsFixed(0)} kcal' : 'N/A', context),
-              ],
-            ),
-          ),
+        MetricCard(
+          title: 'Heart Rate',
+          value: metrics.heartRate != null
+              ? '${metrics.heartRate!.round()} bpm'
+              : 'N/A',
+          icon: Icons.favorite_rounded,
         ),
-        const SizedBox(height: 18),
-        Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 1,
-          child: SizedBox(
-            height: 160,
-            child: Center(
-              child: Text('Trends & charts (coming soon)', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
-            ),
-          ),
+        MetricCard(
+          title: 'Active Energy',
+          value: metrics.activeEnergyBurned != null
+              ? '${metrics.activeEnergyBurned!.round()} kcal'
+              : 'N/A',
+          icon: Icons.local_fire_department_rounded,
+        ),
+        MetricCard(
+          title: 'Water',
+          value: '${metrics.water?.toStringAsFixed(1) ?? 0} L',
+          icon: Icons.water_drop_rounded,
+        ),
+        MetricCard(
+          title: 'Weight',
+          value: metrics.weight != null ? '${metrics.weight} kg' : 'N/A',
+          icon: Icons.monitor_weight_rounded,
         ),
         const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildSummaryGrid(HealthMetricsSummary metrics) {
-    final entries = <_SummaryTileData>[
-      _SummaryTileData('Steps', metrics.steps.toString(), Icons.directions_walk, Colors.blue),
-      _SummaryTileData('Calories', metrics.activeEnergyBurned?.toStringAsFixed(0) ?? 'N/A', Icons.local_fire_department, Colors.orange),
-      _SummaryTileData('Heart Rate', metrics.heartRate != null ? '${metrics.heartRate!.round()} bpm' : 'N/A', Icons.favorite, Colors.red),
-      _SummaryTileData('Water', metrics.water?.toString() ?? 'N/A', Icons.local_drink, Colors.teal),
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: entries.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisExtent: 92, crossAxisSpacing: 12, mainAxisSpacing: 12),
-      itemBuilder: (context, idx) {
-        final e = entries[idx];
-        return _SummaryTile(data: e);
-      },
-    );
-  }
-
-  Widget _infoRow(IconData icon, String label, String val, BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 12),
-        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
-        const SizedBox(width: 12),
-        Text(val, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ],
     );
   }
@@ -296,47 +285,5 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return DateFormat.yMMMd().format(t);
-  }
-}
-
-class _SummaryTileData {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  _SummaryTileData(this.title, this.value, this.icon, this.color);
-}
-
-class _SummaryTile extends StatelessWidget {
-  final _SummaryTileData data;
-  const _SummaryTile({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: data.color.withOpacity(0.12),
-              child: Icon(data.icon, color: data.color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(data.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Text(data.value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              ]),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

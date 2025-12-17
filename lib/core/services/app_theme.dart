@@ -42,6 +42,13 @@ class AppTheme {
     ),
     // You can add further customizations for component themes here.
     textTheme: _textTheme,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.white,
+      foregroundColor:
+          Colors.black, // or Color(0xFFEE374D) if they want red text
+      elevation: 0,
+      scrolledUnderElevation: 0,
+    ),
     // Further component theme customizations can be added here.
   );
 

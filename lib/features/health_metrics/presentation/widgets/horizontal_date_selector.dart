@@ -29,15 +29,18 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
   @override
   void initState() {
     super.initState();
-    _selected = DateTime(widget.initialDate.year, widget.initialDate.month, widget.initialDate.day);
-    _dates = _generateDates(widget.initialDate, widget.daysBefore, widget.daysAfter);
+    _selected = DateTime(widget.initialDate.year, widget.initialDate.month,
+        widget.initialDate.day);
+    _dates =
+        _generateDates(widget.initialDate, widget.daysBefore, widget.daysAfter);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
   }
 
   List<DateTime> _generateDates(DateTime center, int before, int after) {
     final List<DateTime> dates = [];
     for (int i = -before; i <= after; i++) {
-      final d = DateTime(center.year, center.month, center.day).add(Duration(days: i));
+      final d = DateTime(center.year, center.month, center.day)
+          .add(Duration(days: i));
       dates.add(d);
     }
     return dates;
@@ -52,9 +55,14 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
   void _scrollToSelected() {
     final index = _dates.indexWhere((d) => _sameDay(d, _selected));
     if (index == -1) return;
-    const itemWidth = 80.0; // must match item size below
-    final target = (index * (itemWidth + 8)) - (MediaQuery.of(context).size.width / 2) + (itemWidth / 2);
-    final max = _scrollController.position.hasContentDimensions ? _scrollController.position.maxScrollExtent : 0.0;
+    const itemWidth = 46.0;
+    const separatorWidth = 12.0;
+    final target = (index * (itemWidth + separatorWidth)) -
+        (MediaQuery.of(context).size.width / 2) +
+        (itemWidth / 2);
+    final max = _scrollController.position.hasContentDimensions
+        ? _scrollController.position.maxScrollExtent
+        : 0.0;
     _scrollController.animateTo(
       target.clamp(0, max),
       duration: const Duration(milliseconds: 300),
@@ -62,7 +70,8 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
     );
   }
 
-  bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
   String _dayName(DateTime d) => DateFormat('E').format(d); // Mon, Tue
   String _dateShort(DateTime d) => DateFormat('d/M').format(d);
   bool _isToday(DateTime d) => _sameDay(d, DateTime.now());
@@ -76,31 +85,38 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 96,
+      height: 90,
       child: ListView.separated(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: _dates.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final date = _dates[index];
           final isSelected = _sameDay(date, _selected);
           final isToday = _isToday(date);
+          const primaryColor = Color(0xFFEE374D);
 
           return GestureDetector(
             onTap: () => _onTap(date),
-            child: Container(
-              width: 80,
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 40,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : isToday
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
-                        : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: isSelected ? null : Border.all(color: Colors.grey.withOpacity(0.12)),
+                color: isSelected ? primaryColor : Colors.white,
+                borderRadius:
+                    BorderRadius.circular(20), // Fully rounded for width 56
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: isSelected
+                    ? null
+                    : Border.all(color: Colors.grey.withOpacity(0.1)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -108,24 +124,33 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
                   Text(
                     _dayName(date),
                     style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected ? Colors.white : (isToday ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 11,
+                      color: isSelected
+                          ? Colors.white
+                          : (isToday ? primaryColor : Colors.grey.shade500),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _dateShort(date),
+                    _dateShort(date).split('/')[0],
                     style: TextStyle(
-                      fontSize: 14,
-                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 18,
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (isToday)
+                  if (isToday && !isSelected)
                     Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Container(width: 6, height: 6, decoration: BoxDecoration(color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary, shape: BoxShape.circle)),
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     )
                 ],
               ),

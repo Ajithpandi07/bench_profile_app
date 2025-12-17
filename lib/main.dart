@@ -5,7 +5,8 @@ import 'package:bench_profile_app/core/services/background_sync_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bench_profile_app/features/auth/presentation/pages/auth_wrapper.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart' hide SyncManager;
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart'
+    hide SyncManager;
 import 'package:bench_profile_app/core/injection_container.dart' as di;
 import 'package:bench_profile_app/features/health_metrics/domain/usecases/get_health_metrics.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
@@ -17,15 +18,13 @@ import 'package:bench_profile_app/core/services/sync_manager.dart';
 import 'package:bench_profile_app/core/services/app_theme.dart';
 import 'package:bench_profile_app/core/services/theme_service.dart';
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase for main isolate
   await Firebase.initializeApp();
 
-    // init theme service before runApp
+  // init theme service before runApp
   await ThemeService().init();
 
   // Initialize dependency injection for main isolate
@@ -72,6 +71,7 @@ void main() async {
 
   runApp(const MyApp());
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -80,7 +80,9 @@ class MyApp extends StatelessWidget {
     // Provide blocs once and keep MaterialApp reactive to ThemeService.mode
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()..add(GetMetricsForDate(DateTime.now()))),
+        BlocProvider(
+            create: (_) => di.sl<HealthMetricsBloc>()
+              ..add(GetMetricsForDate(DateTime.now()))),
         BlocProvider(create: (_) => di.sl<AuthBloc>()),
       ],
       // Listen to ThemeService.mode and rebuild MaterialApp when it changes
@@ -92,7 +94,7 @@ class MyApp extends StatelessWidget {
             title: 'Bench Profile',
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            themeMode: themeMode, // <- reactive to ThemeService
+            themeMode: themeMode,
             home: const AuthWrapper(),
           );
         },

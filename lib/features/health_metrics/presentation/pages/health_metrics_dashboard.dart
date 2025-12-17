@@ -6,6 +6,7 @@ import 'package:bench_profile_app/features/health_metrics/presentation/bloc/heal
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_state.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
 import 'package:bench_profile_app/features/auth/presentation/pages/profile_page.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_page.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -21,6 +22,7 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F8),
+      appBar: _buildAppBar(),
       body: Stack(
         children: [
           // Main Content Area
@@ -59,7 +61,7 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard> {
                     child: Container(
                       width: 56,
                       height: 56,
-                      margin: const EdgeInsets.only(bottom: 24),
+                      // margin: const EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEE374D),
                         shape: BoxShape.circle,
@@ -102,6 +104,39 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  PreferredSizeWidget? _buildAppBar() {
+    if (_activeTab != 'home') return null; // Or custom app bars for other tabs
+
+    return AppBar(
+      automaticallyImplyLeading: false,
+      title: const Padding(
+        padding: EdgeInsets.only(left: 8.0),
+        child: Text(
+          'Home',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFEE374D),
+          ),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 24.0),
+          child: CircleAvatar(
+            radius: 20,
+            backgroundColor: const Color.fromRGBO(226, 146, 146, 1),
+            backgroundImage:
+                const NetworkImage('https://i.pravatar.cc/150?img=32'),
+          ),
+        ),
+      ],
+      backgroundColor: Colors.transparent, // Let body color show or use white
+      elevation: 0,
+      scrolledUnderElevation: 0,
     );
   }
 
@@ -187,7 +222,7 @@ class _HomeTab extends StatelessWidget {
               top: cardCenterY - size.width, // CenterY - Radius
               left: -size.width * 0.5,
               right: -size.width * 0.5,
-              height: size.width * 2.0, // Radius = width
+              height: size.width * 1.65, // Radius = width
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -197,8 +232,8 @@ class _HomeTab extends StatelessWidget {
                   ),
                   gradient: RadialGradient(
                     colors: [
-                      primaryColor.withOpacity(0.04),
-                      Colors.white.withOpacity(0.0),
+                      Color.fromARGB(255, 207, 2, 153).withOpacity(0.04),
+                      Color.fromARGB(255, 16, 16, 16).withOpacity(0.0),
                     ],
                     stops: const [0.7, 1.0],
                   ),
@@ -213,30 +248,8 @@ class _HomeTab extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Home',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor:
-                                const Color.fromRGBO(226, 146, 146, 1),
-                            backgroundImage: const NetworkImage(
-                                'https://i.pravatar.cc/150?img=32'),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Header removed (moved to AppBar)
+                    const SizedBox(height: 20),
 
                     const SizedBox(height: 20),
 
@@ -611,12 +624,12 @@ class _CircularScoreCardState extends State<CircularScoreCard>
 
             // White Container Background for progress
 
-            Container(
-              width: widget.size * 0.5,
-              height: widget.size * 0.5,
-              decoration: const BoxDecoration(
-                  color: Color(0x99FFCED8), shape: BoxShape.circle),
-            ),
+            // Container(
+            //   width: widget.size * 1.95,
+            //   height: widget.size * 1.95,
+            //   decoration: const BoxDecoration(
+            //       color: Color(0x99FFCED8), shape: BoxShape.circle),
+            // ),
 
             // Dashed Progress Circle
             SizedBox(
@@ -642,53 +655,60 @@ class _CircularScoreCardState extends State<CircularScoreCard>
             ),
 
             // Center Content - Circular Button
-            Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withOpacity(0.15),
-                    blurRadius: 20,
-                    spreadRadius: 4,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Start',
-                      style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500)),
-                  const Text(
-                    'Logging',
-                    style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  Text('to score',
-                      style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500)),
-                  if ((widget.metrics?.steps ?? 0) > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        '${widget.metrics!.steps}',
-                        style: const TextStyle(
-                            color: primaryColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold),
-                      ),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const HealthMetricsPage()),
+                );
+              },
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.15),
+                      blurRadius: 20,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 8),
                     ),
-                ],
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Start',
+                        style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500)),
+                    const Text(
+                      'Logging',
+                      style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text('to score',
+                        style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500)),
+                    if ((widget.metrics?.steps ?? 0) > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          '${widget.metrics!.steps}',
+                          style: const TextStyle(
+                              color: primaryColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
