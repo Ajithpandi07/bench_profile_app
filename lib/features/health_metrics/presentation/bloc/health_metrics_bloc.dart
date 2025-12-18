@@ -95,11 +95,16 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
   Future<void> _onGetMetricsForDate(
       GetMetricsForDate event, Emitter<HealthMetricsState> emit) async {
-    // Update date immediately
+    // 1. Immediate UI update with Local Data (Source of Truth)
     emit(HealthMetricsLoading(selectedDate: event.date));
-    final res = await getHealthMetricsForDate.call(DateParams(event.date));
-    res.fold(
+
+    // Fetch local data (fast)
+    final localRes = await getHealthMetricsForDate.call(DateParams(event.date));
+
+    localRes.fold(
       (failure) {
+        // If local fails, show error, but we still try to sync?
+        // Usually if local fails (e.g. database error), we are in trouble.
         if (failure is PermissionFailure) {
           emit(HealthMetricsPermissionRequired(selectedDate: event.date));
         } else {
@@ -116,12 +121,33 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
           emit(HealthMetricsLoaded(
               metrics: list, summary: summary, selectedDate: event.date));
         } catch (e, st) {
-          debugPrint('Error processing metrics: $e\n$st');
-          emit(HealthMetricsError(
-              message: 'Failed to process data: $e', selectedDate: event.date));
+          debugPrint('Error processing local metrics: $e\n$st');
+          // Non-fatal, might be empty
         }
       },
     );
+
+    // 2. Trigger Background Sync (Device -> Remote -> Local)
+    if (repository != null) {
+      // optimization: Only sync if date is today or recent past?
+      // User asked for "background sync... take health data to remote to locally"
+      // We do this blindly for the requested date to ensure freshness.
+
+      // We don't await this to block UI, but we want to update UI when it finishes.
+      // So we do await it, but since we already emitted Loaded above, the UI is interactive.
+      // However, bloc handlers sort of queue. To truly be "background" to the UI,
+      // we must rely on the fact that we emitted state above.
+      // BUT: Bloc processes events sequentially. Awaiting here delayed processing next event?
+      // No, strictly awaiting here keeps this handler active.
+      // If user taps another date, that event queues.
+      // To make it truly non-blocking for OTHER events (like fast date switching),
+      // we should maybe spawn a separate Future or use a "Sync" event?
+      // But standard Bloc pattern: if we await, we block the stream.
+      // Solution: We emitted Loaded. That's good. But if user clicks next date,
+      // we are stuck awaiting sync here.
+      // Better approach: Fire a separate SyncMetrics event!
+      add(SyncMetrics(date: event.date));
+    }
   }
 
   Future<void> _onGetMetricsRange(
@@ -203,22 +229,43 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
   Future<void> _onSyncMetrics(
       SyncMetrics event, Emitter<HealthMetricsState> emit) async {
-    if (syncManager == null) {
-      emit(HealthMetricsError(
-          message:
-              'SyncManager not configured. Register SyncManager in DI to enable background sync.',
-          selectedDate: state.selectedDate));
-      return;
-    }
+    // This handler runs after GetMetricsForDate because we added it to queue.
+    // It will process in background relative to the initial UI load.
 
-    emit(HealthMetricsSyncing(
-        completed: 0, total: 0, selectedDate: state.selectedDate));
-    final res = await syncManager!.performSyncOnce(days: event.days);
+    final date = event.date ?? state.selectedDate;
+
+    if (repository == null) return;
+
+    // Use specific syncForDate if it exists in repository, otherwise fallback to "SyncManager" (old way)
+    // The user wants "sync for the date".
+
+    // emit(HealthMetricsSyncing(...)); // Optional: show spinner? User said "background", maybe no spinner.
+
+    final res = await repository!.syncMetricsForDate(date);
+
     res.fold(
-      (failure) => emit(HealthMetricsError(
-          message: _mapFailureToMessage(failure),
-          selectedDate: state.selectedDate)),
-      (_) => add(const RefreshMetrics()),
+      (failure) {
+        // Log failure but don't disrupt UI if local data was okay
+        debugPrint('Background sync failed: $failure');
+      },
+      (_) async {
+        // Success! Re-fetch local data to update UI with fresh inputs
+        // We can reuse the same UC or call repo directly.
+        // Let's reuse the internal logic we put in _onGetMetricsForDate but without triggering another sync loop.
+        // Or simply emit a new Loaded state manually.
+        final localRes = await getHealthMetricsForDate.call(DateParams(date));
+        localRes.fold((f) => null, // ignore
+            (maybe) {
+          final list = _normalizeToList(maybe);
+          final summaryMap = aggregator.aggregate(list);
+          final summary = HealthMetricsSummary.fromMap(summaryMap, date);
+          // Verify if user is still on this date?
+          if (state.selectedDate == date) {
+            emit(HealthMetricsLoaded(
+                metrics: list, summary: summary, selectedDate: date));
+          }
+        });
+      },
     );
   }
 

@@ -30,7 +30,8 @@ class IsarHealthMetricsRepository implements HealthRepository {
       // Return metrics for today by default
       return getHealthMetricsForDate(DateTime.now());
     } catch (e) {
-      return Left(RepositoryFailure('Failed to fetch latest health metrics: $e'));
+      return Left(
+          RepositoryFailure('Failed to fetch latest health metrics: $e'));
     }
   }
 
@@ -56,28 +57,30 @@ class IsarHealthMetricsRepository implements HealthRepository {
       final results = await query.sortByDateFrom().findAll();
       return Right(results);
     } catch (e) {
-      return Left(RepositoryFailure('Failed to fetch health metrics range: $e'));
+      return Left(
+          RepositoryFailure('Failed to fetch health metrics range: $e'));
     }
   }
 
   @override
-  Future<Either<Failure, void>> saveHealthMetrics(String uid, List<HealthMetrics> models) async {
+  Future<Either<Failure, void>> saveHealthMetrics(
+      String uid, List<HealthMetrics> models) async {
     try {
       await isar.writeTxn(() async {
         await isar.healthMetrics.putAll(models);
       });
       return const Right(null);
     } catch (e) {
-      return Left(RepositoryFailure('Failed to save health metrics to local DB: $e'));
+      return Left(
+          RepositoryFailure('Failed to save health metrics to local DB: $e'));
     }
   }
 
   @override
-  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(DateTime date) async {
+  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(
+      DateTime date) async {
     try {
- 
- 
-       // Trigger sync if fetching for today (app opening scenario)
+      // Trigger sync if fetching for today (app opening scenario)
       final now = DateTime.now();
       // if (date.year == now.year && date.month == now.month && date.day == now.day) {
       //   await syncPastHealthData();
@@ -100,7 +103,8 @@ class IsarHealthMetricsRepository implements HealthRepository {
 
       // 2. If local DB is empty, try fetching from Remote (Firestore).
       try {
-        final remoteMetrics = await remoteDataSource.getHealthMetricsForDate(date);
+        final remoteMetrics =
+            await remoteDataSource.getHealthMetricsForDate(date);
         if (remoteMetrics.isNotEmpty) {
           // Save remote data to local DB for next time
           await isar.writeTxn(() async {
@@ -113,7 +117,8 @@ class IsarHealthMetricsRepository implements HealthRepository {
       }
 
       // 3. If Remote is also empty/failed, fetch from the device's health API.
-      final deviceMetrics = await healthDataSource.getHealthMetricsForDate(date);
+      final deviceMetrics =
+          await healthDataSource.getHealthMetricsForDate(date);
 
       if (deviceMetrics.isNotEmpty) {
         await isar.writeTxn(() async {
@@ -124,12 +129,14 @@ class IsarHealthMetricsRepository implements HealthRepository {
       // Return the (potentially empty) list of metrics from the device.
       return Right(deviceMetrics);
     } catch (e) {
-      return Left(RepositoryFailure('Failed to query metrics for date $date: $e'));
+      return Left(
+          RepositoryFailure('Failed to query metrics for date $date: $e'));
     }
   }
 
   @override
-  Future<Either<Failure, List<HealthMetrics>?>> getStoredHealthMetrics(String uid) async {
+  Future<Either<Failure, List<HealthMetrics>?>> getStoredHealthMetrics(
+      String uid) async {
     // If you implement stored fetch from Firestore, replace this with real logic.
     return const Right(null);
   }
@@ -155,16 +162,19 @@ class IsarHealthMetricsRepository implements HealthRepository {
         if (localCount == 0) {
           // Case 1: No local data -> Sync from REMOTE only (Restore)
           try {
-            final remoteMetrics = await remoteDataSource.getHealthMetricsForDate(startOfDay);
+            final remoteMetrics =
+                await remoteDataSource.getHealthMetricsForDate(startOfDay);
             if (remoteMetrics.isNotEmpty) {
-              await isar.writeTxn(() async => await isar.healthMetrics.putAll(remoteMetrics));
+              await isar.writeTxn(
+                  () async => await isar.healthMetrics.putAll(remoteMetrics));
             }
           } catch (_) {}
         } else {
           // Case 2: Local data exists -> Sync from DEVICE (Update)
           // We fetch from device to ensure we have the latest data for this day
           try {
-            final deviceMetrics = await healthDataSource.getHealthMetricsForDate(startOfDay);
+            final deviceMetrics =
+                await healthDataSource.getHealthMetricsForDate(startOfDay);
             if (deviceMetrics.isNotEmpty) {
               // Deduplicate: Get existing UUIDs for this day
               final existingUuids = await isar.healthMetrics
@@ -173,12 +183,15 @@ class IsarHealthMetricsRepository implements HealthRepository {
                   .dateFromLessThan(endOfDay, include: false)
                   .uuidProperty()
                   .findAll();
-              
+
               final existingSet = existingUuids.toSet();
-              final newMetrics = deviceMetrics.where((m) => !existingSet.contains(m.uuid)).toList();
+              final newMetrics = deviceMetrics
+                  .where((m) => !existingSet.contains(m.uuid))
+                  .toList();
 
               if (newMetrics.isNotEmpty) {
-                await isar.writeTxn(() async => await isar.healthMetrics.putAll(newMetrics));
+                await isar.writeTxn(
+                    () async => await isar.healthMetrics.putAll(newMetrics));
               }
             }
           } catch (_) {}
@@ -188,6 +201,68 @@ class IsarHealthMetricsRepository implements HealthRepository {
       return const Right(null);
     } on Exception catch (e) {
       return Left(RepositoryFailure('Failed to sync past health data: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> syncMetricsForDate(DateTime date) async {
+    try {
+      // 1. Fetch from Device
+      final deviceMetrics =
+          await healthDataSource.getHealthMetricsForDate(date);
+
+      // 2. Upload to Remote (Device -> Remote)
+      if (deviceMetrics.isNotEmpty) {
+        try {
+          await remoteDataSource.uploadHealthMetrics(deviceMetrics);
+        } catch (_) {
+          // Continue even if upload fails
+        }
+      }
+
+      // 3. Fetch from Remote to get merged data (Remote -> Client)
+      List<HealthMetrics> finalMetrics = deviceMetrics;
+      try {
+        final remoteMetrics =
+            await remoteDataSource.getHealthMetricsForDate(date);
+        if (remoteMetrics.isNotEmpty) {
+          finalMetrics = remoteMetrics;
+        }
+      } catch (_) {
+        // Fallback to device metrics
+      }
+
+      // 4. Save to Local (Client -> Local)
+      if (finalMetrics.isNotEmpty) {
+        // Fetch existing UUIDs and IDs for this date to support UPSERT
+        final start = DateTime(date.year, date.month, date.day);
+        final end = start.add(const Duration(days: 1));
+
+        final existingItems = await isar.healthMetrics
+            .filter()
+            .dateFromGreaterThan(start, include: true)
+            .dateFromLessThan(end, include: false)
+            .findAll();
+
+        final uuidToIdMap = {for (var i in existingItems) i.uuid: i.id};
+
+        // Assign existing Isar IDs to incoming metrics ensuring updates instead of duplicates
+        final metricsToSave = finalMetrics.map((m) {
+          if (uuidToIdMap.containsKey(m.uuid)) {
+            m.id = uuidToIdMap[m.uuid]!;
+          }
+          return m;
+        }).toList();
+
+        await isar.writeTxn(() async {
+          await isar.healthMetrics.putAll(metricsToSave);
+        });
+      }
+
+      return const Right(null);
+    } catch (e) {
+      return Left(
+          RepositoryFailure('Failed to sync metrics for date $date: $e'));
     }
   }
 }

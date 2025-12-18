@@ -1,5 +1,5 @@
-// lib/features/bench_profile/presentation/widgets/metric_card.dart
 import 'package:flutter/material.dart';
+import 'package:bench_profile_app/core/services/app_theme.dart';
 
 class MetricCard extends StatelessWidget {
   final String title;
@@ -15,8 +15,6 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFEE374D);
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -37,12 +35,12 @@ class MetricCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.08),
+              color: AppTheme.primaryColor.withOpacity(0.08),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: primaryColor, size: 24),
+            child: Icon(icon, color: AppTheme.primaryColor, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +67,7 @@ class MetricCard extends StatelessWidget {
             ),
           ),
           Icon(Icons.chevron_right_rounded,
-              color: Colors.grey.shade300, size: 24),
+              color: Colors.grey.shade300, size: 4),
         ],
       ),
     );

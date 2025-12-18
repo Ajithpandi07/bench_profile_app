@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:bench_profile_app/core/services/app_theme.dart';
 
 typedef OnDateSelected = void Function(DateTime date);
 
@@ -131,7 +132,6 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
           final date = _dates[index];
           final isSelected = _sameDay(date, _selected);
           final isToday = _isToday(date);
-          const primaryColor = Color(0xFFEE374D);
 
           return GestureDetector(
             onTap: () => _onTap(date),
@@ -139,7 +139,7 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
               duration: const Duration(milliseconds: 200),
               width: 40,
               decoration: BoxDecoration(
-                color: isSelected ? primaryColor : Colors.white,
+                color: isSelected ? AppTheme.primaryColor : Colors.white,
                 borderRadius:
                     BorderRadius.circular(20), // Fully rounded for width 56
                 boxShadow: [
@@ -162,7 +162,9 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
                       fontSize: 11,
                       color: isSelected
                           ? Colors.white
-                          : (isToday ? primaryColor : Colors.grey.shade500),
+                          : (isToday
+                              ? AppTheme.primaryColor
+                              : Colors.grey.shade500),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -181,8 +183,8 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
                       child: Container(
                         width: 4,
                         height: 4,
-                        decoration: const BoxDecoration(
-                          color: primaryColor,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
                           shape: BoxShape.circle,
                         ),
                       ),

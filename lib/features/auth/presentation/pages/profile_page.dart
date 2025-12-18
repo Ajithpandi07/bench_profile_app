@@ -29,24 +29,36 @@ class ProfilePage extends StatelessWidget {
                 radius: 36,
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                 child: user?.photoURL == null
-                    ? Text(_initials(user?.displayName ?? user?.email ?? 'U'), style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.onPrimaryContainer))
+                    ? Text(_initials(user?.displayName ?? user?.email ?? 'U'),
+                        style: TextStyle(
+                            fontSize: 20,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer))
                     : null,
-                foregroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
+                foregroundImage: user?.photoURL != null
+                    ? NetworkImage(user!.photoURL!)
+                    : null,
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(user?.displayName ?? 'Unknown User', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 4),
-                  Text(user?.email ?? '—', style: Theme.of(context).textTheme.bodyMedium),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(user?.displayName ?? 'Unknown User',
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(user?.email ?? '—',
+                          style: Theme.of(context).textTheme.bodyMedium),
+                    ]),
               ),
               IconButton(
                 icon: const Icon(Icons.edit),
                 tooltip: 'Edit profile',
                 onPressed: () {
                   // optional: show profile edit flow
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile edit not implemented')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Profile edit not implemented')));
                 },
               )
             ],
@@ -57,14 +69,23 @@ class ProfilePage extends StatelessWidget {
           // Quick stats card
           Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               child: Row(
                 children: [
-                  Expanded(child: _statColumn('Steps', metrics?.steps?.toString() ?? '—')),
+                  Expanded(
+                      child: _statColumn('Steps',
+                          metrics?.steps?.value.round().toString() ?? '—')),
                   _verticalDivider(),
-                  Expanded(child: _statColumn('Calories', metrics?.activeEnergyBurned != null ? metrics!.activeEnergyBurned!.toStringAsFixed(0) : '—')),
+                  Expanded(
+                      child: _statColumn(
+                          'Calories',
+                          metrics?.activeEnergyBurned != null
+                              ? metrics!.activeEnergyBurned!.value
+                                  .toStringAsFixed(0)
+                              : '—')),
                   _verticalDivider(),
                   Expanded(child: _statColumn('Sleep', '—')),
                 ],
@@ -77,7 +98,8 @@ class ProfilePage extends StatelessWidget {
           // Preferences / actions
           Card(
             elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Column(children: [
               ListTile(
                 leading: const Icon(Icons.brightness_6_outlined),
@@ -90,9 +112,13 @@ class ProfilePage extends StatelessWidget {
                       initialValue: mode,
                       onSelected: (sel) => themeService.setMode(sel),
                       itemBuilder: (ctx) => [
-                        PopupMenuItem(value: ThemeMode.system, child: const Text('System')),
-                        PopupMenuItem(value: ThemeMode.light, child: const Text('Light')),
-                        PopupMenuItem(value: ThemeMode.dark, child: const Text('Dark')),
+                        PopupMenuItem(
+                            value: ThemeMode.system,
+                            child: const Text('System')),
+                        PopupMenuItem(
+                            value: ThemeMode.light, child: const Text('Light')),
+                        PopupMenuItem(
+                            value: ThemeMode.dark, child: const Text('Dark')),
                       ],
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -112,7 +138,8 @@ class ProfilePage extends StatelessWidget {
                 title: const Text('Privacy'),
                 subtitle: const Text('Manage permissions & data'),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Privacy not implemented')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Privacy not implemented')));
                 },
               ),
               const Divider(height: 1),
@@ -135,7 +162,8 @@ class ProfilePage extends StatelessWidget {
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
               foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
             icon: const Icon(Icons.logout),
             label: const Text('Sign out'),
@@ -143,23 +171,32 @@ class ProfilePage extends StatelessWidget {
           ),
 
           const SizedBox(height: 20),
-          Center(child: Text('App version 1.0.0', style: Theme.of(context).textTheme.bodySmall)),
+          Center(
+              child: Text('App version 1.0.0',
+                  style: Theme.of(context).textTheme.bodySmall)),
           const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  Widget _verticalDivider() => Container(width: 1, height: 44, color: Colors.grey.withOpacity(0.12));
+  Widget _verticalDivider() =>
+      Container(width: 1, height: 44, color: Colors.grey.withOpacity(0.12));
 
-  Widget _statColumn(String label, String value) => Builder(builder: (context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ],
-      ));
+  Widget _statColumn(String label, String value) => Builder(
+      builder: (context) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodySmall?.color)),
+              const SizedBox(height: 6),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ));
 
   static String _initials(String? s) {
     if (s == null || s.trim().isEmpty) return 'U';
@@ -187,7 +224,9 @@ class ProfilePage extends StatelessWidget {
         title: const Text('Sign out'),
         content: const Text('Are you sure you want to sign out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -199,6 +238,5 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
     );
-    
   }
 }

@@ -1,6 +1,7 @@
 // lib/features/health_metrics/presentation/widgets/circular_score_card.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:bench_profile_app/core/services/app_theme.dart';
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
 
 /// A widget that displays a circular score card with quick actions,
@@ -49,7 +50,9 @@ class _CircularScoreCardState extends State<CircularScoreCard>
   void didUpdateWidget(CircularScoreCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.metrics?.steps != oldWidget.metrics?.steps) {
-      _progressAnimation = Tween<double>(begin: _progressAnimation.value, end: _progress).animate(
+      _progressAnimation =
+          Tween<double>(begin: _progressAnimation.value, end: _progress)
+              .animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
       );
       _controller
@@ -65,7 +68,7 @@ class _CircularScoreCardState extends State<CircularScoreCard>
   }
 
   double get _progress {
-    final steps = widget.metrics?.steps;
+    final steps = widget.metrics?.steps?.value;
     if (steps == null || steps <= 0) {
       return 0.0;
     }
@@ -82,7 +85,7 @@ class _CircularScoreCardState extends State<CircularScoreCard>
     final double iconSize = 20 * scale;
     final double fontSize = 12 * scale;
 
-    final steps = widget.metrics?.steps;
+    final steps = widget.metrics?.steps?.value;
     final hasData = steps != null && steps > 0;
 
     return Center(
@@ -99,7 +102,7 @@ class _CircularScoreCardState extends State<CircularScoreCard>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.purple.shade100.withOpacity(0.5),
+                  color: AppTheme.primaryColor.withOpacity(0.3),
                   width: 8 * scale,
                 ),
               ),
@@ -116,7 +119,9 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                     AnimatedBuilder(
                       animation: _progressAnimation,
                       builder: (context, _) {
-                        final currentSteps = (widget.goalSteps * _progressAnimation.value).toInt();
+                        final currentSteps =
+                            (widget.goalSteps * _progressAnimation.value)
+                                .toInt();
                         return Text(
                           '$currentSteps',
                           style: theme.textTheme.headlineMedium?.copyWith(
@@ -156,7 +161,8 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                           ),
                         ),
                         SizedBox(width: 4 * scale),
-                        Icon(Icons.info_outline, size: 14 * scale, color: Colors.grey.shade400),
+                        Icon(Icons.info_outline,
+                            size: 14 * scale, color: Colors.grey.shade400),
                       ],
                     ),
                   ],
@@ -189,7 +195,9 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                     _QuickAction(
                       icon: Icons.water_drop,
                       label: 'water',
-                      current: widget.metrics?.water?.toStringAsFixed(1) ?? '0.0',
+                      current:
+                          widget.metrics?.water?.value.toStringAsFixed(1) ??
+                              '0.0',
                       total: '2.5 l',
                       size: buttonSize,
                       iconSize: iconSize,
@@ -202,7 +210,10 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                     _QuickAction(
                       icon: Icons.directions_walk,
                       label: 'kcal',
-                      current: widget.metrics?.activeEnergyBurned?.toInt().toString() ?? '0',
+                      current: widget.metrics?.activeEnergyBurned?.value
+                              .toInt()
+                              .toString() ??
+                          '0',
                       total: '500',
                       size: buttonSize,
                       iconSize: iconSize,
@@ -266,7 +277,8 @@ class _QuickAction extends StatelessWidget {
                   onTap: onAdd,
                   customBorder: const CircleBorder(),
                   child: Center(
-                    child: Icon(icon, size: iconSize * 1.2, color: Colors.grey.shade700),
+                    child: Icon(icon,
+                        size: iconSize * 1.2, color: Colors.grey.shade700),
                   ),
                 ),
               ),
@@ -279,7 +291,9 @@ class _QuickAction extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.purple.shade50, width: 2),
+                    border: Border.all(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        width: 2),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -292,7 +306,7 @@ class _QuickAction extends StatelessWidget {
                     child: Text(
                       '+',
                       style: TextStyle(
-                        color: Colors.purple.shade600,
+                        color: AppTheme.primaryColor,
                         fontSize: fontSize,
                         fontWeight: FontWeight.bold,
                       ),
@@ -306,7 +320,8 @@ class _QuickAction extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           '$current / $total',
-          style: TextStyle(fontSize: fontSize * 0.8, color: Colors.grey.shade500),
+          style:
+              TextStyle(fontSize: fontSize * 0.8, color: Colors.grey.shade500),
         ),
       ],
     );
@@ -342,12 +357,13 @@ class _HydrationAction extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: 0.75,
                   strokeWidth: 4,
-                  backgroundColor: Colors.purple.shade100,
-                  color: Colors.purple.shade400,
+                  backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+                  color: AppTheme.primaryColor,
                 ),
               ),
               // Icon
-              Icon(Icons.water_drop, size: iconSize, color: Colors.grey.shade700),
+              Icon(Icons.water_drop,
+                  size: iconSize, color: Colors.grey.shade700),
               // Play/Action indicator
               Positioned(
                 bottom: 0,
@@ -356,10 +372,11 @@ class _HydrationAction extends StatelessWidget {
                   width: size * 0.3,
                   height: size * 0.3,
                   decoration: BoxDecoration(
-                    color: Colors.purple.shade600,
+                    color: AppTheme.primaryColor,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.play_arrow, size: iconSize * 0.6, color: Colors.white),
+                  child: Icon(Icons.play_arrow,
+                      size: iconSize * 0.6, color: Colors.white),
                 ),
               ),
             ],
@@ -368,7 +385,8 @@ class _HydrationAction extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'In 3 h',
-          style: TextStyle(fontSize: fontSize * 0.8, color: Colors.grey.shade500),
+          style:
+              TextStyle(fontSize: fontSize * 0.8, color: Colors.grey.shade500),
         ),
       ],
     );

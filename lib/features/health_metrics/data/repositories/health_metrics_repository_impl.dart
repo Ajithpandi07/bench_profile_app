@@ -54,13 +54,26 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
   Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(
       DateTime date) async {
     try {
+      // Local-First: Return stored data explicitly.
+      final localList = await localDataSource.getAllHealthMetricsForDate(date);
+      return Right(localList);
+    } on CacheException {
+      return Left(CacheFailure('Local cache error.'));
+    } catch (e) {
+      return Left(RepositoryFailure('Unexpected error: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> syncMetricsForDate(DateTime date) async {
+    try {
       final now = DateTime.now();
       final dayStart = DateTime(date.year, date.month, date.day);
-      if (dayStart.isAfter(now)) return const Right(<HealthMetrics>[]);
+
+      // If date is in future, nothing to sync
+      if (dayStart.isAfter(now)) return const Right(null);
 
       // 1. Fetch from Device (HealthConnect)
-      // We do NOT save this to local directly anymore.
-      // The flow is strictly: Device -> Remote -> Local.
       List<HealthMetrics> deviceList = [];
       try {
         final deviceMaybe = await dataSource.getHealthMetricsForDate(date);
@@ -70,60 +83,48 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
             .toList();
       } catch (e) {
         if (e is! PermissionDeniedException) {
-          debugPrint('Device fetch failed: $e');
+          debugPrint('Device sync fetch failed: $e');
         }
+        // If critical permission failure, we might rethrow or return Left,
+        // but for sync often we want to just log and continue if possible or return failure.
+        if (e is PermissionDeniedException)
+          rethrow; // Let caller process permissions
       }
 
-      // 2. Sync Logic: Device -> Remote -> Local
-      if (await networkInfo.isConnected) {
-        try {
-          // A. DEVICE -> REMOTE (Upload)
-          // We assume Remote is the source of truth, so we push our fresh device data there first.
-          if (deviceList.isNotEmpty) {
-            // Optional: Filter dupes against remote if needed, but "Upsert" on server handles it usually.
-            // For now, we attempt to upload all fresh device data found.
-            await remoteDataSource.uploadHealthMetrics(deviceList);
-          }
-
-          // B. REMOTE -> LOCAL (Download & Cache)
-          // Now that Remote is updated, we fetch from it to update our Local "Source of Truth".
-          final remoteMaybe =
-              await remoteDataSource.getHealthMetricsForDate(date);
-          final remoteList = _normalizeToList(remoteMaybe);
-
-          if (remoteList.isNotEmpty) {
-            // Mark as synced since it came from remote
-            final syncedList =
-                remoteList.map((m) => m.copyWith(synced: true)).toList();
-            await localDataSource.cacheHealthMetricsBatch(syncedList);
-          }
-        } catch (e) {
-          debugPrint('Strict sync (Device->Remote->Local) failed: $e');
-          // Fallback: If sync fails, we might want to temporarily show existing local?
-        }
-      } else {
-        // Offline Fallback:
-        // Since we cannot sync Device->Remote, we technically "lose" the device view if we don't cache it.
-        // However, user requested "Device -> Local should NOT be".
-        // But for offline usability, we might display Local data as is.
-        // NOTE: If offline, users won't see new device steps until they go online. This follows the strict request.
+      if (!await networkInfo.isConnected) {
+        // Offline: If we have device data, we can still cache it locally?
+        // Actually, user flow says "Background sync ... take health data to remote to locally".
+        // But optimization: cache device data locally immediately for offline support?
+        // User asked "take health data to remote to locally".
+        // But standard offline support implies caching device data directly is usually fine.
+        // However, to stick to "Device -> Remote -> Local" strict pattern:
+        // We cannot proceed without internet.
+        return const Left(NetworkFailure('No internet for sync.'));
       }
 
-      // 3. Return Local (The Source of Truth)
-      final localList = await localDataSource.getAllHealthMetricsForDate(date);
+      // 2. DEVICE -> REMOTE (Upload)
+      if (deviceList.isNotEmpty) {
+        await remoteDataSource.uploadHealthMetrics(deviceList);
+      }
 
-      // If local is empty (and maybe we are offline or sync failed),
-      // check if we should try a "Last Resort" remote fetch if we think we have connectivity?
-      // (Already tried in step 2).
+      // 3. REMOTE -> LOCAL (Download & Cache)
+      final remoteMaybe = await remoteDataSource.getHealthMetricsForDate(date);
+      final remoteList = _normalizeToList(remoteMaybe);
 
-      return Right(localList);
+      if (remoteList.isNotEmpty) {
+        final syncedList =
+            remoteList.map((m) => m.copyWith(synced: true)).toList();
+        await localDataSource.cacheHealthMetricsBatch(syncedList);
+      }
+
+      return const Right(null);
     } on PermissionDeniedException {
       return const Left(
           PermissionFailure('Health permissions were not granted.'));
-    } on CacheException {
-      return Left(CacheFailure('Local cache error.'));
+    } on ServerException catch (e) {
+      return Left(ServerFailure('Sync failed: ${e.message}'));
     } catch (e) {
-      return Left(RepositoryFailure('Unexpected error: ${e.toString()}'));
+      return Left(RepositoryFailure('Sync error: ${e.toString()}'));
     }
   }
 
@@ -177,65 +178,74 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
 
   @override
   Future<Either<Failure, void>> syncPastHealthData({int days = 30}) async {
-    return Left(RepositoryFailure('Sync error:'));
+    try {
+      if (!await networkInfo.isConnected) {
+        return const Left(NetworkFailure('No internet connection during sync'));
+      }
 
-    // try {
-    //   final today = DateTime.now();
-    //   final startDate = DateTime(today.year, today.month, today.day).subtract(Duration(days: days));
-    //   final types = HealthDataType.values;
+      final today = DateTime.now();
+      // Only look back 'days' amount to avoid massive syncs.
+      // For "Seamless", we iterate day by day or just range.
+      // Since health package works best with daily batches, let's iterate.
+      // However, to be efficient, we can try range fetch if supported.
+      // Given previous "today restriction", let's respect that "background sync"
+      // might need to catch up on missed days.
 
-    //   final deviceMaybe = await dataSource.getHealthMetricsRange(startDate, today, types);
-    //   final deviceList = _normalizeToList(deviceMaybe);
+      for (int i = 0; i < days; i++) {
+        final date = today.subtract(Duration(days: i));
+        // START OF DAY
+        final d = DateTime(date.year, date.month, date.day);
 
-    //   if (deviceList.isEmpty) {
-    //     debugPrint('No device metrics found for range $startDate..$today');
-    //     return const Right(null);
-    //   }
+        debugPrint('Background Sync: Processing $d...');
 
-    //   // Group device points by day
-    //   final Map<String, List<HealthMetrics>> byDate = {};
-    //   for (final p in deviceList) {
-    //     final key = '${p.dateFrom.year}-${p.dateFrom.month.toString().padLeft(2, '0')}-${p.dateFrom.day.toString().padLeft(2, '0')}';
-    //     byDate.putIfAbsent(key, () => []).add(p);
-    //   }
+        // 1. Fetch DEVICE (Device Source of Truth for raw data)
+        // We use the same 'getHealthMetricsForDate' logic which now grabs just that day (no massive lookback)
+        // Note: This relies on 'dataSource' being safe to call in background (it is).
+        List<HealthMetrics> deviceData = [];
+        try {
+          final deviceMaybe = await dataSource.getHealthMetricsForDate(d);
+          deviceData = _normalizeToList(deviceMaybe);
+        } catch (e) {
+          debugPrint('Background Sync: Device fetch failed for $d: $e');
+          // If device fetch fails (e.g. permissions locked in background), we skip this day
+          continue;
+        }
 
-    //   for (final entry in byDate.entries) {
-    //     final parts = entry.key.split('-');
-    //     final d = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
-    //     final deviceForDay = entry.value;
+        if (deviceData.isEmpty) {
+          debugPrint('Background Sync: No device data for $d');
+          // Even if device is empty, should we check if Remote has data to pull down?
+          // Yes, "Seamless Device -> Remote -> Local" implies pulling remote too.
+        } else {
+          // 2. DEVICE -> REMOTE (Upload)
+          // We indiscriminately upload fresh device data. Remote handles merging.
+          await remoteDataSource.uploadHealthMetrics(deviceData);
+          debugPrint(
+              'Background Sync: Uploaded ${deviceData.length} items for $d');
+        }
 
-    //     // fetch remote points for that day (best-effort)
-    //     List<HealthMetrics> remoteForDay = [];
-    //     try {
-    //       final remoteMaybe = await remoteDataSource.getHealthMetricsForDate(d);
-    //       remoteForDay = _normalizeToList(remoteMaybe);
-    //     } catch (e) {
-    //       debugPrint('Failed to fetch remote metrics for $d: $e');
-    //     }
+        // 3. REMOTE -> LOCAL (Download & updates Local Source of Truth)
+        final remoteMaybe = await remoteDataSource.getHealthMetricsForDate(d);
+        final remoteList = _normalizeToList(remoteMaybe);
 
-    //     final remoteUuids = remoteForDay.map((e) => e.uuid).toSet();
-    //     final toUpload = deviceForDay.where((p) => !remoteUuids.contains(p.uuid)).toList();
+        if (remoteList.isNotEmpty) {
+          final syncedList =
+              remoteList.map((m) => m.copyWith(synced: true)).toList();
+          await localDataSource.cacheHealthMetricsBatch(syncedList);
+          debugPrint(
+              'Background Sync: Cached ${syncedList.length} items locally for $d');
+        }
+      }
 
-    //     if (toUpload.isNotEmpty) {
-    //       try {
-    //         await remoteDataSource.uploadHealthMetrics(toUpload);
-    //         debugPrint('Uploaded ${toUpload.length} missing points for $d');
-    //       } catch (e, st) {
-    //         debugPrint('Upload failed for $d: $e\n$st');
-    //       }
-    //     } else {
-    //       debugPrint('No missing points to upload for $d');
-    //     }
-    //   }
-
-    //   return const Right(null);
-    // } on PermissionDeniedException {
-    //   return const Left(PermissionFailure('Health permissions were not granted.'));
-    // } on ServerException catch (e) {
-    //   return Left(ServerFailure('Remote server error during sync: ${e.message}'));
-    // } catch (e) {
-    //   return Left(RepositoryFailure('Sync error: ${e.toString()}'));
-    // }
+      return const Right(null);
+    } on PermissionDeniedException {
+      return const Left(
+          PermissionFailure('Health permissions were not granted.'));
+    } on ServerException catch (e) {
+      return Left(
+          ServerFailure('Remote server error during sync: ${e.message}'));
+    } catch (e) {
+      return Left(RepositoryFailure('Sync error: ${e.toString()}'));
+    }
   }
 
   @override

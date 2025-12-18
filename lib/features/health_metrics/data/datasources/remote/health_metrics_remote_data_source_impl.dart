@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io' show Platform;
+import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
 import 'package:bench_profile_app/core/error/exceptions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bench_profile_app/core/util/metric_aggregator.dart';
@@ -62,7 +63,14 @@ class HealthMetricsRemoteDataSourceImpl
         // A better approach would be to recalculate summary from ALL metrics for the day, but that requires a read.
         // We will stick to the existing "blind merge" logic but scoped to the correct day.
 
-        final summaryData = aggregator.aggregate(dailyMetrics);
+        final rawSummaryData = aggregator.aggregate(dailyMetrics);
+        final summaryData = rawSummaryData.map((key, value) {
+          if (value is MetricValue) {
+            return MapEntry(key, {'value': value.value, 'unit': value.unit});
+          }
+          return MapEntry(key, value);
+        });
+
         summaryData['timestamp'] = Timestamp.fromDate(date);
         summaryData['source'] = 'health_package';
 

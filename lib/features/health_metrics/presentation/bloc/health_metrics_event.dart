@@ -69,13 +69,17 @@ class SaveMetrics extends HealthMetricsEvent {
   List<Object?> get props => [metrics];
 }
 
-/// Start a background sync run (Workmanager / manual)
 class SyncMetrics extends HealthMetricsEvent {
   final int days;
-  const SyncMetrics({this.days = 7});
+  final DateTime? date;
+
+  const SyncMetrics({
+    this.days = 7,
+    this.date,
+  });
 
   @override
-  List<Object?> get props => [days];
+  List<Object?> get props => [days, date];
 }
 
 /// Notify progress for sync (UI-friendly)

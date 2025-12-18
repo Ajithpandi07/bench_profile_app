@@ -282,41 +282,164 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
   }
 
   Widget _buildMetricsView(BuildContext context, HealthMetricsSummary metrics) {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      children: [
-        MetricCard(
-          title: 'Steps',
-          value: '${metrics.steps}',
-          icon: Icons.directions_walk,
-        ),
-        MetricCard(
-          title: 'Heart Rate',
-          value: metrics.heartRate != null
-              ? '${metrics.heartRate!.round()} bpm'
-              : 'N/A',
-          icon: Icons.favorite_rounded,
-        ),
-        MetricCard(
-          title: 'Active Energy',
-          value: metrics.activeEnergyBurned != null
-              ? '${metrics.activeEnergyBurned!.round()} kcal'
-              : 'N/A',
-          icon: Icons.local_fire_department_rounded,
-        ),
-        MetricCard(
-          title: 'Water',
-          value: '${metrics.water?.toStringAsFixed(1) ?? 0} L',
-          icon: Icons.water_drop_rounded,
-        ),
-        MetricCard(
-          title: 'Weight',
-          value: metrics.weight != null ? '${metrics.weight} kg' : 'N/A',
-          icon: Icons.monitor_weight_rounded,
-        ),
-        const SizedBox(height: 40),
-      ],
-    );
+    // define configurations
+    final metricsConfig = [
+      _MetricConfig(
+        label: 'Steps',
+        icon: Icons.directions_walk,
+        selector: (s) => s.steps,
+        formatter: (val, unit) => '${val.round()} $unit',
+      ),
+      _MetricConfig(
+        label: 'Active Energy',
+        icon: Icons.local_fire_department_rounded,
+        selector: (s) => s.activeEnergyBurned,
+        formatter: (val, unit) => '${val.round()} $unit',
+      ),
+      _MetricConfig(
+        label: 'Flights Climbed',
+        icon: Icons.stairs_rounded,
+        selector: (s) => s.flightsClimbed,
+        formatter: (val, unit) => '${val.round()}',
+      ),
+      _MetricConfig(
+        label: 'Sleep (Asleep)',
+        icon: Icons.bedtime_rounded,
+        selector: (s) => s.sleepAsleep,
+        formatter: (val, unit) => '${(val / 60).toStringAsFixed(1)} hr',
+      ),
+      _MetricConfig(
+        label: 'Sleep (Awake)',
+        icon: Icons.wb_sunny_rounded,
+        selector: (s) => s.sleepAwake,
+        formatter: (val, unit) => '${(val / 60).toStringAsFixed(1)} hr',
+      ),
+      _MetricConfig(
+        label: 'Water',
+        icon: Icons.water_drop_rounded,
+        selector: (s) => s.water,
+        formatter: (val, unit) => '${val.toStringAsFixed(1)} $unit',
+      ),
+      _MetricConfig(
+        label: 'Heart Rate',
+        icon: Icons.favorite_rounded,
+        selector: (s) => s.heartRate,
+        formatter: (val, unit) => '${val.round()} BPM',
+      ),
+      _MetricConfig(
+        label: 'Blood Pressure (Sys)',
+        icon: Icons.compress,
+        selector: (s) => s.bloodPressureSystolic,
+        formatter: (val, unit) => '${val.round()} mmHg',
+      ),
+      _MetricConfig(
+        label: 'Blood Pressure (Dia)',
+        icon: Icons.compress_outlined,
+        selector: (s) => s.bloodPressureDiastolic,
+        formatter: (val, unit) => '${val.round()} mmHg',
+      ),
+      _MetricConfig(
+        label: 'Weight',
+        icon: Icons.monitor_weight_rounded,
+        selector: (s) => s.weight,
+        formatter: (val, unit) => '${val.toStringAsFixed(1)} $unit',
+      ),
+      _MetricConfig(
+        label: 'Basal Energy',
+        icon: Icons.battery_charging_full_rounded,
+        selector: (s) => s.basalEnergyBurned,
+        formatter: (val, unit) => '${val.round()} $unit',
+      ),
+      _MetricConfig(
+        label: 'Body Fat',
+        icon: Icons.accessibility_new_rounded,
+        selector: (s) => s.bodyFatPercentage,
+        formatter: (val, unit) => '${val.toStringAsFixed(1)}%',
+      ),
+      _MetricConfig(
+        label: 'Body Temp',
+        icon: Icons.thermostat_rounded,
+        selector: (s) => s.bodyTemperature,
+        formatter: (val, unit) => '${val.toStringAsFixed(1)} °C',
+      ),
+      _MetricConfig(
+        label: 'Blood Glucose',
+        icon: Icons.bloodtype_rounded,
+        selector: (s) => s.bloodGlucose,
+        formatter: (val, unit) => '${val.round()} $unit',
+      ),
+      _MetricConfig(
+        label: 'Height',
+        icon: Icons.height_rounded,
+        selector: (s) => s.height,
+      ),
+      _MetricConfig(
+        label: 'Sleep (Deep)',
+        icon: Icons.bedtime_outlined,
+        selector: (s) => s.sleepDeep,
+        formatter: (val, unit) => '${(val / 60).toStringAsFixed(1)} hr',
+      ),
+      _MetricConfig(
+        label: 'Sleep (REM)',
+        icon: Icons.psychology_rounded,
+        selector: (s) => s.sleepRem,
+        formatter: (val, unit) => '${(val / 60).toStringAsFixed(1)} hr',
+      ),
+      _MetricConfig(
+        label: 'Blood Oxygen',
+        icon: Icons.air,
+        selector: (s) => s.bloodOxygen,
+        formatter: (val, unit) => '${val.round()}%',
+      ),
+    ];
+
+    try {
+      // Filter and build
+      final availableMetrics = metricsConfig.where((config) {
+        try {
+          final m = config.selector(metrics);
+          return m != null && m.value > 0;
+        } catch (e) {
+          debugPrint('Error selecting metric ${config.label}: $e');
+          return false;
+        }
+      }).toList();
+
+      if (availableMetrics.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Text(
+              'No metrics available for this date.',
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+          ),
+        );
+      }
+
+      return ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        itemCount: availableMetrics.length + 1, // +1 for spacing at bottom
+        separatorBuilder: (_, __) => const SizedBox(height: 6),
+        itemBuilder: (context, index) {
+          if (index == availableMetrics.length) {
+            return const SizedBox(height: 40);
+          }
+
+          final config = availableMetrics[index];
+          final metricInfo = config.selector(metrics)!;
+
+          return MetricCard(
+            title: config.label,
+            value: config.formatter(metricInfo.value, metricInfo.unit),
+            icon: config.icon,
+          );
+        },
+      );
+    } catch (e, st) {
+      debugPrint('Error building metrics list: $e\n$st');
+      return Center(child: Text('Error displaying metrics: $e'));
+    }
   }
 
   static String timeAgo(DateTime t) {
@@ -326,4 +449,18 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return DateFormat.yMMMd().format(t);
   }
+}
+
+class _MetricConfig {
+  final String label;
+  final IconData icon;
+  final MetricValue? Function(HealthMetricsSummary) selector;
+  final String Function(double value, String unit) formatter;
+
+  _MetricConfig({
+    required this.label,
+    required this.icon,
+    required this.selector,
+    String Function(double, String)? formatter,
+  }) : formatter = formatter ?? ((val, unit) => '$val $unit');
 }

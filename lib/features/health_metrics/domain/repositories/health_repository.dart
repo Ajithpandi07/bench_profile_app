@@ -12,7 +12,8 @@ abstract class HealthRepository {
   Future<Either<Failure, List<HealthMetrics>>> getHealthMetrics();
 
   /// Returns aggregated metrics for a specific date.
-  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(DateTime date);
+  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(
+      DateTime date);
 
   /// Returns aggregated metrics for a custom date range and data types.
   Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsRange(
@@ -22,11 +23,16 @@ abstract class HealthRepository {
   );
 
   /// Persist health metrics for a user (e.g., upload to Firestore).
-  Future<Either<Failure, void>> saveHealthMetrics(String uid, List<HealthMetrics> model);
+  Future<Either<Failure, void>> saveHealthMetrics(
+      String uid, List<HealthMetrics> model);
 
   /// Returns the latest stored health metrics from the database for a user.
-  Future<Either<Failure, List<HealthMetrics>?>> getStoredHealthMetrics(String uid);
+  Future<Either<Failure, List<HealthMetrics>?>> getStoredHealthMetrics(
+      String uid);
 
   /// Triggers a background sync for health data for a given number of past days.
   Future<Either<Failure, void>> syncPastHealthData({int days = 30});
+
+  /// Explicitly syncs data for a specific date (Device -> Remote -> Local).
+  Future<Either<Failure, void>> syncMetricsForDate(DateTime date);
 }

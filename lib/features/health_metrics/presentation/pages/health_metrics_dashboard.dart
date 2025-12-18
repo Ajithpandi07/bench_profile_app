@@ -416,7 +416,7 @@ class _HomeTab extends StatelessWidget {
                               icon: Icons.water_drop,
                               sub: '+',
                               val:
-                                  '${metrics?.water?.toStringAsFixed(1) ?? 0}/3.2',
+                                  '${metrics?.water?.value.toStringAsFixed(1) ?? 0}/3.2',
                               unit: 'l',
                             ),
                           ),
@@ -427,7 +427,7 @@ class _HomeTab extends StatelessWidget {
                               icon: Icons.directions_run,
                               sub: '+',
                               val:
-                                  '0/${(metrics?.activeEnergyBurned ?? 60).toInt()}',
+                                  '0/${(metrics?.activeEnergyBurned?.value ?? 60).toInt()}',
                               unit: 'min',
                             ),
                           ),
@@ -824,11 +824,11 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                             color: Colors.grey.shade600,
                             fontSize: 14,
                             fontWeight: FontWeight.w500)),
-                    if ((widget.metrics?.steps ?? 0) > 0)
+                    if ((widget.metrics?.steps?.value ?? 0) > 0)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
-                          '${widget.metrics!.steps}',
+                          '${widget.metrics!.steps!.value.toInt()}',
                           style: const TextStyle(
                               color: primaryColor,
                               fontSize: 18,

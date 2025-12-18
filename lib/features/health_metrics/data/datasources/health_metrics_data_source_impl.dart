@@ -186,19 +186,19 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
         await _fetchBatch(start, end, _tier1CoreTypes()),
       );
 
-      // Tier 2 – Body Measurements & Vitals (90-day lookback)
+      // Tier 2 – Body Measurements & Vitals (No lookback, only today)
       allPoints.addAll(
         await _fetchBatch(
-          start.subtract(const Duration(days: 90)),
+          start, // was start.subtract(Duration(days: 90))
           end,
           _tier2BodyAndVitals(),
         ),
       );
 
-      // Tier 3 – Sensitive/Detailed (180-day lookback)
+      // Tier 3 – Sensitive/Detailed (No lookback, only today)
       allPoints.addAll(
         await _fetchBatch(
-          start.subtract(const Duration(days: 180)),
+          start, // was start.subtract(Duration(days: 180))
           end,
           _tier3MedicalAndNutrition(),
         ),
@@ -249,14 +249,14 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
         allPoints.addAll(await _fetchBatch(start, end, _tier1CoreTypes()));
         allPoints.addAll(
           await _fetchBatch(
-            start.subtract(const Duration(days: 90)),
+            start, // was start.subtract(Duration(days: 90))
             end,
             _tier2BodyAndVitals(),
           ),
         );
         allPoints.addAll(
           await _fetchBatch(
-            start.subtract(const Duration(days: 180)),
+            start, // was start.subtract(Duration(days: 180))
             end,
             _tier3MedicalAndNutrition(),
           ),

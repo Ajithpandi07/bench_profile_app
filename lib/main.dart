@@ -46,14 +46,14 @@ void main() async {
   //   inputData: {'debug': '1'},
   // );
 
-  // // Also register periodic task if you want
-  // await Workmanager().registerPeriodicTask(
-  //   "periodic-sync-id",
-  //   healthDataSyncTask,
-  //   // initialDelay: const Duration(seconds: 10),
-  //   frequency: const Duration(minutes: 15),
-  //   constraints: Constraints(networkType: NetworkType.connected),
-  // );
+  // Register periodic task
+  await Workmanager().registerPeriodicTask(
+    "periodic-sync-id",
+    healthDataSyncTask,
+    // initialDelay: const Duration(seconds: 10),
+    frequency: const Duration(minutes: 15),
+    constraints: Constraints(networkType: NetworkType.connected),
+  );
 
   // // DEBUG: run one-shot sync immediately on startup (only in debug)
   // if (kDebugMode) {

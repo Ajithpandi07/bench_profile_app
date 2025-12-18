@@ -10,7 +10,7 @@ class AppTheme {
 
   // The seed color that will be used to generate the color schemes.
   // Using a shade of blue as it's often associated with health and trust.
-  static final _seedColor = Colors.purple[400]!;
+  static const primaryColor = Color(0xFFEE374D);
 
   /// Defines the base text theme for the application.
   /// These styles will be adapted with appropriate colors by the ColorScheme.
@@ -36,8 +36,9 @@ class AppTheme {
   /// The light theme configuration for the application.
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
+    scaffoldBackgroundColor: const Color(0xFFF8F8F8),
     colorScheme: ColorScheme.fromSeed(
-      seedColor: _seedColor,
+      seedColor: primaryColor,
       brightness: Brightness.light,
     ),
     // You can add further customizations for component themes here.
@@ -56,7 +57,7 @@ class AppTheme {
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: _seedColor,
+      seedColor: primaryColor,
       brightness: Brightness.dark,
     ),
     // You can add further customizations for component themes here.
