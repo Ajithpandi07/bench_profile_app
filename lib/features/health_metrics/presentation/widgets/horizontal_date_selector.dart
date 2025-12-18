@@ -36,8 +36,30 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
   }
 
+  @override
+  void didUpdateWidget(HorizontalDateSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_sameDay(widget.initialDate, oldWidget.initialDate)) {
+      if (!_sameDay(_selected, widget.initialDate)) {
+        setState(() {
+          _selected = widget.initialDate;
+        });
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _scrollToSelected());
+      }
+    }
+  }
+
   List<DateTime> _generateDates(DateTime center, int before, int after) {
+    // If we want a fixed range relative to "Today", we should anchor to DateTime.now()
+    // rather than shifting the window every time the user taps (confusing UX).
+    // Let's verify if the user wants an infinite scroll or a fixed window.
+    // Current impl shifts the window based on 'center'.
+    // If the parent passes a new 'initialDate' (the selected one), the window shifts?
+    // That might be jarring.
+    // Assuming we keep the existing generation logic for now but ensure smooth scroll.
     final List<DateTime> dates = [];
+    // Using the passed center:
     for (int i = -before; i <= after; i++) {
       final d = DateTime(center.year, center.month, center.day)
           .add(Duration(days: i));
@@ -47,26 +69,39 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
   }
 
   void _onTap(DateTime date) {
-    setState(() => _selected = DateTime(date.year, date.month, date.day));
-    widget.onDateSelected(_selected);
+    if (_sameDay(date, _selected)) return;
+    setState(() => _selected = date);
+    widget.onDateSelected(date);
     _scrollToSelected();
   }
 
   void _scrollToSelected() {
+    if (!_scrollController.hasClients) return;
+
     final index = _dates.indexWhere((d) => _sameDay(d, _selected));
     if (index == -1) return;
-    const itemWidth = 46.0;
-    const separatorWidth = 12.0;
-    final target = (index * (itemWidth + separatorWidth)) -
-        (MediaQuery.of(context).size.width / 2) +
-        (itemWidth / 2);
-    final max = _scrollController.position.hasContentDimensions
-        ? _scrollController.position.maxScrollExtent
-        : 0.0;
+
+    const itemWidth = 40.0; // matched to build method width
+    const separatorWidth = 12.0; // matched to separatorBuilder
+
+    // Calculate the offset to center the item
+    // center of item = index * (w + sep) + w/2
+    // center of screen = screenWidth / 2
+    // offset = centerOfItem - centerOfScreen
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final target = (index * (itemWidth + separatorWidth)) +
+        (itemWidth / 2) -
+        (screenWidth / 2) +
+        16; // +16 for padding correction?
+
+    final max = _scrollController.position.maxScrollExtent;
+    final min = _scrollController.position.minScrollExtent;
+
     _scrollController.animateTo(
-      target.clamp(0, max),
+      target.clamp(min, max),
       duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
+      curve: Curves.easeOutCubic,
     );
   }
 

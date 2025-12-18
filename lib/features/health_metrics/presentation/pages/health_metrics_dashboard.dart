@@ -7,6 +7,9 @@ import 'package:bench_profile_app/features/health_metrics/presentation/bloc/heal
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
 import 'package:bench_profile_app/features/auth/presentation/pages/profile_page.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_page.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -19,90 +22,144 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard> {
   String _activeTab = 'home';
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
-      appBar: _buildAppBar(),
-      body: Stack(
-        children: [
-          // Main Content Area
-          Positioned.fill(
-            bottom: 80, // Space for bottom nav
-            child: _buildBody(),
-          ),
+  void initState() {
+    super.initState();
+    // Trigger initial fetch when dashboard mounts
+    context.read<HealthMetricsBloc>().add(GetMetricsForDate(DateTime.now()));
+  }
 
-          // Custom Bottom Navigation
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<HealthMetricsBloc, HealthMetricsState>(
+      listener: (context, state) {
+        if (state is HealthMetricsPermissionRequired) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Permission Required',
+                style: TextStyle(
+                  color: Color(0xFFEE374D),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavItem(
-                    icon: Icons.home_rounded,
-                    isActive: _activeTab == 'home',
-                    onTap: () => setState(() => _activeTab = 'home'),
+              content: const Text(
+                'To track your progress, this app needs access to your health data. Please grant the necessary permissions in settings.',
+                style: TextStyle(fontSize: 16),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.grey.shade600),
                   ),
-                  _NavItem(
-                    icon: Icons.favorite_border_rounded,
-                    isActive: _activeTab == 'heart',
-                    onTap: () => setState(() => _activeTab = 'heart'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEE374D),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  // Center Add Button
-                  GestureDetector(
-                    onTap: () => setState(() => _activeTab = 'add'),
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      // margin: const EdgeInsets.only(bottom: 24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEE374D),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFEE374D).withOpacity(0.4),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'H',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            fontFamily:
-                                'serif', // Trying to match the H style roughly
-                            letterSpacing: -1,
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    openAppSettings();
+                  },
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F8F8),
+        appBar: _buildAppBar(),
+        body: Stack(
+          children: [
+            // Main Content Area
+            Positioned.fill(
+              bottom: 80, // Space for bottom nav
+              child: _buildBody(),
+            ),
+
+            // Custom Bottom Navigation
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _NavItem(
+                      icon: Icons.home_rounded,
+                      isActive: _activeTab == 'home',
+                      onTap: () => setState(() => _activeTab = 'home'),
+                    ),
+                    _NavItem(
+                      icon: Icons.favorite_border_rounded,
+                      isActive: _activeTab == 'heart',
+                      onTap: () => setState(() => _activeTab = 'heart'),
+                    ),
+                    // Center Add Button
+                    GestureDetector(
+                      onTap: () => setState(() => _activeTab = 'add'),
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        // margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEE374D),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFEE374D).withOpacity(0.4),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'H',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              fontFamily:
+                                  'serif', // Trying to match the H style roughly
+                              letterSpacing: -1,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  _NavItem(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    isActive: _activeTab == 'message',
-                    onTap: () => setState(() => _activeTab = 'message'),
-                  ),
-                  _NavItem(
-                    icon: Icons.settings_outlined,
-                    isActive: _activeTab == 'settings',
-                    onTap: () => setState(() => _activeTab = 'settings'),
-                  ),
-                ],
+                    _NavItem(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      isActive: _activeTab == 'message',
+                      onTap: () => setState(() => _activeTab = 'message'),
+                    ),
+                    _NavItem(
+                      icon: Icons.settings_outlined,
+                      isActive: _activeTab == 'settings',
+                      onTap: () => setState(() => _activeTab = 'settings'),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -215,6 +272,77 @@ class _HomeTab extends StatelessWidget {
           metrics = state.summary;
         }
 
+        // Persistent Permission State UI
+        if (state is HealthMetricsPermissionRequired) {
+          // Keep the background but replace content
+          return Stack(
+            children: [
+              Positioned(
+                top: cardCenterY - size.width,
+                left: -size.width * 0.5,
+                right: -size.width * 0.5,
+                height: size.width * 1.65,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: primaryColor.withOpacity(0.08),
+                      width: 1.5,
+                    ),
+                    gradient: RadialGradient(
+                      colors: [
+                        Color.fromARGB(255, 207, 2, 153).withOpacity(0.04),
+                        Color.fromARGB(255, 16, 16, 16).withOpacity(0.0),
+                      ],
+                      stops: const [0.7, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock_outline_rounded,
+                          size: 64, color: primaryColor.withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Permissions Locked',
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Health permissions are required to show your dashboard. Please grant them in settings.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24)),
+                        ),
+                        onPressed: () => openAppSettings(),
+                        child: const Text('Open Settings'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
         return Stack(
           children: [
             // Massive Background Single Circle - Concentric with Card
@@ -222,7 +350,7 @@ class _HomeTab extends StatelessWidget {
               top: cardCenterY - size.width, // CenterY - Radius
               left: -size.width * 0.5,
               right: -size.width * 0.5,
-              height: size.width * 1.65, // Radius = width
+              height: size.width * 1.50, // Radius = width
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -233,7 +361,7 @@ class _HomeTab extends StatelessWidget {
                   gradient: RadialGradient(
                     colors: [
                       Color.fromARGB(255, 207, 2, 153).withOpacity(0.04),
-                      Color.fromARGB(255, 16, 16, 16).withOpacity(0.0),
+                      Color.fromARGB(255, 147, 21, 21).withOpacity(0.0),
                     ],
                     stops: const [0.7, 1.0],
                   ),

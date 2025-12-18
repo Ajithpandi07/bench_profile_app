@@ -39,44 +39,65 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
 
   // Tier 1: Core Daily Activity, Vitals & Sleep (High Frequency Fetch)
   List<HealthDataType> _tier1CoreTypes() => [
-    // Activity
-    HealthDataType.STEPS,
-    HealthDataType.HEART_RATE,
-    HealthDataType.ACTIVE_ENERGY_BURNED,
-    HealthDataType.FLIGHTS_CLIMBED,
-    HealthDataType.WORKOUT, // New - Represents sessions like Running, etc.
+        // Activity
+        HealthDataType.STEPS,
+        HealthDataType.HEART_RATE,
+        HealthDataType.ACTIVE_ENERGY_BURNED,
+        HealthDataType.FLIGHTS_CLIMBED,
+        HealthDataType.WORKOUT, // New - Represents sessions like Running, etc.
 
-    // Sleep
-    // HealthDataType.SLEEP_IN_BED, // New - Total sleep session duration
-    HealthDataType.SLEEP_ASLEEP,
-    HealthDataType.SLEEP_AWAKE,
-  ];
+        // Sleep
+        // HealthDataType.SLEEP_IN_BED, // New - Total sleep session duration
+        HealthDataType.SLEEP_ASLEEP,
+        HealthDataType.SLEEP_AWAKE,
+      ];
 
   // Tier 2: Body Measurements & Vitals (Medium Frequency / Lower Volatility)
   List<HealthDataType> _tier2BodyAndVitals() => [
-    // Body Measurement
-    HealthDataType.HEIGHT,
-    HealthDataType.WEIGHT,
-    HealthDataType.BODY_FAT_PERCENTAGE,
-    HealthDataType.BODY_MASS_INDEX, // New
+        // Body Measurement
+        HealthDataType.HEIGHT,
+        HealthDataType.WEIGHT,
+        HealthDataType.BODY_FAT_PERCENTAGE,
+        HealthDataType.BODY_MASS_INDEX, // New
 
-    // Vitals
-    HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
-    HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
-    HealthDataType.RESPIRATORY_RATE,
-    HealthDataType.BODY_TEMPERATURE,
+        // Vitals
+        HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
+        HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
+        HealthDataType.RESPIRATORY_RATE,
+        HealthDataType.BODY_TEMPERATURE,
 
-    // Nutrition
-    HealthDataType.WATER,
-    HealthDataType.BASAL_ENERGY_BURNED,
-  ];
+        // Nutrition
+        HealthDataType.WATER,
+        HealthDataType.BASAL_ENERGY_BURNED,
+      ];
 
   // Tier 3: Sensitive Medical & Detailed Nutrition (Low Frequency Fetch)
   List<HealthDataType> _tier3MedicalAndNutrition() => [
-    HealthDataType.BLOOD_GLUCOSE,
-    HealthDataType.NUTRITION, // New - For detailed macro/micronutrients
-    // Add other sensitive types like MENSTRUATION_FLOW if needed...
-  ];
+        HealthDataType.BLOOD_GLUCOSE,
+        HealthDataType.NUTRITION, // New - For detailed macro/micronutrients
+        // Add other sensitive types like MENSTRUATION_FLOW if needed...
+      ];
+
+  // ---------------------------------------------------------------------------
+  // HELPER: PERMISSION CHECK
+  // ---------------------------------------------------------------------------
+
+  Future<void> _ensurePermissions(List<HealthDataType> types) async {
+    try {
+      final hasPerms = await _health.hasPermissions(types) ?? false;
+      if (!hasPerms) {
+        // Request
+        final granted = await _health.requestAuthorization(types);
+        if (!granted) {
+          throw PermissionDeniedException();
+        }
+      }
+    } catch (e) {
+      // If requestAuthorization fails explicitly or throws
+      dev.log('Permission request failed: $e', name: 'HealthDataSource');
+      throw PermissionDeniedException();
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // SAFE BATCH FETCH (NO PER-TYPE LOOPS)
@@ -116,14 +137,17 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   // ---------------------------------------------------------------------------
 
   List<HealthMetrics> _mapAndDeduplicate(List<HealthDataPoint> points) {
-    final mapped = points.map((p) {
-      try {
-        return HealthMetrics.fromHealthDataPoint(p);
-      } catch (e, st) {
-        dev.log('Mapping failed: $e\n$st', name: 'HealthDataSource');
-        return null;
-      }
-    }).whereType<HealthMetrics>().toList();
+    final mapped = points
+        .map((p) {
+          try {
+            return HealthMetrics.fromHealthDataPoint(p);
+          } catch (e, st) {
+            dev.log('Mapping failed: $e\n$st', name: 'HealthDataSource');
+            return null;
+          }
+        })
+        .whereType<HealthMetrics>()
+        .toList();
 
     final Map<String, HealthMetrics> byUuid = {};
     for (final m in mapped) {
@@ -146,6 +170,16 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
 
     try {
       final allPoints = <HealthDataPoint>[];
+
+      // Collect all potential types for permission request
+      final allTypes = [
+        ..._tier1CoreTypes(),
+        ..._tier2BodyAndVitals(),
+        ..._tier3MedicalAndNutrition(),
+      ].toSet().toList(); // Deduplicate
+
+      // ENSURE PERMISSIONS FIRST
+      await _ensurePermissions(allTypes);
 
       // Tier 1 – Core Daily Activity & Sleep (1-day lookback)
       allPoints.addAll(
@@ -172,6 +206,9 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
 
       return _mapAndDeduplicate(allPoints);
     } catch (e) {
+      if (e is PermissionDeniedException) {
+        rethrow;
+      }
       dev.log('Error in getHealthMetricsForDate: $e', name: 'HealthDataSource');
       if (e.toString().toLowerCase().contains('permission')) {
         throw PermissionDeniedException();
@@ -188,6 +225,21 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   ) async {
     try {
       final allPoints = <HealthDataPoint>[];
+
+      // Prepare types for permission check
+      List<HealthDataType> typesToCheck;
+      if (types.isNotEmpty) {
+        typesToCheck = types;
+      } else {
+        typesToCheck = [
+          ..._tier1CoreTypes(),
+          ..._tier2BodyAndVitals(),
+          ..._tier3MedicalAndNutrition(),
+        ].toSet().toList();
+      }
+
+      // ENSURE PERMISSIONS
+      await _ensurePermissions(typesToCheck);
 
       // If specific types requested → fetch once
       if (types.isNotEmpty) {
@@ -213,6 +265,7 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
 
       return _mapAndDeduplicate(allPoints);
     } catch (e) {
+      if (e is PermissionDeniedException) rethrow;
       dev.log('Error in getHealthMetricsRange: $e', name: 'HealthDataSource');
       if (e.toString().toLowerCase().contains('permission')) {
         throw PermissionDeniedException();

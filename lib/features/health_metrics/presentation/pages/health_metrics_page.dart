@@ -82,7 +82,6 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                       top:
                           0.0), // Removed top padding as header provides spacing
                   child: HorizontalDateSelector(
-                    key: ValueKey(selectedDate),
                     initialDate: selectedDate,
                     daysBefore: 60,
                     daysAfter:
@@ -174,8 +173,49 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
       return _buildMetricsView(context, summary);
     }
 
+    if (state is HealthMetricsPermissionRequired) {
+      return _buildPermissionRequired();
+    }
+
     // fallback
     return const SizedBox.shrink();
+  }
+
+  Widget _buildPermissionRequired() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      children: [
+        const SizedBox(height: 40),
+        Icon(Icons.security, size: 64, color: Colors.orange.shade400),
+        const SizedBox(height: 20),
+        Text('Permissions Required',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(
+            'To track your health metrics, we need permission to access Health Connect data.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade600)),
+        const SizedBox(height: 24),
+        Center(
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.check_circle_outline),
+            label: const Text('Grant Permissions'),
+            onPressed: () {
+              // Triggering GetMetricsForDate will re-run _ensurePermissions in the datasource
+              context
+                  .read<HealthMetricsBloc>()
+                  .add(GetMetricsForDate(selectedDate));
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildEmpty() {

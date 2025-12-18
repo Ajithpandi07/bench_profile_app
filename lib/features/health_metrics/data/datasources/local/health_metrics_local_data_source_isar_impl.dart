@@ -26,7 +26,7 @@ class HealthMetricsLocalDataSourceIsarImpl
             .filter()
             .uuidEqualTo(metrics.uuid)
             .findFirst();
-        
+
         if (existing == null) {
           await _isar.healthMetrics.put(metrics);
         }
@@ -67,7 +67,7 @@ class HealthMetricsLocalDataSourceIsarImpl
     }
   }
 
-    @override
+  @override
   Future<List<HealthMetrics>> getUnsyncedMetrics({int limit = 50}) async {
     // Find metrics where syncedAt is null.
     return await _isar.healthMetrics
@@ -85,22 +85,20 @@ class HealthMetricsLocalDataSourceIsarImpl
       await _isar.writeTxn(() async {
         // Find all the metrics that match the provided UUIDs.
         // Use filter() because 'uuid' is not indexed.
-        final metricsToUpdate = await _isar.healthMetrics
-            .filter()
-            .group((q) {
-              // Start with the first uuid
-              var builder = q.uuidEqualTo(uuids.first);
-              // Chain subsequent uuids with .or()
-              for (var i = 1; i < uuids.length; i++) {
-                builder = builder.or().uuidEqualTo(uuids[i]);
-              }
-              return builder;
-            })
-            .findAll();
+        final metricsToUpdate = await _isar.healthMetrics.filter().group((q) {
+          // Start with the first uuid
+          var builder = q.uuidEqualTo(uuids.first);
+          // Chain subsequent uuids with .or()
+          for (var i = 1; i < uuids.length; i++) {
+            builder = builder.or().uuidEqualTo(uuids[i]);
+          }
+          return builder;
+        }).findAll();
 
         // Create updated copies with the current timestamp.
         final now = DateTime.now();
-        final updatedMetrics = metricsToUpdate.map((m) => m.copyWith(syncedAt: now)).toList();
+        final updatedMetrics =
+            metricsToUpdate.map((m) => m.copyWith(syncedAt: now)).toList();
 
         // Bulk-update the records in the database.
         if (updatedMetrics.isNotEmpty) {
@@ -136,7 +134,11 @@ class HealthMetricsLocalDataSourceIsarImpl
               .uuidEqualTo(metric.uuid)
               .findFirst();
 
-          if (existing == null) {
+          if (existing != null) {
+            // Update existing record: reuse the Isar ID so it overwrites
+            metricsToSave.add(metric.copyWith(id: existing.id));
+          } else {
+            // New record: use the metric as-is (id will be auto-increment)
             metricsToSave.add(metric);
           }
         }
@@ -150,7 +152,8 @@ class HealthMetricsLocalDataSourceIsarImpl
   }
 
   @override
-  Future<List<HealthMetrics>> getMetricsForDateRange(DateTime start, DateTime end) async {
+  Future<List<HealthMetrics>> getMetricsForDateRange(
+      DateTime start, DateTime end) async {
     try {
       // Use a query to find all metrics within the date range.
       final results = await _isar.healthMetrics
@@ -179,5 +182,4 @@ class HealthMetricsLocalDataSourceIsarImpl
       throw CacheException();
     }
   }
-
 }

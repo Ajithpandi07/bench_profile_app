@@ -7,7 +7,8 @@ import 'package:bench_profile_app/features/health_metrics/data/datasources/remot
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
 import 'package:bench_profile_app/features/health_metrics/data/models/health_model.dart';
 
-class HealthMetricsRemoteDataSourceImpl implements HealthMetricsRemoteDataSource {
+class HealthMetricsRemoteDataSourceImpl
+    implements HealthMetricsRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
   final MetricAggregator aggregator;
@@ -27,43 +28,62 @@ class HealthMetricsRemoteDataSourceImpl implements HealthMetricsRemoteDataSource
       }
       if (metrics.isEmpty) return;
 
-      // Platform-specific collection name
-      final platformCollection = Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
+      final platformCollection =
+          Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
 
-      final date = metrics.first.dateFrom;
-      final docId =
-          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      // Group metrics by day to ensure they go into the correct document
+      final Map<String, List<HealthMetrics>> groupedByDate = {};
+      for (final m in metrics) {
+        final dateKey =
+            '${m.dateFrom.year}-${m.dateFrom.month.toString().padLeft(2, '0')}-${m.dateFrom.day.toString().padLeft(2, '0')}';
+        groupedByDate.putIfAbsent(dateKey, () => []).add(m);
+      }
 
-      // CORRECT: build path by chaining collection/doc/collection/doc
-      final summaryDocRef = firestore
-          .collection('bench_profile')
-          .doc(userId)
-          .collection(platformCollection)
-          .doc(docId);
+      for (final entry in groupedByDate.entries) {
+        final docId = entry.key;
+        final dailyMetrics = entry.value;
+        // Parse date from key for the summary timestamp
+        final parts = docId.split('-');
+        final date = DateTime(
+            int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
 
-      final pointsCollectionRef = summaryDocRef.collection('health_metrics');
+        final summaryDocRef = firestore
+            .collection('bench_profile')
+            .doc(userId)
+            .collection(platformCollection)
+            .doc(docId);
 
-      // Create summary
-      final summaryData = aggregator.aggregate(metrics);
-      summaryData['timestamp'] = Timestamp.fromDate(DateTime(date.year, date.month, date.day));
-      summaryData['source'] = 'health_package';
+        final pointsCollectionRef = summaryDocRef.collection('health_metrics');
 
-      // Firestore batch limit is 500 operations. We use a safe chunk size.
-      const int batchSize = 450;
-      for (var i = 0; i < metrics.length; i += batchSize) {
-        final batch = firestore.batch();
-        final end = (i + batchSize < metrics.length) ? i + batchSize : metrics.length;
-        final chunk = metrics.sublist(i, end);
+        // Create summary for THIS day
+        // Note: Ideally we should fetch existing summary and merge, but 'aggregator.aggregate' usually just sums the list passed.
+        // If we only upload partial data, the summary might be incomplete if we overwrite.
+        // But for now, we follow the previous pattern of SetOptions(merge: true).
+        // A better approach would be to recalculate summary from ALL metrics for the day, but that requires a read.
+        // We will stick to the existing "blind merge" logic but scoped to the correct day.
 
-        // Write summary only in the first batch
-        if (i == 0) {
-          batch.set(summaryDocRef, summaryData, SetOptions(merge: true));
+        final summaryData = aggregator.aggregate(dailyMetrics);
+        summaryData['timestamp'] = Timestamp.fromDate(date);
+        summaryData['source'] = 'health_package';
+
+        const int batchSize = 450;
+        for (var i = 0; i < dailyMetrics.length; i += batchSize) {
+          final batch = firestore.batch();
+          final end = (i + batchSize < dailyMetrics.length)
+              ? i + batchSize
+              : dailyMetrics.length;
+          final chunk = dailyMetrics.sublist(i, end);
+
+          // Write summary only in the first batch of this day
+          if (i == 0) {
+            batch.set(summaryDocRef, summaryData, SetOptions(merge: true));
+          }
+
+          for (final metric in chunk) {
+            batch.set(pointsCollectionRef.doc(metric.uuid), metric.toMap());
+          }
+          await batch.commit();
         }
-
-        for (final metric in chunk) {
-          batch.set(pointsCollectionRef.doc(metric.uuid), metric.toMap());
-        }
-        await batch.commit();
       }
     } catch (e) {
       print('Error uploading metrics: $e');
@@ -81,7 +101,8 @@ class HealthMetricsRemoteDataSourceImpl implements HealthMetricsRemoteDataSource
 
     try {
       // Platform-specific collection name
-      final platformCollection = Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
+      final platformCollection =
+          Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
 
       final docId =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -99,7 +120,8 @@ class HealthMetricsRemoteDataSourceImpl implements HealthMetricsRemoteDataSource
         return []; // No data found for this date
       }
 
-      final metrics = snapshot.docs.map((doc) => HealthModel.fromMap(doc.data())).toList();
+      final metrics =
+          snapshot.docs.map((doc) => HealthModel.fromMap(doc.data())).toList();
       return metrics;
     } catch (e) {
       // Wrap Firestore/other errors in a ServerException
@@ -114,8 +136,12 @@ class HealthMetricsRemoteDataSourceImpl implements HealthMetricsRemoteDataSource
     final userId = auth.currentUser?.uid;
     if (userId == null) throw ServerException('User is not authenticated.');
 
-    final platformCollection = Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
-    final parentRef = firestore.collection('bench_profile').doc(userId).collection(platformCollection);
+    final platformCollection =
+        Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
+    final parentRef = firestore
+        .collection('bench_profile')
+        .doc(userId)
+        .collection(platformCollection);
 
     final snapshot = await parentRef.get();
     final allPoints = <HealthMetrics>[];
@@ -133,5 +159,4 @@ class HealthMetricsRemoteDataSourceImpl implements HealthMetricsRemoteDataSource
     }
     return allPoints;
   }
-
 }

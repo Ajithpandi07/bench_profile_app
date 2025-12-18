@@ -69,72 +69,103 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     return <HealthMetrics>[];
   }
 
-  Future<void> _onGetMetrics(GetMetrics event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onGetMetrics(
+      GetMetrics event, Emitter<HealthMetricsState> emit) async {
     final date = DateTime.now(); // Default to today for generic fetch
     emit(HealthMetricsLoading(selectedDate: date));
     final res = await getHealthMetrics.call(NoParams());
     res.fold(
-      (failure) => emit(HealthMetricsError(message: _mapFailureToMessage(failure), selectedDate: date)),
+      (failure) {
+        if (failure is PermissionFailure) {
+          emit(HealthMetricsPermissionRequired(selectedDate: date));
+        } else {
+          emit(HealthMetricsError(
+              message: _mapFailureToMessage(failure), selectedDate: date));
+        }
+      },
       (maybe) {
         final list = _normalizeToList(maybe);
         final summaryMap = aggregator.aggregate(list);
         final summary = HealthMetricsSummary.fromMap(summaryMap, date);
-        emit(HealthMetricsLoaded(metrics: list, summary: summary, selectedDate: date));
+        emit(HealthMetricsLoaded(
+            metrics: list, summary: summary, selectedDate: date));
       },
     );
   }
 
-  Future<void> _onGetMetricsForDate(GetMetricsForDate event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onGetMetricsForDate(
+      GetMetricsForDate event, Emitter<HealthMetricsState> emit) async {
     // Update date immediately
     emit(HealthMetricsLoading(selectedDate: event.date));
     final res = await getHealthMetricsForDate.call(DateParams(event.date));
     res.fold(
-      (failure) => emit(HealthMetricsError(message: _mapFailureToMessage(failure), selectedDate: event.date)),
+      (failure) {
+        if (failure is PermissionFailure) {
+          emit(HealthMetricsPermissionRequired(selectedDate: event.date));
+        } else {
+          emit(HealthMetricsError(
+              message: _mapFailureToMessage(failure),
+              selectedDate: event.date));
+        }
+      },
       (maybe) {
         try {
           final list = _normalizeToList(maybe);
           final summaryMap = aggregator.aggregate(list);
           final summary = HealthMetricsSummary.fromMap(summaryMap, event.date);
-          emit(HealthMetricsLoaded(metrics: list, summary: summary, selectedDate: event.date));
+          emit(HealthMetricsLoaded(
+              metrics: list, summary: summary, selectedDate: event.date));
         } catch (e, st) {
           debugPrint('Error processing metrics: $e\n$st');
-          emit(HealthMetricsError(message: 'Failed to process data: $e', selectedDate: event.date));
+          emit(HealthMetricsError(
+              message: 'Failed to process data: $e', selectedDate: event.date));
         }
       },
     );
   }
 
-  Future<void> _onGetMetricsRange(GetMetricsRange event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onGetMetricsRange(
+      GetMetricsRange event, Emitter<HealthMetricsState> emit) async {
     emit(HealthMetricsLoading(selectedDate: state.selectedDate));
     // Prefer repository method for ranges if available
     if (repository != null) {
-      final res = await repository!.getHealthMetricsRange(event.start, event.end, event.types ?? []);
+      final res = await repository!
+          .getHealthMetricsRange(event.start, event.end, event.types ?? []);
       res.fold(
-        (failure) => emit(HealthMetricsError(message: _mapFailureToMessage(failure), selectedDate: state.selectedDate)),
+        (failure) => emit(HealthMetricsError(
+            message: _mapFailureToMessage(failure),
+            selectedDate: state.selectedDate)),
         (list) {
-          emit(HealthMetricsLoaded(metrics: list, summary: null, selectedDate: state.selectedDate));
+          emit(HealthMetricsLoaded(
+              metrics: list, summary: null, selectedDate: state.selectedDate));
         },
       );
       return;
     }
-    emit(HealthMetricsError(message: 'Range queries are not implemented (repository missing)', selectedDate: state.selectedDate));
+    emit(HealthMetricsError(
+        message: 'Range queries are not implemented (repository missing)',
+        selectedDate: state.selectedDate));
   }
 
-  Future<void> _onRefresh(RefreshMetrics event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onRefresh(
+      RefreshMetrics event, Emitter<HealthMetricsState> emit) async {
     // Refresh the currently selected date
     add(GetMetricsForDate(state.selectedDate));
   }
 
-  Future<void> _onLoadCached(LoadCachedMetrics event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onLoadCached(
+      LoadCachedMetrics event, Emitter<HealthMetricsState> emit) async {
     final date = event.date ?? DateTime.now();
     if (repository == null) {
-      emit(HealthMetricsError(message: 'Local cache not available', selectedDate: date));
+      emit(HealthMetricsError(
+          message: 'Local cache not available', selectedDate: date));
       return;
     }
     final res = await repository!.getHealthMetricsForDate(date);
     // repository returns Either<Failure, HealthMetrics> or list depending on impl — normalize
     res.fold(
-      (failure) => emit(HealthMetricsError(message: _mapFailureToMessage(failure), selectedDate: date)),
+      (failure) => emit(HealthMetricsError(
+          message: _mapFailureToMessage(failure), selectedDate: date)),
       (maybe) {
         // maybe is HealthMetrics OR List<HealthMetrics> depending on impl
         final list = _normalizeToList(maybe);
@@ -147,54 +178,80 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     );
   }
 
-  Future<void> _onSaveMetrics(SaveMetrics event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onSaveMetrics(
+      SaveMetrics event, Emitter<HealthMetricsState> emit) async {
     if (repository == null) {
-      emit(HealthMetricsError(message: 'Repository not available to save metrics', selectedDate: state.selectedDate));
+      emit(HealthMetricsError(
+          message: 'Repository not available to save metrics',
+          selectedDate: state.selectedDate));
       return;
     }
 
-    final res = await repository!.saveHealthMetrics('local', event.metrics); // TODO: pass real uid if available
+    final res = await repository!.saveHealthMetrics(
+        'local', event.metrics); // TODO: pass real uid if available
     res.fold(
-      (failure) => emit(HealthMetricsError(message: _mapFailureToMessage(failure), selectedDate: state.selectedDate)),
-      (_) => emit(HealthMetricsLoaded(metrics: event.metrics, summary: HealthMetricsSummary.fromMap(aggregator.aggregate(event.metrics), DateTime.now()), selectedDate: state.selectedDate)),
+      (failure) => emit(HealthMetricsError(
+          message: _mapFailureToMessage(failure),
+          selectedDate: state.selectedDate)),
+      (_) => emit(HealthMetricsLoaded(
+          metrics: event.metrics,
+          summary: HealthMetricsSummary.fromMap(
+              aggregator.aggregate(event.metrics), DateTime.now()),
+          selectedDate: state.selectedDate)),
     );
   }
 
-  Future<void> _onSyncMetrics(SyncMetrics event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onSyncMetrics(
+      SyncMetrics event, Emitter<HealthMetricsState> emit) async {
     if (syncManager == null) {
-      emit(HealthMetricsError(message: 'SyncManager not configured. Register SyncManager in DI to enable background sync.', selectedDate: state.selectedDate));
+      emit(HealthMetricsError(
+          message:
+              'SyncManager not configured. Register SyncManager in DI to enable background sync.',
+          selectedDate: state.selectedDate));
       return;
     }
 
-    emit(HealthMetricsSyncing(completed: 0, total: 0, selectedDate: state.selectedDate));
+    emit(HealthMetricsSyncing(
+        completed: 0, total: 0, selectedDate: state.selectedDate));
     final res = await syncManager!.performSyncOnce(days: event.days);
     res.fold(
-      (failure) => emit(HealthMetricsError(message: _mapFailureToMessage(failure), selectedDate: state.selectedDate)),
+      (failure) => emit(HealthMetricsError(
+          message: _mapFailureToMessage(failure),
+          selectedDate: state.selectedDate)),
       (_) => add(const RefreshMetrics()),
     );
   }
 
-  Future<void> _onSyncProgress(SyncProgress event, Emitter<HealthMetricsState> emit) async {
-    emit(HealthMetricsSyncing(completed: event.completed, total: event.total, selectedDate: state.selectedDate));
+  Future<void> _onSyncProgress(
+      SyncProgress event, Emitter<HealthMetricsState> emit) async {
+    emit(HealthMetricsSyncing(
+        completed: event.completed,
+        total: event.total,
+        selectedDate: state.selectedDate));
   }
 
-  Future<void> _onSyncFailed(SyncFailed event, Emitter<HealthMetricsState> emit) async {
-    emit(HealthMetricsError(message: event.message, selectedDate: state.selectedDate));
+  Future<void> _onSyncFailed(
+      SyncFailed event, Emitter<HealthMetricsState> emit) async {
+    emit(HealthMetricsError(
+        message: event.message, selectedDate: state.selectedDate));
   }
 
-  Future<void> _onMarkMetricsSynced(MarkMetricsSynced event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onMarkMetricsSynced(
+      MarkMetricsSynced event, Emitter<HealthMetricsState> emit) async {
     // If your repository supports marking entries as synced, call it here.
     // Default: do nothing and just refresh.
     add(const RefreshMetrics());
   }
 
-  Future<void> _onRequestPermissions(RequestPermissions event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onRequestPermissions(
+      RequestPermissions event, Emitter<HealthMetricsState> emit) async {
     // Permission handling is platform-specific and likely belongs in DataSource.
     // This event is a signal for the UI. You can call a "permission helper" here if you have one.
     emit(HealthMetricsPermissionRequired(selectedDate: state.selectedDate));
   }
 
-  Future<void> _onPermissionsStatusChanged(PermissionsStatusChanged event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onPermissionsStatusChanged(
+      PermissionsStatusChanged event, Emitter<HealthMetricsState> emit) async {
     if (event.granted) {
       add(const RefreshMetrics());
     } else {
@@ -202,35 +259,44 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     }
   }
 
-  Future<void> _onClearCache(ClearCache event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onClearCache(
+      ClearCache event, Emitter<HealthMetricsState> emit) async {
     if (repository == null) {
-      emit(HealthMetricsError(message: 'Repository not available', selectedDate: state.selectedDate));
+      emit(HealthMetricsError(
+          message: 'Repository not available',
+          selectedDate: state.selectedDate));
       return;
     }
     try {
-      await repository!.saveHealthMetrics('local', <HealthMetrics>[]); // no-op placeholder
+      await repository!
+          .saveHealthMetrics('local', <HealthMetrics>[]); // no-op placeholder
       emit(HealthMetricsEmpty(selectedDate: state.selectedDate));
     } catch (e) {
-      emit(HealthMetricsError(message: e.toString(), selectedDate: state.selectedDate));
+      emit(HealthMetricsError(
+          message: e.toString(), selectedDate: state.selectedDate));
     }
   }
 
-  Future<void> _onSelectDate(SelectDate event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onSelectDate(
+      SelectDate event, Emitter<HealthMetricsState> emit) async {
     // UI helper - fetch for date and update state
     add(GetMetricsForDate(event.date));
   }
 
-  Future<void> _onToggleMetricType(ToggleMetricType event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onToggleMetricType(
+      ToggleMetricType event, Emitter<HealthMetricsState> emit) async {
     // TODO: Implement logic to toggle visibility of specific metric types in the UI.
     // This might require updating the HealthMetricsState to include a filter or visibility map.
   }
 
-  Future<void> _onSubscribeToLiveUpdates(SubscribeToLiveUpdates event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onSubscribeToLiveUpdates(
+      SubscribeToLiveUpdates event, Emitter<HealthMetricsState> emit) async {
     // TODO: Implement subscription to real-time health data updates from the repository.
     // This requires the repository to expose a Stream<List<HealthMetrics>>.
   }
 
-  Future<void> _onUnsubscribeFromLiveUpdates(UnsubscribeFromLiveUpdates event, Emitter<HealthMetricsState> emit) async {
+  Future<void> _onUnsubscribeFromLiveUpdates(UnsubscribeFromLiveUpdates event,
+      Emitter<HealthMetricsState> emit) async {
     await _updatesSubscription?.cancel();
     _updatesSubscription = null;
   }

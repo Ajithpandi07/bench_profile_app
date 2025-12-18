@@ -43,27 +43,6 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
     return <HealthMetrics>[];
   }
 
-  // Full restore helper: fetch ALL remote metrics for current user and upsert locally.
-  Future<Either<Failure, void>> _restoreLocalFromRemoteAll() async {
-    try {
-      if (!await networkInfo.isConnected) {
-        return const Left(NetworkFailure('No internet connection for restore'));
-      }
-
-      final remoteMaybe = await remoteDataSource.getAllHealthMetricsForUser();
-      final remoteList = _normalizeToList(remoteMaybe);
-
-      if (remoteList.isEmpty) return const Right(null);
-
-      await localDataSource.cacheHealthMetricsBatch(remoteList);
-      return const Right(null);
-    } on ServerException catch (e) {
-      return Left(ServerFailure('Remote restore failed: ${e.message}'));
-    } catch (e) {
-      return Left(RepositoryFailure('Restore failed: ${e.toString()}'));
-    }
-  }
-
   // --- HealthRepository methods -------------------------------------------
 
   @override
@@ -72,98 +51,75 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
   }
 
   @override
-  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(DateTime date) async {
+  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(
+      DateTime date) async {
     try {
       final now = DateTime.now();
       final dayStart = DateTime(date.year, date.month, date.day);
       if (dayStart.isAfter(now)) return const Right(<HealthMetrics>[]);
 
-      // Attempt Device -> Remote -> Local (best-effort) if online
+      // 1. Fetch from Device (HealthConnect)
+      // We do NOT save this to local directly anymore.
+      // The flow is strictly: Device -> Remote -> Local.
+      List<HealthMetrics> deviceList = [];
+      try {
+        final deviceMaybe = await dataSource.getHealthMetricsForDate(date);
+        deviceList = _normalizeToList(deviceMaybe)
+            .where((m) =>
+                m.dateFrom.isBefore(now) || m.dateFrom.isAtSameMomentAs(now))
+            .toList();
+      } catch (e) {
+        if (e is! PermissionDeniedException) {
+          debugPrint('Device fetch failed: $e');
+        }
+      }
+
+      // 2. Sync Logic: Device -> Remote -> Local
       if (await networkInfo.isConnected) {
         try {
-          final deviceMaybe = await dataSource.getHealthMetricsForDate(date);
-          final deviceList = _normalizeToList(deviceMaybe)
-              .where((m) => m.dateFrom.isBefore(now) || m.dateFrom.isAtSameMomentAs(now))
-              .toList();
+          // A. DEVICE -> REMOTE (Upload)
+          // We assume Remote is the source of truth, so we push our fresh device data there first.
+          if (deviceList.isNotEmpty) {
+            // Optional: Filter dupes against remote if needed, but "Upsert" on server handles it usually.
+            // For now, we attempt to upload all fresh device data found.
+            await remoteDataSource.uploadHealthMetrics(deviceList);
+          }
 
-          // Get remote canonical set for date
-          final remoteMaybe = await remoteDataSource.getHealthMetricsForDate(date);
+          // B. REMOTE -> LOCAL (Download & Cache)
+          // Now that Remote is updated, we fetch from it to update our Local "Source of Truth".
+          final remoteMaybe =
+              await remoteDataSource.getHealthMetricsForDate(date);
           final remoteList = _normalizeToList(remoteMaybe);
-          final remoteUuids = remoteList.map((e) => e.uuid).toSet();
 
-          // Upload only missing
-          final toUpload = deviceList.where((p) => !remoteUuids.contains(p.uuid)).toList();
-          if (toUpload.isNotEmpty) {
-            try {
-              await remoteDataSource.uploadHealthMetrics(toUpload);
-            } catch (e, st) {
-              debugPrint('Upload missing points failed (non-fatal): $e\n$st');
-            }
+          if (remoteList.isNotEmpty) {
+            // Mark as synced since it came from remote
+            final syncedList =
+                remoteList.map((m) => m.copyWith(synced: true)).toList();
+            await localDataSource.cacheHealthMetricsBatch(syncedList);
           }
-
-          // Re-fetch canonical remote and cache locally
-          final postRemoteMaybe = await remoteDataSource.getHealthMetricsForDate(date);
-          final postRemoteList = _normalizeToList(postRemoteMaybe);
-          if (postRemoteList.isNotEmpty) {
-            try {
-              await localDataSource.cacheHealthMetricsBatch(postRemoteList);
-            } catch (e, st) {
-              debugPrint('Cache remote -> local failed (non-fatal): $e\n$st');
-            }
-          }
-        } catch (e, st) {
-          debugPrint('Daily sync attempt failed (non-fatal): $e\n$st');
+        } catch (e) {
+          debugPrint('Strict sync (Device->Remote->Local) failed: $e');
+          // Fallback: If sync fails, we might want to temporarily show existing local?
         }
+      } else {
+        // Offline Fallback:
+        // Since we cannot sync Device->Remote, we technically "lose" the device view if we don't cache it.
+        // However, user requested "Device -> Local should NOT be".
+        // But for offline usability, we might display Local data as is.
+        // NOTE: If offline, users won't see new device steps until they go online. This follows the strict request.
       }
 
-      // Read from local (UI source-of-truth)
-      try {
-        final localList = await localDataSource.getAllHealthMetricsForDate(date);
+      // 3. Return Local (The Source of Truth)
+      final localList = await localDataSource.getAllHealthMetricsForDate(date);
 
-        // If local is empty and we have network, do a full restore from remote
-        if (localList.isEmpty && await networkInfo.isConnected) {
-          final restoreRes = await _restoreLocalFromRemoteAll();
-          if (restoreRes.isRight()) {
-            final restored = await localDataSource.getAllHealthMetricsForDate(date);
-            return Right(restored);
-          } else {
-            // restore failed => try remote fallback for this date
-            try {
-              final remoteFallback = await remoteDataSource.getHealthMetricsForDate(date);
-              return Right(_normalizeToList(remoteFallback));
-            } catch (e) {
-              debugPrint('Remote fallback after failed restore also failed: $e');
-              return Right(localList); // empty
-            }
-          }
-        }
+      // If local is empty (and maybe we are offline or sync failed),
+      // check if we should try a "Last Resort" remote fetch if we think we have connectivity?
+      // (Already tried in step 2).
 
-        return Right(localList);
-      } catch (e) {
-        debugPrint('Local read failed: $e');
-        // Local failed -> try remote fallback and cache
-        if (await networkInfo.isConnected) {
-          try {
-            final remoteFallback = await remoteDataSource.getHealthMetricsForDate(date);
-            final remoteList = _normalizeToList(remoteFallback);
-            if (remoteList.isNotEmpty) {
-              try {
-                await localDataSource.cacheHealthMetricsBatch(remoteList);
-              } catch (e, st) {
-                debugPrint('Cache after remote fallback failed: $e\n$st');
-              }
-            }
-            return Right(remoteList);
-          } catch (e2) {
-            return Left(CacheFailure('Local read failed and remote fallback failed: ${e2.toString()}'));
-          }
-        }
-        return Left(CacheFailure('Local read failed: ${e.toString()}'));
-      }
+      return Right(localList);
     } on PermissionDeniedException {
-      return const Left(PermissionFailure('Health permissions were not granted.'));
-    } on ServerException catch (e) {
-      return Left(ServerFailure('Remote error: ${e.message}'));
+      return const Left(
+          PermissionFailure('Health permissions were not granted.'));
     } on CacheException {
       return Left(CacheFailure('Local cache error.'));
     } catch (e) {
@@ -178,11 +134,13 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
     List<HealthDataType> types,
   ) async {
     try {
-      final maybeRange = await dataSource.getHealthMetricsRange(start, end, types);
+      final maybeRange =
+          await dataSource.getHealthMetricsRange(start, end, types);
       final list = _normalizeToList(maybeRange);
       return Right(list);
     } on PermissionDeniedException {
-      return const Left(PermissionFailure('Health permissions were not granted.'));
+      return const Left(
+          PermissionFailure('Health permissions were not granted.'));
     } on ServerException {
       return Left(ServerFailure('Failed to fetch data from the server.'));
     } catch (e) {
@@ -191,7 +149,8 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveHealthMetrics(String uid, List<HealthMetrics> model) async {
+  Future<Either<Failure, void>> saveHealthMetrics(
+      String uid, List<HealthMetrics> model) async {
     if (await networkInfo.isConnected) {
       try {
         // Upload to remote
@@ -205,20 +164,21 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
         }
         return const Right(null);
       } on ServerException catch (e) {
-        return Left(ServerFailure('Failed to save metrics to remote: ${e.toString()}'));
+        return Left(
+            ServerFailure('Failed to save metrics to remote: ${e.toString()}'));
       } catch (e) {
         return Left(Failure('Unexpected error during save: ${e.toString()}'));
       }
     } else {
-      return const Left(NetworkFailure('No internet connection. Could not save metrics.'));
+      return const Left(
+          NetworkFailure('No internet connection. Could not save metrics.'));
     }
   }
 
   @override
   Future<Either<Failure, void>> syncPastHealthData({int days = 30}) async {
+    return Left(RepositoryFailure('Sync error:'));
 
-      return Left(RepositoryFailure('Sync error:'));
-     
     // try {
     //   final today = DateTime.now();
     //   final startDate = DateTime(today.year, today.month, today.day).subtract(Duration(days: days));
@@ -279,7 +239,8 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
   }
 
   @override
-  Future<Either<Failure, List<HealthMetrics>?>> getStoredHealthMetrics(String uid) async {
+  Future<Either<Failure, List<HealthMetrics>?>> getStoredHealthMetrics(
+      String uid) async {
     try {
       if (!await networkInfo.isConnected) {
         return const Left(NetworkFailure('No internet connection.'));
