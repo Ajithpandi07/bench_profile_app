@@ -81,20 +81,58 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   // ---------------------------------------------------------------------------
   // HELPER: PERMISSION CHECK
   // ---------------------------------------------------------------------------
+  // Cache permission status to avoid hitting rate limits on getGrantedPermissions
+  bool _hasCachedPermissions = false;
+  DateTime? _lastPermissionCheck;
 
   Future<void> _ensurePermissions(List<HealthDataType> types) async {
+    // If we checked recently (within 60s) and had permissions, skip check
+    if (_hasCachedPermissions &&
+        _lastPermissionCheck != null &&
+        DateTime.now().difference(_lastPermissionCheck!) <
+            const Duration(seconds: 60)) {
+      return;
+    }
+
+    // Apply rate guard before calling Health Connect API
+    await _HealthConnectRateGuard.wait();
+
     try {
-      final hasPerms = await _health.hasPermissions(types) ?? false;
-      if (!hasPerms) {
-        // Request
-        final granted = await _health.requestAuthorization(types);
-        if (!granted) {
-          throw PermissionDeniedException();
+      if (Platform.isAndroid) {
+        final status = await _health.getHealthConnectSdkStatus();
+        if (status != HealthConnectSdkStatus.sdkAvailable) {
+          throw HealthConnectNotInstalledException();
         }
       }
+
+      final hasPerms = await _health.hasPermissions(types) ?? false;
+
+      _lastPermissionCheck = DateTime.now();
+
+      if (hasPerms) {
+        _hasCachedPermissions = true;
+        return;
+      }
+
+      // If not granted, we must request. This shows UI, so we reset cache logic potentially?
+      // Requesting permissions is a heavy operation.
+      _hasCachedPermissions = false;
+
+      // Request
+      final granted = await _health.requestAuthorization(types);
+      if (!granted) {
+        throw PermissionDeniedException();
+      }
+
+      // If granted after request
+      _hasCachedPermissions = true;
+      _lastPermissionCheck = DateTime.now();
     } catch (e) {
+      if (e is HealthConnectNotInstalledException) rethrow;
+
       // If requestAuthorization fails explicitly or throws
       dev.log('Permission request failed: $e', name: 'HealthDataSource');
+      _hasCachedPermissions = false;
       throw PermissionDeniedException();
     }
   }
@@ -209,6 +247,9 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       if (e is PermissionDeniedException) {
         rethrow;
       }
+      if (e is HealthConnectNotInstalledException) {
+        rethrow;
+      }
       dev.log('Error in getHealthMetricsForDate: $e', name: 'HealthDataSource');
       if (e.toString().toLowerCase().contains('permission')) {
         throw PermissionDeniedException();
@@ -266,6 +307,7 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       return _mapAndDeduplicate(allPoints);
     } catch (e) {
       if (e is PermissionDeniedException) rethrow;
+      if (e is HealthConnectNotInstalledException) rethrow;
       dev.log('Error in getHealthMetricsRange: $e', name: 'HealthDataSource');
       if (e.toString().toLowerCase().contains('permission')) {
         throw PermissionDeniedException();

@@ -89,6 +89,8 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
         // but for sync often we want to just log and continue if possible or return failure.
         if (e is PermissionDeniedException)
           rethrow; // Let caller process permissions
+        if (e is HealthConnectNotInstalledException)
+          rethrow; // Let caller prompt install
       }
 
       if (!await networkInfo.isConnected) {
@@ -121,6 +123,9 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
     } on PermissionDeniedException {
       return const Left(
           PermissionFailure('Health permissions were not granted.'));
+    } on HealthConnectNotInstalledException {
+      return const Left(
+          HealthConnectFailure('Health Connect is not installed.'));
     } on ServerException catch (e) {
       return Left(ServerFailure('Sync failed: ${e.message}'));
     } catch (e) {
@@ -142,6 +147,9 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
     } on PermissionDeniedException {
       return const Left(
           PermissionFailure('Health permissions were not granted.'));
+    } on HealthConnectNotInstalledException {
+      return const Left(
+          HealthConnectFailure('Health Connect is not installed.'));
     } on ServerException {
       return Left(ServerFailure('Failed to fetch data from the server.'));
     } catch (e) {
@@ -177,7 +185,7 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> syncPastHealthData({int days = 30}) async {
+  Future<Either<Failure, void>> syncPastHealthData({int days = 45}) async {
     try {
       if (!await networkInfo.isConnected) {
         return const Left(NetworkFailure('No internet connection during sync'));
@@ -206,6 +214,11 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
           final deviceMaybe = await dataSource.getHealthMetricsForDate(d);
           deviceData = _normalizeToList(deviceMaybe);
         } catch (e) {
+          if (e is HealthConnectNotInstalledException) {
+            // Abort sync entirely if Health Connect is missing
+            return const Left(
+                HealthConnectFailure('Health Connect not installed.'));
+          }
           debugPrint('Background Sync: Device fetch failed for $d: $e');
           // If device fetch fails (e.g. permissions locked in background), we skip this day
           continue;
@@ -240,6 +253,9 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
     } on PermissionDeniedException {
       return const Left(
           PermissionFailure('Health permissions were not granted.'));
+    } on HealthConnectNotInstalledException {
+      return const Left(
+          HealthConnectFailure('Health Connect is not installed.'));
     } on ServerException catch (e) {
       return Left(
           ServerFailure('Remote server error during sync: ${e.message}'));

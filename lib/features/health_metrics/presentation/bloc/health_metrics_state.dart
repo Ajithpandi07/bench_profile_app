@@ -36,7 +36,8 @@ class HealthMetricsLoaded extends HealthMetricsState {
 
 class HealthMetricsError extends HealthMetricsState {
   final String message;
-  const HealthMetricsError({required this.message, required super.selectedDate});
+  const HealthMetricsError(
+      {required this.message, required super.selectedDate});
 
   @override
   List<Object?> get props => [message, selectedDate];
@@ -66,6 +67,10 @@ class HealthMetricsPermissionRequired extends HealthMetricsState {
 
   @override
   List<Object?> get props => [reason, selectedDate];
+}
+
+class HealthMetricsHealthConnectRequired extends HealthMetricsState {
+  const HealthMetricsHealthConnectRequired({required super.selectedDate});
 }
 
 /// Cache-only loaded

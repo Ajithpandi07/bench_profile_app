@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'dart:async';
+
 const String healthDataSyncTask =
     "com.example.bench_profile_app.syncPastHealthData";
 
@@ -42,7 +43,8 @@ void callbackDispatcher() {
           .first // Get the first event, which is the restored user or null.
           .timeout(const Duration(seconds: 10), onTimeout: () {
         // This is a clearer way to handle a timeout than a generic catch.
-        throw TimeoutException('Firebase Auth session restoration timed out after 10 seconds.');
+        throw TimeoutException(
+            'Firebase Auth session restoration timed out after 10 seconds.');
       });
 
       if (user == null) {
@@ -57,13 +59,14 @@ void callbackDispatcher() {
       final healthRepo = di.sl<HealthRepository>();
       await _bgLog('HealthRepository found. Starting syncPastHealthData().');
 
-      // Execute the sync for the past 30 days.
-      final result = await healthRepo.syncPastHealthData();
+      // Execute the sync for the past 45 days as requested.
+      final result = await healthRepo.syncPastHealthData(days: 45);
       final success = result.isRight(); // `isRight()` means it was successful.
 
       if (success) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_sync_timestamp', DateTime.now().toIso8601String());
+        await prefs.setString(
+            'last_sync_timestamp', DateTime.now().toIso8601String());
       }
 
       await _bgLog(

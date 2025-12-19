@@ -243,8 +243,13 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
     final res = await repository!.syncMetricsForDate(date);
 
-    res.fold(
-      (failure) {
+    await res.fold(
+      (failure) async {
+        if (failure is PermissionFailure) {
+          emit(HealthMetricsPermissionRequired(selectedDate: date));
+        } else if (failure is HealthConnectFailure) {
+          emit(HealthMetricsHealthConnectRequired(selectedDate: date));
+        }
         // Log failure but don't disrupt UI if local data was okay
         debugPrint('Background sync failed: $failure');
       },

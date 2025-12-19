@@ -6,7 +6,7 @@ class ThemeService {
   static const _kKey = 'app_theme_mode';
 
   // ValueNotifier so UI can listen for changes
-  final ValueNotifier<ThemeMode> mode = ValueNotifier(ThemeMode.system);
+  final ValueNotifier<ThemeMode> mode = ValueNotifier(ThemeMode.light);
 
   ThemeService._internal();
   static final ThemeService _instance = ThemeService._internal();
@@ -24,14 +24,16 @@ class ThemeService {
         mode.value = ThemeMode.dark;
         break;
       default:
-        mode.value = ThemeMode.system;
+        mode.value = ThemeMode.light;
     }
   }
 
   Future<void> setMode(ThemeMode m) async {
     mode.value = m;
     final prefs = await SharedPreferences.getInstance();
-    final s = m == ThemeMode.system ? 'system' : (m == ThemeMode.dark ? 'dark' : 'light');
+    final s = m == ThemeMode.system
+        ? 'system'
+        : (m == ThemeMode.dark ? 'dark' : 'light');
     await prefs.setString(_kKey, s);
   }
 

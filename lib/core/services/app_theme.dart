@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// A centralized place for the application's theme definitions.
 ///
@@ -11,6 +12,9 @@ class AppTheme {
   // The seed color that will be used to generate the color schemes.
   // Using a shade of blue as it's often associated with health and trust.
   static const primaryColor = Color(0xFFEE374D);
+
+  static const primaryVariant = Color(0xFFA72740);
+  static const primaryLight = Color.fromRGBO(226, 146, 146, 1);
 
   /// Defines the base text theme for the application.
   /// These styles will be adapted with appropriate colors by the ColorScheme.
@@ -39,6 +43,8 @@ class AppTheme {
     scaffoldBackgroundColor: const Color(0xFFF8F8F8),
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryColor,
+      primary: primaryColor,
+      secondary: primaryVariant,
       brightness: Brightness.light,
     ),
     // You can add further customizations for component themes here.
@@ -49,6 +55,7 @@ class AppTheme {
           Colors.black, // or Color(0xFFEE374D) if they want red text
       elevation: 0,
       scrolledUnderElevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
     ),
     // Further component theme customizations can be added here.
   );
@@ -58,6 +65,8 @@ class AppTheme {
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryColor,
+      primary: primaryColor,
+      secondary: primaryVariant,
       brightness: Brightness.dark,
     ),
     // You can add further customizations for component themes here.

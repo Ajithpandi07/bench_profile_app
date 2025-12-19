@@ -6,7 +6,9 @@ class Failure {
   String toString() => 'Failure: $message';
 }
 
-class ServerFailure extends Failure { const ServerFailure(super.message); }
+class ServerFailure extends Failure {
+  const ServerFailure(super.message);
+}
 
 class PermissionFailure extends Failure {
   const PermissionFailure(super.message);
@@ -15,10 +17,15 @@ class PermissionFailure extends Failure {
 class NetworkFailure extends Failure {
   const NetworkFailure(super.message);
 }
+
 class RepositoryFailure extends Failure {
   const RepositoryFailure(String message) : super(message);
 }
 
 class CacheFailure extends Failure {
   const CacheFailure(String message) : super(message);
+}
+
+class HealthConnectFailure extends Failure {
+  const HealthConnectFailure(super.message);
 }

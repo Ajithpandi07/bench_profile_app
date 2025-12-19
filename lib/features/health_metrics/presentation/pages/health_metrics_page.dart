@@ -9,6 +9,7 @@ import 'package:bench_profile_app/features/health_metrics/presentation/bloc/heal
 import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/widgets/horizontal_date_selector.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/widgets/metric_card.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/widgets/empty_metrics_state.dart';
 
 class HealthMetricsPage extends StatefulWidget {
   const HealthMetricsPage({super.key});
@@ -219,36 +220,18 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
   }
 
   Widget _buildEmpty() {
-    return ListView(
+    return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
-      children: [
-        const SizedBox(height: 40),
-        Icon(Icons.health_and_safety_outlined,
-            size: 64, color: Colors.grey.shade400),
-        const SizedBox(height: 20),
-        Text(
-          'No health data yet',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Tap refresh or allow Health permissions to start collecting data.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey.shade500),
-        ),
-        const SizedBox(height: 24),
-        Center(
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.refresh),
-            label: const Text('Fetch now'),
-            onPressed: () => context
-                .read<HealthMetricsBloc>()
-                .add(GetMetricsForDate(selectedDate)),
-          ),
-        ),
-      ],
+      child: EmptyMetricsState(
+        title: 'No Health Data Yet',
+        message:
+            'Tap refresh or allow Health permissions to start collecting data.',
+        icon: Icons.health_and_safety_outlined,
+        actionLabel: 'Fetch Now',
+        onAction: () => context
+            .read<HealthMetricsBloc>()
+            .add(GetMetricsForDate(selectedDate)),
+      ),
     );
   }
 
@@ -406,14 +389,11 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
       }).toList();
 
       if (availableMetrics.isEmpty) {
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Text(
-              'No metrics available for this date.',
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
-          ),
+        return EmptyMetricsState(
+          title: 'No Data for This Day',
+          message:
+              'It seems there are no recorded metrics for this selected date.',
+          icon: Icons.insert_chart_outlined_rounded,
         );
       }
 
