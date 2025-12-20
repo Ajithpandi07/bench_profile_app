@@ -23,15 +23,17 @@ class HealthMetricsLoading extends HealthMetricsState {
 class HealthMetricsLoaded extends HealthMetricsState {
   final List<HealthMetrics> metrics;
   final HealthMetricsSummary? summary;
+  final bool isSyncing;
 
   const HealthMetricsLoaded({
     required this.metrics,
     this.summary,
+    this.isSyncing = false,
     required super.selectedDate,
   });
 
   @override
-  List<Object?> get props => [metrics, summary, selectedDate];
+  List<Object?> get props => [metrics, summary, selectedDate, isSyncing];
 }
 
 class HealthMetricsError extends HealthMetricsState {

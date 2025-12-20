@@ -60,7 +60,7 @@ void callbackDispatcher() {
       await _bgLog('HealthRepository found. Starting syncPastHealthData().');
 
       // Execute the sync for the past 45 days as requested.
-      final result = await healthRepo.syncPastHealthData(days: 45);
+      final result = await healthRepo.syncPastHealthData(days: 1);
       final success = result.isRight(); // `isRight()` means it was successful.
 
       if (success) {

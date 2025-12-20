@@ -6,12 +6,12 @@ import '../../../../core/usecase/usecase.dart';
 import '../entities/health_metrics.dart';
 import '../repositories/health_repository.dart';
 
-class GetHealthMetrics implements UseCase<List<HealthMetrics>, NoParams> {
+class GetCachedMetrics implements UseCase<List<HealthMetrics>, NoParams> {
   final HealthRepository repository;
-  GetHealthMetrics(this.repository);
+  GetCachedMetrics(this.repository);
 
   @override
   Future<Either<Failure, List<HealthMetrics>>> call(NoParams params) {
-    return repository.getHealthMetrics();
+    return repository.getCachedMetrics();
   }
 }

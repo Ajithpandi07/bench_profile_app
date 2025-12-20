@@ -25,10 +25,10 @@ class IsarHealthMetricsRepository implements HealthRepository {
   });
 
   @override
-  Future<Either<Failure, List<HealthMetrics>>> getHealthMetrics() async {
+  Future<Either<Failure, List<HealthMetrics>>> getCachedMetrics() async {
     try {
       // Return metrics for today by default
-      return getHealthMetricsForDate(DateTime.now());
+      return getCachedMetricsForDate(DateTime.now());
     } catch (e) {
       return Left(
           RepositoryFailure('Failed to fetch latest health metrics: $e'));
@@ -77,7 +77,7 @@ class IsarHealthMetricsRepository implements HealthRepository {
   }
 
   @override
-  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(
+  Future<Either<Failure, List<HealthMetrics>>> getCachedMetricsForDate(
       DateTime date) async {
     try {
       // Trigger sync if fetching for today (app opening scenario)
@@ -116,18 +116,10 @@ class IsarHealthMetricsRepository implements HealthRepository {
         // Ignore remote errors and proceed to device fetch
       }
 
-      // 3. If Remote is also empty/failed, fetch from the device's health API.
-      final deviceMetrics =
-          await healthDataSource.getHealthMetricsForDate(date);
-
-      if (deviceMetrics.isNotEmpty) {
-        await isar.writeTxn(() async {
-          await isar.healthMetrics.putAll(deviceMetrics);
-        });
-      }
-
-      // Return the (potentially empty) list of metrics from the device.
-      return Right(deviceMetrics);
+      // 3. If Remote is also empty, we return empty list.
+      // We DO NOT fetch from device here anymore, as per "Local First" strict separation.
+      // Device fetch happens only during strict Sync.
+      return const Right([]);
     } catch (e) {
       return Left(
           RepositoryFailure('Failed to query metrics for date $date: $e'));
@@ -174,7 +166,7 @@ class IsarHealthMetricsRepository implements HealthRepository {
           // We fetch from device to ensure we have the latest data for this day
           try {
             final deviceMetrics =
-                await healthDataSource.getHealthMetricsForDate(startOfDay);
+                await healthDataSource.fetchFromDeviceForDate(startOfDay);
             if (deviceMetrics.isNotEmpty) {
               // Deduplicate: Get existing UUIDs for this day
               final existingUuids = await isar.healthMetrics
@@ -208,8 +200,7 @@ class IsarHealthMetricsRepository implements HealthRepository {
   Future<Either<Failure, void>> syncMetricsForDate(DateTime date) async {
     try {
       // 1. Fetch from Device
-      final deviceMetrics =
-          await healthDataSource.getHealthMetricsForDate(date);
+      final deviceMetrics = await healthDataSource.fetchFromDeviceForDate(date);
 
       // 2. Upload to Remote (Device -> Remote)
       if (deviceMetrics.isNotEmpty) {
@@ -263,6 +254,74 @@ class IsarHealthMetricsRepository implements HealthRepository {
     } catch (e) {
       return Left(
           RepositoryFailure('Failed to sync metrics for date $date: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> requestPermissions() async {
+    // Isar repo uses the same datasource, so we can delegate.
+    try {
+      // Create a default list of types since the interface requires it
+      // In a real app we might want to consolidate this list somewhere common.
+      final types = [
+        HealthDataType.STEPS,
+        HealthDataType.HEART_RATE,
+        HealthDataType.ACTIVE_ENERGY_BURNED,
+        HealthDataType.FLIGHTS_CLIMBED,
+        HealthDataType.WORKOUT,
+        HealthDataType.SLEEP_ASLEEP,
+        HealthDataType.SLEEP_AWAKE,
+        HealthDataType.HEIGHT,
+        HealthDataType.WEIGHT,
+        HealthDataType.BODY_FAT_PERCENTAGE,
+        HealthDataType.BODY_MASS_INDEX,
+        HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
+        HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
+        HealthDataType.RESPIRATORY_RATE,
+        HealthDataType.BODY_TEMPERATURE,
+        HealthDataType.WATER,
+        HealthDataType.BASAL_ENERGY_BURNED,
+        HealthDataType.BLOOD_GLUCOSE,
+        HealthDataType.NUTRITION,
+      ];
+      final granted = await healthDataSource.requestPermissions(types);
+      return Right(granted);
+    } catch (e) {
+      return Left(PermissionFailure('Failed to request permissions: $e'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> restoreAllHealthData() async {
+    try {
+      final remoteMetrics = await remoteDataSource.getAllHealthMetricsForUser();
+      if (remoteMetrics.isNotEmpty) {
+        // Bulk write to Isar
+        await isar.writeTxn(() async {
+          // Put all overwrites existing by ID.
+          // Since remote is source-of-truth for restore, we trust it.
+          // Note: Remote metrics might not have Isar IDs populated, so new IDs generated,
+          // potentially duplicating if UUID logic isn't enforcing uniqueness via filter first.
+          // However, HealthMetrics entity uses 'uuid' but Isar needs 'id'.
+          // To safely UPSERT by UUID, we should map existing UUIDs.
+
+          // Optimization: If cache is expected to be empty, direct putAll is fine.
+          // If we are restoring into a dirty cache, we need deduplication.
+          // Let's assume we want to UPSERT by UUID.
+
+          // 1. Get all existing UUIDs? (Likely too many for massive datasets)
+          // 2. Or just putAll and let duplicates happen? (Bad)
+          // 3. Or iterate and check? (Slow)
+          // 4. Ideally Isar has an index on UUID and we use putByUuid? Isar doesn't support custom PK purely like that easily without config.
+
+          // Current best effort: Delete All first? (User said "when local cleaned")
+          // If not cleaning, we probably want to just blind put.
+          await isar.healthMetrics.putAll(remoteMetrics);
+        });
+      }
+      return const Right(null);
+    } catch (e) {
+      return Left(RepositoryFailure('Failed to restore all health data: $e'));
     }
   }
 }

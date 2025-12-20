@@ -9,10 +9,10 @@ import '../entities/health_metrics.dart';
 abstract class HealthRepository {
   /// Returns latest health metrics from the device/platform (last 24h).
   /// Changed to return a list to keep the API consistent.
-  Future<Either<Failure, List<HealthMetrics>>> getHealthMetrics();
+  Future<Either<Failure, List<HealthMetrics>>> getCachedMetrics();
 
-  /// Returns aggregated metrics for a specific date.
-  Future<Either<Failure, List<HealthMetrics>>> getHealthMetricsForDate(
+  /// Returns aggregated metrics for a specific date from CACHE (Local DB).
+  Future<Either<Failure, List<HealthMetrics>>> getCachedMetricsForDate(
       DateTime date);
 
   /// Returns aggregated metrics for a custom date range and data types.
@@ -31,8 +31,14 @@ abstract class HealthRepository {
       String uid);
 
   /// Triggers a background sync for health data for a given number of past days.
-  Future<Either<Failure, void>> syncPastHealthData({int days = 30});
+  Future<Either<Failure, void>> syncPastHealthData({int days = 1});
 
   /// Explicitly syncs data for a specific date (Device -> Remote -> Local).
   Future<Either<Failure, void>> syncMetricsForDate(DateTime date);
+
+  /// Requests health permissions from the user. Returns true if granted.
+  Future<Either<Failure, bool>> requestPermissions();
+
+  /// Restores ALL historical data from Remote to Local (e.g. fresh install or cache clear).
+  Future<Either<Failure, void>> restoreAllHealthData();
 }

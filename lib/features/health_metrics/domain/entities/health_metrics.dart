@@ -48,11 +48,22 @@ class HealthMetrics extends Equatable {
     this.lastModified = const _DefaultDateTime(),
   });
 
-  /// Create from a Health package data point
-  factory HealthMetrics.fromHealthDataPoint(HealthDataPoint p) {
+  /// Create from a Health package data point safely
+  static HealthMetrics? tryParse(HealthDataPoint p) {
+    double? extractedValue;
+
+    if (p.value is NumericHealthValue) {
+      extractedValue = (p.value as NumericHealthValue).numericValue.toDouble();
+    } else {
+      // Handle other types or ignore
+      // For Nutrition, we could try to extract calories, but for now let's just ignore to prevent crashes
+      // and logs. If specific support is needed, we can add a specialized handler here.
+      return null;
+    }
+
     return HealthMetrics(
       uuid: p.uuid,
-      value: (p.value as NumericHealthValue).numericValue.toDouble(),
+      value: extractedValue,
       unit: p.unit.name,
       dateFrom: p.dateFrom,
       dateTo: p.dateTo,
@@ -61,6 +72,16 @@ class HealthMetrics extends Equatable {
       sourceId: p.sourceId,
       lastModified: DateTime.now(),
     );
+  }
+
+  /// Deprecated: Use tryParse instead
+  factory HealthMetrics.fromHealthDataPoint(HealthDataPoint p) {
+    final m = tryParse(p);
+    if (m == null) {
+      throw FormatException(
+          'Unsupported HealthValue type: ${p.value.runtimeType}');
+    }
+    return m;
   }
 
   /// Create from Firestore map / document
@@ -76,14 +97,16 @@ class HealthMetrics extends Equatable {
     return HealthMetrics(
       uuid: map['uuid'] as String,
       type: map['type'] as String,
-      value: (map['value'] as num).toDouble(),
+      value: (map['value'] as num?)?.toDouble() ?? 0.0,
       unit: map['unit'] as String,
       dateFrom: parseDate(map['dateFrom']),
       dateTo: parseDate(map['dateTo']),
       sourceName: map['sourceName'] as String,
       sourceId: map['sourceId'] as String,
       synced: (map['synced'] as bool?) ?? false,
-      syncedAt: map['syncedAt'] is Timestamp ? (map['syncedAt'] as Timestamp).toDate() : (map['syncedAt'] as DateTime?),
+      syncedAt: map['syncedAt'] is Timestamp
+          ? (map['syncedAt'] as Timestamp).toDate()
+          : (map['syncedAt'] as DateTime?),
       lastModified: map['lastModified'] is Timestamp
           ? (map['lastModified'] as Timestamp).toDate()
           : (map['lastModified'] as DateTime?) ?? DateTime.now(),

@@ -11,12 +11,13 @@ class DateParams {
   DateParams(this.date);
 }
 
-class GetHealthMetricsForDate implements UseCase<List<HealthMetrics>, DateParams> {
+class GetCachedMetricsForDate
+    implements UseCase<List<HealthMetrics>, DateParams> {
   final HealthRepository repository;
-  GetHealthMetricsForDate(this.repository);
+  GetCachedMetricsForDate(this.repository);
 
   @override
   Future<Either<Failure, List<HealthMetrics>>> call(DateParams params) {
-    return repository.getHealthMetricsForDate(params.date);
+    return repository.getCachedMetricsForDate(params.date);
   }
 }

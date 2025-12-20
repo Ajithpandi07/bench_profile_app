@@ -166,6 +166,12 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
         'Batch fetch failed (${types.length} types): $e',
         name: 'HealthDataSource',
       );
+      // CRITICAL FIX: Do NOT swallow permission errors here.
+      if (e.toString().toLowerCase().contains('permission') ||
+          e is PermissionDeniedException) {
+        throw PermissionDeniedException();
+      }
+      // For other errors, we might return empty list to avoid crashing the whole sync
       return [];
     }
   }
@@ -178,7 +184,7 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
     final mapped = points
         .map((p) {
           try {
-            return HealthMetrics.fromHealthDataPoint(p);
+            return HealthMetrics.tryParse(p);
           } catch (e, st) {
             dev.log('Mapping failed: $e\n$st', name: 'HealthDataSource');
             return null;
@@ -202,7 +208,7 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   // ---------------------------------------------------------------------------
 
   @override
-  Future<List<HealthMetrics>> getHealthMetricsForDate(DateTime date) async {
+  Future<List<HealthMetrics>> fetchFromDeviceForDate(DateTime date) async {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
 
@@ -219,28 +225,36 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       // ENSURE PERMISSIONS FIRST
       await _ensurePermissions(allTypes);
 
-      // Tier 1 – Core Daily Activity & Sleep (1-day lookback)
+      // OPTIMIZATION: Fetch ALL types in a single batch to avoid multiple rate-guard delays (10s each).
+      // Since all tiers use the same start/end date logic now (no custom lookbacks), we can combine them.
+
+      // We reuse allTypes which contains the union of all tiers.
       allPoints.addAll(
-        await _fetchBatch(start, end, _tier1CoreTypes()),
+        await _fetchBatch(start, end, allTypes),
       );
 
-      // Tier 2 – Body Measurements & Vitals (No lookback, only today)
-      allPoints.addAll(
-        await _fetchBatch(
-          start, // was start.subtract(Duration(days: 90))
-          end,
-          _tier2BodyAndVitals(),
-        ),
-      );
+      dev.log(
+          'Fetched ${allPoints.length} raw points from Health Connect for date $date (Start: $start, End: $end)',
+          name: 'HealthDataSource');
 
-      // Tier 3 – Sensitive/Detailed (No lookback, only today)
-      allPoints.addAll(
-        await _fetchBatch(
-          start, // was start.subtract(Duration(days: 180))
-          end,
-          _tier3MedicalAndNutrition(),
-        ),
-      );
+      if (allPoints.isEmpty) {
+        dev.log(
+            'WARNING: Health Connect returned 0 points. Checking permissions...',
+            name: 'HealthDataSource');
+        final perms = await _health.hasPermissions(allTypes);
+        dev.log('HasPermissions for all types: $perms',
+            name: 'HealthDataSource');
+
+        // DEBUG FALLBACK: Try fetching JUST STEPS to see if it's a batch issue
+        dev.log('DEBUG: Attempting isolated STEPS fetch...',
+            name: 'HealthDataSource');
+        final steps = await _fetchBatch(start, end, [HealthDataType.STEPS]);
+        dev.log('DEBUG: Isolated STEPS fetch result count: ${steps.length}',
+            name: 'HealthDataSource');
+        if (steps.isNotEmpty) {
+          allPoints.addAll(steps);
+        }
+      }
 
       return _mapAndDeduplicate(allPoints);
     } catch (e) {
@@ -250,7 +264,7 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       if (e is HealthConnectNotInstalledException) {
         rethrow;
       }
-      dev.log('Error in getHealthMetricsForDate: $e', name: 'HealthDataSource');
+      dev.log('Error in fetchFromDeviceForDate: $e', name: 'HealthDataSource');
       if (e.toString().toLowerCase().contains('permission')) {
         throw PermissionDeniedException();
       }
@@ -313,6 +327,24 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
         throw PermissionDeniedException();
       }
       return [];
+    }
+  }
+
+  @override
+  Future<bool> requestPermissions(List<HealthDataType> types) async {
+    try {
+      // Use the internal ensuring logic which handles caching/rate-limiting
+      // But force a request if needed.
+      // _ensurePermissions logic: checks cache, if false, requests.
+      // If we are calling this method explicitly, we likely WANT to show the UI.
+      // So let's force a request by invalidating cache.
+      _hasCachedPermissions = false;
+      await _ensurePermissions(types);
+      return true;
+    } catch (e) {
+      if (e is PermissionDeniedException) return false;
+      // If error, assume false
+      return false;
     }
   }
 }

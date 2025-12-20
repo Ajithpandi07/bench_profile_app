@@ -39,7 +39,7 @@ class HealthMetricsLocalDataSourceIsarImpl
 
   /// Return all HealthMetrics entries whose dateFrom lies on the given date.
   @override
-  Future<List<HealthMetrics>> getAllHealthMetricsForDate(DateTime date) async {
+  Future<List<HealthMetrics>> readFromCacheForDate(DateTime date) async {
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));

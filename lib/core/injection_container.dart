@@ -108,20 +108,20 @@ Future<void> init() async {
   }
 
   // Usecases
-  if (!sl.isRegistered<GetHealthMetrics>()) {
-    sl.registerLazySingleton<GetHealthMetrics>(
-        () => GetHealthMetrics(sl<HealthRepository>()));
+  if (!sl.isRegistered<GetCachedMetrics>()) {
+    sl.registerLazySingleton<GetCachedMetrics>(
+        () => GetCachedMetrics(sl<HealthRepository>()));
   }
-  if (!sl.isRegistered<GetHealthMetricsForDate>()) {
-    sl.registerLazySingleton<GetHealthMetricsForDate>(
-        () => GetHealthMetricsForDate(sl<HealthRepository>()));
+  if (!sl.isRegistered<GetCachedMetricsForDate>()) {
+    sl.registerLazySingleton<GetCachedMetricsForDate>(
+        () => GetCachedMetricsForDate(sl<HealthRepository>()));
   }
 
   // Bloc
   if (!sl.isRegistered<HealthMetricsBloc>()) {
     sl.registerFactory<HealthMetricsBloc>(() => HealthMetricsBloc(
-          getHealthMetrics: sl<GetHealthMetrics>(),
-          getHealthMetricsForDate: sl<GetHealthMetricsForDate>(),
+          getCachedMetrics: sl<GetCachedMetrics>(),
+          getCachedMetricsForDate: sl<GetCachedMetricsForDate>(),
           aggregator: sl<MetricAggregator>(),
           repository: sl<HealthRepository>(),
         ));

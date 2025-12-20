@@ -133,6 +133,10 @@ class ClearCache extends HealthMetricsEvent {
   const ClearCache();
 }
 
+class RestoreAllData extends HealthMetricsEvent {
+  const RestoreAllData();
+}
+
 /// UI: user selected a date via the selector
 class SelectDate extends HealthMetricsEvent {
   final DateTime date;

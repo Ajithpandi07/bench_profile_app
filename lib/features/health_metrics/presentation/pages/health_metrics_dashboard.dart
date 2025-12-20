@@ -36,6 +36,12 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
     WidgetsBinding.instance.addObserver(this);
     // Trigger initial fetch when dashboard mounts
     context.read<HealthMetricsBloc>().add(GetMetricsForDate(DateTime.now()));
+    // Automatically trigger restore/sync on load (delayed to allow initial load to settle)
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        context.read<HealthMetricsBloc>().add(const RestoreAllData());
+      }
+    });
   }
 
   @override
@@ -58,43 +64,52 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<HealthMetricsBloc, HealthMetricsState>(
-      listener: (context, state) {
-        if (state is HealthMetricsPermissionRequired) {
-          showDialog(
-            context: context,
-            builder: (ctx) => const PermissionRequiredDialog(),
-          );
-        } else if (state is HealthMetricsHealthConnectRequired) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => const HealthConnectInstallDialog(),
-          );
-        }
+    return PopScope(
+      canPop: _activeTab == 'home',
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        setState(() {
+          _activeTab = 'home';
+        });
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8F8F8),
-        appBar: _buildAppBar(),
-        body: Stack(
-          children: [
-            // Main Content Area
-            Positioned.fill(
-              bottom: 80, // Space for bottom nav
-              child: _buildBody(),
-            ),
-
-            // Custom Bottom Navigation
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: CustomBottomNavigationBar(
-                activeTab: _activeTab,
-                onTabSelected: (tab) => setState(() => _activeTab = tab),
+      child: BlocListener<HealthMetricsBloc, HealthMetricsState>(
+        listener: (context, state) {
+          if (state is HealthMetricsPermissionRequired) {
+            showDialog(
+              context: context,
+              builder: (ctx) => const PermissionRequiredDialog(),
+            );
+          } else if (state is HealthMetricsHealthConnectRequired) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => const HealthConnectInstallDialog(),
+            );
+          }
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8F8F8),
+          appBar: _buildAppBar(),
+          body: Stack(
+            children: [
+              // Main Content Area
+              Positioned.fill(
+                bottom: 80, // Space for bottom nav
+                child: _buildBody(),
               ),
-            ),
-          ],
+
+              // Custom Bottom Navigation
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: CustomBottomNavigationBar(
+                  activeTab: _activeTab,
+                  onTabSelected: (tab) => setState(() => _activeTab = tab),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -119,30 +134,50 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 24.0),
-          child: CircleAvatar(
-            radius: 20,
-            backgroundColor: AppTheme.primaryLight,
-            child: Builder(
-              builder: (context) {
-                // We could use AuthBloc, but direct FirebaseAuth access is safe for simple UI display here
-                // assuming AuthWrapper ensures we are logged in.
-                // Or better: Use the bloc state if available.
-                // Let's grab it from FirebaseAuth instance for direct simplicity as requested.
-                // You might need to import firebase_auth.
-                final user = FirebaseAuth.instance.currentUser;
-                final String initial = (user?.email?.isNotEmpty == true)
-                    ? user!.email![0].toUpperCase()
-                    : 'U';
-                return Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Color.fromARGB(255, 19, 19, 19),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+          child: BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
+            builder: (context, state) {
+              final bool isSyncing = state is HealthMetricsSyncing ||
+                  (state is HealthMetricsLoaded && state.isSyncing);
+
+              if (isSyncing) {
+                return const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          Color.fromARGB(255, 19, 19, 19)),
+                    ),
                   ),
                 );
-              },
-            ),
+              }
+              return CircleAvatar(
+                radius: 20,
+                backgroundColor: AppTheme.primaryLight,
+                child: Builder(
+                  builder: (context) {
+                    String initial = 'U';
+                    try {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user?.email?.isNotEmpty == true) {
+                        initial = user!.email![0].toUpperCase();
+                      }
+                    } catch (_) {}
+
+                    return Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Color.fromARGB(255, 19, 19, 19),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -234,6 +269,21 @@ class _HomeTab extends StatelessWidget {
                   ),
                 ),
               ),
+              Positioned(
+                top: cardCenterY - size.width * 1, // CenterY - Radius
+                left: -size.width * 0.5,
+                right: -size.width * 0.5,
+                height: size.width * 1.31, // Radius = width
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: primaryColor.withOpacity(0.08),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
 
               // Main Scrollable Content
               SafeArea(
@@ -312,26 +362,8 @@ class _HomeTab extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 32),
-
                       // Check-in Card
-                      const CheckInCard(),
-
-                      const SizedBox(height: 24),
-
-                      // Today's Plan
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Today's Plan",
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 40),
+                      // const CheckInCard(),
                     ],
                   ),
                 ),

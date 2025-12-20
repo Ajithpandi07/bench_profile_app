@@ -21,16 +21,16 @@ abstract class SyncManager {
 }
 
 class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
-  final GetHealthMetrics getHealthMetrics;
-  final GetHealthMetricsForDate getHealthMetricsForDate;
+  final GetCachedMetrics getCachedMetrics;
+  final GetCachedMetricsForDate getCachedMetricsForDate;
   final MetricAggregator aggregator;
   final HealthRepository? repository;
   final SyncManager? syncManager;
   StreamSubscription? _updatesSubscription;
 
   HealthMetricsBloc({
-    required this.getHealthMetrics,
-    required this.getHealthMetricsForDate,
+    required this.getCachedMetrics,
+    required this.getCachedMetricsForDate,
     required this.aggregator,
     this.repository,
     this.syncManager,
@@ -48,6 +48,7 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     on<RequestPermissions>(_onRequestPermissions);
     on<PermissionsStatusChanged>(_onPermissionsStatusChanged);
     on<ClearCache>(_onClearCache);
+    on<RestoreAllData>(_onRestoreAllData);
     on<SelectDate>(_onSelectDate);
     on<ToggleMetricType>(_onToggleMetricType);
     on<SubscribeToLiveUpdates>(_onSubscribeToLiveUpdates);
@@ -73,7 +74,7 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
       GetMetrics event, Emitter<HealthMetricsState> emit) async {
     final date = DateTime.now(); // Default to today for generic fetch
     emit(HealthMetricsLoading(selectedDate: date));
-    final res = await getHealthMetrics.call(NoParams());
+    final res = await getCachedMetrics.call(NoParams());
     res.fold(
       (failure) {
         if (failure is PermissionFailure) {
@@ -99,7 +100,7 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     emit(HealthMetricsLoading(selectedDate: event.date));
 
     // Fetch local data (fast)
-    final localRes = await getHealthMetricsForDate.call(DateParams(event.date));
+    final localRes = await getCachedMetricsForDate.call(DateParams(event.date));
 
     localRes.fold(
       (failure) {
@@ -129,24 +130,9 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
     // 2. Trigger Background Sync (Device -> Remote -> Local)
     if (repository != null) {
-      // optimization: Only sync if date is today or recent past?
-      // User asked for "background sync... take health data to remote to locally"
-      // We do this blindly for the requested date to ensure freshness.
-
-      // We don't await this to block UI, but we want to update UI when it finishes.
-      // So we do await it, but since we already emitted Loaded above, the UI is interactive.
-      // However, bloc handlers sort of queue. To truly be "background" to the UI,
-      // we must rely on the fact that we emitted state above.
-      // BUT: Bloc processes events sequentially. Awaiting here delayed processing next event?
-      // No, strictly awaiting here keeps this handler active.
-      // If user taps another date, that event queues.
-      // To make it truly non-blocking for OTHER events (like fast date switching),
-      // we should maybe spawn a separate Future or use a "Sync" event?
-      // But standard Bloc pattern: if we await, we block the stream.
-      // Solution: We emitted Loaded. That's good. But if user clicks next date,
-      // we are stuck awaiting sync here.
-      // Better approach: Fire a separate SyncMetrics event!
-      add(SyncMetrics(date: event.date));
+      // Automatic sync removed per user request (strict separation).
+      // Sync must be triggered manually or via separate background worker.
+      // add(SyncMetrics(date: event.date));
     }
   }
 
@@ -187,7 +173,7 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
           message: 'Local cache not available', selectedDate: date));
       return;
     }
-    final res = await repository!.getHealthMetricsForDate(date);
+    final res = await repository!.getCachedMetricsForDate(date);
     // repository returns Either<Failure, HealthMetrics> or list depending on impl — normalize
     res.fold(
       (failure) => emit(HealthMetricsError(
@@ -236,10 +222,15 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
     if (repository == null) return;
 
-    // Use specific syncForDate if it exists in repository, otherwise fallback to "SyncManager" (old way)
-    // The user wants "sync for the date".
-
-    // emit(HealthMetricsSyncing(...)); // Optional: show spinner? User said "background", maybe no spinner.
+    // Show visual indicator if we already have data
+    if (state is HealthMetricsLoaded) {
+      final curr = state as HealthMetricsLoaded;
+      emit(HealthMetricsLoaded(
+          metrics: curr.metrics,
+          summary: curr.summary,
+          selectedDate: curr.selectedDate,
+          isSyncing: true));
+    }
 
     final res = await repository!.syncMetricsForDate(date);
 
@@ -249,16 +240,24 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
           emit(HealthMetricsPermissionRequired(selectedDate: date));
         } else if (failure is HealthConnectFailure) {
           emit(HealthMetricsHealthConnectRequired(selectedDate: date));
+        } else {
+          // Generic failure: revert isSyncing if we were loaded
+          if (state is HealthMetricsLoaded) {
+            final curr = state as HealthMetricsLoaded;
+            if (curr.isSyncing) {
+              emit(HealthMetricsLoaded(
+                  metrics: curr.metrics,
+                  summary: curr.summary,
+                  selectedDate: curr.selectedDate,
+                  isSyncing: false));
+            }
+          }
+          debugPrint('Background sync failed: $failure');
         }
-        // Log failure but don't disrupt UI if local data was okay
-        debugPrint('Background sync failed: $failure');
       },
       (_) async {
         // Success! Re-fetch local data to update UI with fresh inputs
-        // We can reuse the same UC or call repo directly.
-        // Let's reuse the internal logic we put in _onGetMetricsForDate but without triggering another sync loop.
-        // Or simply emit a new Loaded state manually.
-        final localRes = await getHealthMetricsForDate.call(DateParams(date));
+        final localRes = await getCachedMetricsForDate.call(DateParams(date));
         localRes.fold((f) => null, // ignore
             (maybe) {
           final list = _normalizeToList(maybe);
@@ -267,7 +266,10 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
           // Verify if user is still on this date?
           if (state.selectedDate == date) {
             emit(HealthMetricsLoaded(
-                metrics: list, summary: summary, selectedDate: date));
+                metrics: list,
+                summary: summary,
+                selectedDate: date,
+                isSyncing: false));
           }
         });
       },
@@ -297,9 +299,28 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
   Future<void> _onRequestPermissions(
       RequestPermissions event, Emitter<HealthMetricsState> emit) async {
-    // Permission handling is platform-specific and likely belongs in DataSource.
-    // This event is a signal for the UI. You can call a "permission helper" here if you have one.
-    emit(HealthMetricsPermissionRequired(selectedDate: state.selectedDate));
+    if (repository == null) {
+      // If we don't have a repository, we can't request properly, so we just emit required
+      emit(HealthMetricsPermissionRequired(selectedDate: state.selectedDate));
+      return;
+    }
+
+    final res = await repository!.requestPermissions();
+    res.fold(
+      (failure) {
+        // If request failed (e.g. system error), we still probably need permissions
+        emit(HealthMetricsPermissionRequired(selectedDate: state.selectedDate));
+      },
+      (granted) {
+        if (granted) {
+          add(const RefreshMetrics());
+        } else {
+          // User denied
+          emit(HealthMetricsPermissionRequired(
+              selectedDate: state.selectedDate));
+        }
+      },
+    );
   }
 
   Future<void> _onPermissionsStatusChanged(
@@ -322,11 +343,59 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     try {
       await repository!
           .saveHealthMetrics('local', <HealthMetrics>[]); // no-op placeholder
+
+      // Post-clear: Trigger restore automatically
+      add(const RestoreAllData());
+
       emit(HealthMetricsEmpty(selectedDate: state.selectedDate));
     } catch (e) {
       emit(HealthMetricsError(
           message: e.toString(), selectedDate: state.selectedDate));
     }
+  }
+
+  Future<void> _onRestoreAllData(
+      RestoreAllData event, Emitter<HealthMetricsState> emit) async {
+    if (repository == null) return;
+
+    if (state is HealthMetricsLoaded) {
+      final curr = state as HealthMetricsLoaded;
+      emit(HealthMetricsLoaded(
+          metrics: curr.metrics,
+          summary: curr.summary,
+          selectedDate: curr.selectedDate,
+          isSyncing: true));
+    } else {
+      emit(HealthMetricsSyncing(
+          completed: 0, total: 100, selectedDate: state.selectedDate));
+    }
+
+    final res = await repository!.restoreAllHealthData();
+
+    // Artificial delay to ensure user sees the "Syncing" state
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    res.fold(
+      (failure) {
+        if (state is HealthMetricsLoaded) {
+          final curr = state as HealthMetricsLoaded;
+          if (curr.isSyncing) {
+            emit(HealthMetricsLoaded(
+                metrics: curr.metrics,
+                summary: curr.summary,
+                selectedDate: curr.selectedDate,
+                isSyncing: false));
+          }
+        }
+        emit(HealthMetricsError(
+            message: _mapFailureToMessage(failure),
+            selectedDate: state.selectedDate));
+      },
+      (_) {
+        // Success. Refresh current view.
+        add(const RefreshMetrics());
+      },
+    );
   }
 
   Future<void> _onSelectDate(
