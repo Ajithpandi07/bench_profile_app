@@ -54,7 +54,9 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // Refresh metrics when returning from settings/background
-      if (mounted) {
+      // But only if this page is actually visible (top of stack)
+      // If we are in Detail Page, that page will handle its own lifecycle if needed.
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
         context
             .read<HealthMetricsBloc>()
             .add(GetMetricsForDate(DateTime.now()));
@@ -288,83 +290,97 @@ class _HomeTab extends StatelessWidget {
               // Main Scrollable Content
               SafeArea(
                 bottom: false,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      // Header removed (moved to AppBar)
-                      const SizedBox(height: 20),
+                child: RefreshIndicator(
+                  color: primaryColor,
+                  onRefresh: () async {
+                    // Trigger sync manually
+                    context
+                        .read<HealthMetricsBloc>()
+                        .add(const RefreshMetrics());
+                    // Wait briefly for UI feel or until state changes (handled by bloc)
+                    await Future.delayed(const Duration(milliseconds: 1500));
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        // Hint text
 
-                      const SizedBox(height: 20),
+                        // Header removed (moved to AppBar)
+                        const SizedBox(height: 20),
 
-                      // Circular Progress (Now smaller and tighter)
-                      CircularScoreCard(
-                        metrics: metrics,
-                        goalSteps: 10000,
-                        size:
-                            240, // Reduced from 360 to wrap tightly around 160 button
-                        animateDuration: const Duration(milliseconds: 700),
-                      ),
+                        const SizedBox(height: 20),
 
-                      const SizedBox(height: 40), // Spacing to grid
-
-                      // Stats Grid
-                      // Stats Grid - Arced Layout
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 0), // Highest point (outer)
-                              child: _StatItem(
-                                icon: Icons.restaurant,
-                                sub: '+',
-                                val: '0/3',
-                                unit: '',
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 40), // Lower point (inner)
-                              child: _StatItem(
-                                icon: Icons.water_drop,
-                                sub: '+',
-                                val:
-                                    '${metrics?.water?.value.toStringAsFixed(1) ?? 0}/3.2',
-                                unit: 'l',
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 40), // Lower point (inner)
-                              child: _StatItem(
-                                icon: Icons.directions_run,
-                                sub: '+',
-                                val:
-                                    '0/${(metrics?.activeEnergyBurned?.value ?? 60).toInt()}',
-                                unit: 'min',
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  top: 0), // Highest point (outer)
-                              child: _StatItem(
-                                icon: Icons.calendar_today,
-                                sub: '+',
-                                val: 'In 3',
-                                unit: 'h',
-                              ),
-                            ),
-                          ],
+                        // Circular Progress (Now smaller and tighter)
+                        CircularScoreCard(
+                          metrics: metrics,
+                          goalSteps: 10000,
+                          size:
+                              240, // Reduced from 360 to wrap tightly around 160 button
+                          animateDuration: const Duration(milliseconds: 700),
                         ),
-                      ),
 
-                      // Check-in Card
-                      // const CheckInCard(),
-                    ],
+                        const SizedBox(height: 40), // Spacing to grid
+
+                        // Stats Grid
+                        // Stats Grid - Arced Layout
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 0), // Highest point (outer)
+                                child: _StatItem(
+                                  icon: Icons.restaurant,
+                                  sub: '+',
+                                  val: '0/3',
+                                  unit: '',
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 40), // Lower point (inner)
+                                child: _StatItem(
+                                  icon: Icons.water_drop,
+                                  sub: '+',
+                                  val:
+                                      '${metrics?.water?.value.toStringAsFixed(1) ?? 0}/3.2',
+                                  unit: 'l',
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 40), // Lower point (inner)
+                                child: _StatItem(
+                                  icon: Icons.directions_run,
+                                  sub: '+',
+                                  val:
+                                      '0/${(metrics?.activeEnergyBurned?.value ?? 60).toInt()}',
+                                  unit: 'min',
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 0), // Highest point (outer)
+                                child: _StatItem(
+                                  icon: Icons.calendar_today,
+                                  sub: '+',
+                                  val: 'In 3',
+                                  unit: 'h',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Check-in Card
+                        // const CheckInCard(),
+                      ],
+                    ),
                   ),
                 ),
               ),

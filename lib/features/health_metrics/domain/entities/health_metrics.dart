@@ -30,6 +30,10 @@ class HealthMetrics extends Equatable {
   DateTime? syncedAt;
   DateTime? lastSyncedAt;
 
+  /// Audit timestamps
+  late DateTime createdAt;
+  late DateTime updatedAt;
+
   /// last local modification time (use for conflict resolution)
   late DateTime lastModified;
 
@@ -46,7 +50,13 @@ class HealthMetrics extends Equatable {
     this.synced = false,
     this.syncedAt,
     this.lastModified = const _DefaultDateTime(),
-  });
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    final now = DateTime.now();
+    this.createdAt = createdAt ?? now;
+    this.updatedAt = updatedAt ?? now;
+  }
 
   /// Create from a Health package data point safely
   static HealthMetrics? tryParse(HealthDataPoint p) {
@@ -56,11 +66,11 @@ class HealthMetrics extends Equatable {
       extractedValue = (p.value as NumericHealthValue).numericValue.toDouble();
     } else {
       // Handle other types or ignore
-      // For Nutrition, we could try to extract calories, but for now let's just ignore to prevent crashes
-      // and logs. If specific support is needed, we can add a specialized handler here.
       return null;
     }
 
+    // When parsing new data from device, it's effectively "created" now in our system
+    // unless we had source creation time (which HealthPoint doesn't explicitly give us easily in same format)
     return HealthMetrics(
       uuid: p.uuid,
       value: extractedValue,
@@ -71,6 +81,8 @@ class HealthMetrics extends Equatable {
       sourceName: p.sourceName,
       sourceId: p.sourceId,
       lastModified: DateTime.now(),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
   }
 
@@ -94,6 +106,14 @@ class HealthMetrics extends Equatable {
       throw ArgumentError('Unsupported date type: ${v.runtimeType}');
     }
 
+    DateTime parseOptionalDate(dynamic v, DateTime fallback) {
+      if (v == null) return fallback;
+      if (v is Timestamp) return v.toDate();
+      if (v is DateTime) return v;
+      if (v is String) return DateTime.parse(v);
+      return fallback;
+    }
+
     return HealthMetrics(
       uuid: map['uuid'] as String,
       type: map['type'] as String,
@@ -107,9 +127,9 @@ class HealthMetrics extends Equatable {
       syncedAt: map['syncedAt'] is Timestamp
           ? (map['syncedAt'] as Timestamp).toDate()
           : (map['syncedAt'] as DateTime?),
-      lastModified: map['lastModified'] is Timestamp
-          ? (map['lastModified'] as Timestamp).toDate()
-          : (map['lastModified'] as DateTime?) ?? DateTime.now(),
+      lastModified: parseOptionalDate(map['lastModified'], DateTime.now()),
+      createdAt: parseOptionalDate(map['createdAt'], DateTime.now()),
+      updatedAt: parseOptionalDate(map['updatedAt'], DateTime.now()),
     );
   }
 
@@ -126,6 +146,8 @@ class HealthMetrics extends Equatable {
     bool? synced,
     DateTime? syncedAt,
     DateTime? lastModified,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return HealthMetrics(
       id: id ?? this.id,
@@ -140,6 +162,8 @@ class HealthMetrics extends Equatable {
       synced: synced ?? this.synced,
       syncedAt: syncedAt ?? this.syncedAt,
       lastModified: lastModified ?? this.lastModified,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -156,6 +180,8 @@ class HealthMetrics extends Equatable {
       'synced': synced,
       'syncedAt': syncedAt != null ? Timestamp.fromDate(syncedAt!) : null,
       'lastModified': Timestamp.fromDate(lastModified),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
 
@@ -173,6 +199,8 @@ class HealthMetrics extends Equatable {
         synced,
         syncedAt,
         lastModified,
+        createdAt,
+        updatedAt,
       ];
 }
 

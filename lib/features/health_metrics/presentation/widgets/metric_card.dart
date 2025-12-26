@@ -52,15 +52,21 @@ class MetricCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: Colors.grey.shade600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 // Allow value to be flexible or parsed slightly if needed, but keeping simple for now
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                FittedBox(
+                  alignment: Alignment.centerLeft,
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                 ),
               ],

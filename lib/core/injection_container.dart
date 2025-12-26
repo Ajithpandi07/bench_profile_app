@@ -52,12 +52,18 @@ Future<void> init() async {
 
   // Initialize Isar (must finish before registering datasources that need it)
   if (!sl.isRegistered<Isar>()) {
-    final dir = await getApplicationDocumentsDirectory();
-    final isar = await Isar.open(
-      [HealthMetricsSchema],
-      directory: dir.path,
-      // optional: name: 'health_metrics_db',
-    );
+    // Check if an instance is already open (e.g., from a previous hot restart)
+    // This prevents "IsarError: Cannot open Environment: MdbxError (11): Try again"
+    Isar? isar = Isar.getInstance();
+
+    if (isar == null) {
+      final dir = await getApplicationDocumentsDirectory();
+      isar = await Isar.open(
+        [HealthMetricsSchema],
+        directory: dir.path,
+        // optional: name: 'health_metrics_db',
+      );
+    }
     // register the opened Isar as a singleton
     sl.registerSingleton<Isar>(isar);
   }
@@ -181,11 +187,14 @@ Future<void> initForBackground() async {
 
   // Initialize Isar for background isolate if not already done here.
   if (!sl.isRegistered<Isar>()) {
-    final dir = await getApplicationDocumentsDirectory();
-    final isar = await Isar.open(
-      [HealthMetricsSchema],
-      directory: dir.path,
-    );
+    Isar? isar = Isar.getInstance();
+    if (isar == null) {
+      final dir = await getApplicationDocumentsDirectory();
+      isar = await Isar.open(
+        [HealthMetricsSchema],
+        directory: dir.path,
+      );
+    }
     sl.registerSingleton<Isar>(isar);
   }
 

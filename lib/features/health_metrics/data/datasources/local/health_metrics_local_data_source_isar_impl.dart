@@ -28,7 +28,16 @@ class HealthMetricsLocalDataSourceIsarImpl
             .findFirst();
 
         if (existing == null) {
+          // New: defaults will have set created/updated to now()
           await _isar.healthMetrics.put(metrics);
+        } else {
+          // Existing: preserve Id and CreatedAt, update UpdatedAt
+          final updated = metrics.copyWith(
+            id: existing.id,
+            createdAt: existing.createdAt, // Preserve creation time
+            updatedAt: DateTime.now(), // Update modification time
+          );
+          await _isar.healthMetrics.put(updated);
         }
       });
     } catch (e, st) {
@@ -136,9 +145,15 @@ class HealthMetricsLocalDataSourceIsarImpl
 
           if (existing != null) {
             // Update existing record: reuse the Isar ID so it overwrites
-            metricsToSave.add(metric.copyWith(id: existing.id));
+            // Preserve createdAt, update updatedAt
+            metricsToSave.add(metric.copyWith(
+              id: existing.id,
+              createdAt: existing.createdAt,
+              updatedAt: DateTime.now(),
+            ));
           } else {
             // New record: use the metric as-is (id will be auto-increment)
+            // Ensure timestamps are set if they aren't already (though model defaults handle this)
             metricsToSave.add(metric);
           }
         }

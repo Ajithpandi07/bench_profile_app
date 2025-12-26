@@ -62,7 +62,7 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     if (maybe is HealthMetrics) return <HealthMetrics>[maybe];
     if (maybe is List) {
       try {
-        return (maybe as List).cast<HealthMetrics>();
+        return maybe.cast<HealthMetrics>();
       } catch (_) {
         return <HealthMetrics>[];
       }
@@ -96,16 +96,15 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
   Future<void> _onGetMetricsForDate(
       GetMetricsForDate event, Emitter<HealthMetricsState> emit) async {
-    // 1. Immediate UI update with Local Data (Source of Truth)
+    // 1. Initial Loading State
     emit(HealthMetricsLoading(selectedDate: event.date));
 
-    // Fetch local data (fast)
+    // 2. Fetch local data (Source of Truth)
     final localRes = await getCachedMetricsForDate.call(DateParams(event.date));
 
-    localRes.fold(
-      (failure) {
-        // If local fails, show error, but we still try to sync?
-        // Usually if local fails (e.g. database error), we are in trouble.
+    await localRes.fold(
+      (failure) async {
+        // If local access fails entirely (e.g. DB corruption), we show error
         if (failure is PermissionFailure) {
           emit(HealthMetricsPermissionRequired(selectedDate: event.date));
         } else {
@@ -114,26 +113,78 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
               selectedDate: event.date));
         }
       },
-      (maybe) {
-        try {
-          final list = _normalizeToList(maybe);
+      (maybe) async {
+        final list = _normalizeToList(maybe);
+
+        if (list.isNotEmpty) {
+          // Case A: We have data locally. Show it immediately.
           final summaryMap = aggregator.aggregate(list);
           final summary = HealthMetricsSummary.fromMap(summaryMap, event.date);
           emit(HealthMetricsLoaded(
               metrics: list, summary: summary, selectedDate: event.date));
-        } catch (e, st) {
-          debugPrint('Error processing local metrics: $e\n$st');
-          // Non-fatal, might be empty
+        } else {
+          // Case B: Local data is EMPTY.
+          // Try to fetch from Health Connect (Device) -> Upload -> Cache.
+          if (repository != null) {
+            // Show loading or empty state while we sync?
+            // Let's keep it as "Loading" (already emitted) because we are actively fetching.
+            // Or emit generic empty first?
+            // Better to keep Loading indicator so user knows something is happening.
+
+            // Trigger Sync
+            final syncRes = await repository!.syncMetricsForDate(event.date);
+
+            await syncRes.fold(
+              (failure) async {
+                if (failure is PermissionFailure) {
+                  emit(HealthMetricsPermissionRequired(
+                      selectedDate: event.date));
+                } else if (failure is HealthConnectFailure) {
+                  emit(HealthMetricsHealthConnectRequired(
+                      selectedDate: event.date));
+                } else {
+                  // If sync failed for other reasons (network etc), just show Empty
+                  // (since we definitely have no local data)
+                  // Or show error? Maybe warning?
+                  // Sticking to original behavior: Empty.
+                  emit(HealthMetricsEmpty(selectedDate: event.date));
+                  debugPrint('Auto-sync failed for empty date: $failure');
+                }
+              },
+              (_) async {
+                // Sync Success! Now re-fetch local data to display it.
+                final freshLocalRes =
+                    await getCachedMetricsForDate.call(DateParams(event.date));
+
+                freshLocalRes.fold(
+                  (f) => emit(HealthMetricsError(
+                      message: _mapFailureToMessage(f),
+                      selectedDate: event.date)),
+                  (freshMaybe) {
+                    final freshList = _normalizeToList(freshMaybe);
+                    if (freshList.isNotEmpty) {
+                      final summaryMap = aggregator.aggregate(freshList);
+                      final summary =
+                          HealthMetricsSummary.fromMap(summaryMap, event.date);
+                      emit(HealthMetricsLoaded(
+                          metrics: freshList,
+                          summary: summary,
+                          selectedDate: event.date));
+                    } else {
+                      // Still empty after sync? Then it's truly empty.
+                      emit(HealthMetricsEmpty(selectedDate: event.date));
+                    }
+                  },
+                );
+              },
+            );
+          } else {
+            // No repo available to sync
+            emit(HealthMetricsEmpty(selectedDate: event.date));
+          }
         }
       },
     );
-
-    // 2. Trigger Background Sync (Device -> Remote -> Local)
-    if (repository != null) {
-      // Automatic sync removed per user request (strict separation).
-      // Sync must be triggered manually or via separate background worker.
-      // add(SyncMetrics(date: event.date));
-    }
   }
 
   Future<void> _onGetMetricsRange(
@@ -161,8 +212,9 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
 
   Future<void> _onRefresh(
       RefreshMetrics event, Emitter<HealthMetricsState> emit) async {
-    // Refresh the currently selected date
-    add(GetMetricsForDate(state.selectedDate));
+    // Force a sync with Health Connect to get fresh data
+    // This addresses the user requirement to "check health connect if any new data arrives"
+    add(SyncMetrics(date: state.selectedDate));
   }
 
   Future<void> _onLoadCached(

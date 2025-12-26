@@ -97,27 +97,13 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
       List<HealthMetrics> metricsToSave = [];
       List<HealthMetrics> metricsToUpload = [];
 
-      // We need to know which device items are already synced.
-      // Easiest way: Fetch all local metrics for this date.
-      final localList = await localDataSource.readFromCacheForDate(date);
-      final localMap = {for (var m in localList) m.uuid: m};
+      // Pre-processing
 
       for (var deviceMetric in deviceList) {
-        final existing = localMap[deviceMetric.uuid];
-        if (existing != null && existing.synced) {
-          // Keep the existng synced status
-          metricsToSave.add(deviceMetric.copyWith(
-            synced: true,
-            syncedAt: existing.syncedAt,
-            // We optionally preserve ID here if we were doing it manually, but cacheBatch handles ID lookup.
-            // But cacheBatch in ISAR implementation overwrites everything.
-            // So we MUST pass the preserved values here.
-          ));
-        } else {
-          // Not synced yet (or new)
-          metricsToSave.add(deviceMetric); // synced is false by default
-          metricsToUpload.add(deviceMetric);
-        }
+        // ALWAYS add to update list, regardless of previous sync status to ensure re-upload
+        // The user specifically requested to not filter already uploaded metrics.
+        metricsToSave.add(deviceMetric); // Start as not synced (default)
+        metricsToUpload.add(deviceMetric); // Upload this metric
       }
 
       // 3. Parallel Execution: Local Save & Remote Sync

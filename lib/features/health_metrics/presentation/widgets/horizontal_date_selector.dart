@@ -156,25 +156,31 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    _dayName(date),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isSelected
-                          ? Colors.white
-                          : (isToday
-                              ? AppTheme.primaryColor
-                              : Colors.grey.shade500),
-                      fontWeight: FontWeight.w600,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _dayName(date),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isSelected
+                            ? Colors.white
+                            : (isToday
+                                ? AppTheme.primaryColor
+                                : Colors.grey.shade500),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    _dateShort(date).split('/')[0],
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: isSelected ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.bold,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _dateShort(date).split('/')[0],
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: isSelected ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   if (isToday && !isSelected)
@@ -183,7 +189,7 @@ class _HorizontalDateSelectorState extends State<HorizontalDateSelector> {
                       child: Container(
                         width: 4,
                         height: 4,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: AppTheme.primaryColor,
                           shape: BoxShape.circle,
                         ),

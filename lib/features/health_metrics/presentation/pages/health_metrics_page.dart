@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
 import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_state.dart';
@@ -20,15 +19,25 @@ class HealthMetricsPage extends StatefulWidget {
 
 class _HealthMetricsPageState extends State<HealthMetricsPage> {
   late DateTime selectedDate;
+  late HealthMetricsBloc _bloc;
 
   @override
   void initState() {
     super.initState();
-    selectedDate = DateTime.now();
-    // Dispatch initial load for today's date
+    // Initialize with whatever date the Bloc currently has (so we don't reset to Today)
+    _bloc = context.read<HealthMetricsBloc>();
+    selectedDate = _bloc.state.selectedDate;
+
+    // Dispatch initial load for the *already selected* date to ensure fresh data
+    // (In case we came from a route that didn't load it fully, or just to be safe)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HealthMetricsBloc>().add(GetMetricsForDate(selectedDate));
     });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -97,7 +106,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
 
                 // Main content with pull-to-refresh
                 Expanded(
-                  child: RefreshIndicator(
+                  child: RefreshIndicator.adaptive(
                     onRefresh: () => _handleRefresh(context),
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
@@ -398,6 +407,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
       }
 
       return ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         itemCount: availableMetrics.length + 1, // +1 for spacing at bottom
         separatorBuilder: (_, __) => const SizedBox(height: 6),
@@ -420,14 +430,6 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
       debugPrint('Error building metrics list: $e\n$st');
       return Center(child: Text('Error displaying metrics: $e'));
     }
-  }
-
-  static String timeAgo(DateTime t) {
-    final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return DateFormat.yMMMd().format(t);
   }
 }
 

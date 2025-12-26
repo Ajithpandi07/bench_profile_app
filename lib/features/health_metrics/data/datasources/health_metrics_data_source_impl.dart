@@ -100,17 +100,25 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
     try {
       if (Platform.isAndroid) {
         final status = await _health.getHealthConnectSdkStatus();
+        dev.log('DEBUG: Health Connect SDK Status: $status',
+            name: 'HealthDataSource');
         if (status != HealthConnectSdkStatus.sdkAvailable) {
           throw HealthConnectNotInstalledException();
         }
       }
 
+      dev.log('DEBUG: Checking permissions for ${types.length} types...',
+          name: 'HealthDataSource');
       final hasPerms = await _health.hasPermissions(types) ?? false;
+      dev.log('DEBUG: hasPermissions returned: $hasPerms',
+          name: 'HealthDataSource');
 
       _lastPermissionCheck = DateTime.now();
 
       if (hasPerms) {
         _hasCachedPermissions = true;
+        dev.log('DEBUG: Permissions already granted.',
+            name: 'HealthDataSource');
         return;
       }
 
@@ -119,7 +127,12 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       _hasCachedPermissions = false;
 
       // Request
+      dev.log('DEBUG: Requesting authorization for types...',
+          name: 'HealthDataSource');
       final granted = await _health.requestAuthorization(types);
+      dev.log('DEBUG: requestAuthorization returned: $granted',
+          name: 'HealthDataSource');
+
       if (!granted) {
         throw PermissionDeniedException();
       }
@@ -127,6 +140,8 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       // If granted after request
       _hasCachedPermissions = true;
       _lastPermissionCheck = DateTime.now();
+      dev.log('DEBUG: Permissions granted after request.',
+          name: 'HealthDataSource');
     } catch (e) {
       if (e is HealthConnectNotInstalledException) rethrow;
 
@@ -234,7 +249,7 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       );
 
       dev.log(
-          'Fetched ${allPoints.length} raw points from Health Connect for date $date (Start: $start, End: $end)',
+          'Fetched ${allPoints.length} raw points from Health Connect for date $date (Start: $start, End: $end). Types found: ${allPoints.map((e) => e.typeString).toSet().toList()}',
           name: 'HealthDataSource');
 
       if (allPoints.isEmpty) {
@@ -252,7 +267,11 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
         dev.log('DEBUG: Isolated STEPS fetch result count: ${steps.length}',
             name: 'HealthDataSource');
         if (steps.isNotEmpty) {
+          dev.log('DEBUG: Steps found: ${steps.length} - ${steps.first}',
+              name: 'HealthDataSource');
           allPoints.addAll(steps);
+        } else {
+          dev.log('DEBUG: Steps list is empty', name: 'HealthDataSource');
         }
       }
 
