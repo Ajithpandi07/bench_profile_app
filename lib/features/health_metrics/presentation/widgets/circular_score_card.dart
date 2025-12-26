@@ -1,329 +1,252 @@
-// lib/features/health_metrics/presentation/widgets/circular_score_card.dart
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../domain/entities/health_metrics.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
+import 'package:bench_profile_app/core/injection_container.dart' as di;
 
-class CircularScoreCard extends StatelessWidget {
-  final HealthMetrics? metrics;
+class CircularScoreCard extends StatefulWidget {
+  final HealthMetricsSummary? metrics;
   final int goalSteps;
-  final bool showQuickActions;
-  final bool fullCircle;
+  final double size;
   final Duration animateDuration;
-  final double? size; // optional fixed size (square), otherwise responsive
 
   const CircularScoreCard({
     super.key,
-    this.metrics,
-    this.goalSteps = 10000,
-    this.showQuickActions = true,
-    this.fullCircle = false,
-    this.animateDuration = const Duration(milliseconds: 700),
-    this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final steps = metrics?.steps ?? 0;
-    final rawProgress = (steps / goalSteps).clamp(0.0, 1.0);
-
-    // Responsive sizing: if size provided use it; otherwise adapt to parent's width
-    return LayoutBuilder(builder: (context, constraints) {
-      final double width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.of(context).size.width;
-      // Choose a square size; for half-circle we prefer a shorter height (half), for full circle use equal.
-      final double computedSize = size ??
-          (fullCircle ? width : min(width, (MediaQuery.of(context).size.height * 0.28).clamp(160.0, 320)));
-
-      // Use TweenAnimationBuilder to smoothly animate progress when steps change.
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          RepaintBoundary(
-            child: SizedBox(
-              width: computedSize,
-              height: fullCircle ? computedSize : computedSize * 0.6, // half circle uses smaller height
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: rawProgress),
-                duration: animateDuration,
-                curve: Curves.easeOutCubic,
-                builder: (context, animatedProgress, child) {
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CustomPaint(
-                        size: Size(computedSize, fullCircle ? computedSize : computedSize * 0.6),
-                        painter: _ArcPainter(
-                          progress: animatedProgress,
-                          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                          progressColor: Theme.of(context).colorScheme.primary,
-                          strokeWidth: 14.0,
-                          fullCircle: fullCircle,
-                        ),
-                      ),
-                      // Center content
-                      _CenterContent(
-                        metrics: metrics,
-                        goalSteps: goalSteps,
-                        progress: animatedProgress,
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // Quick actions below for semi and full circle (optional)
-          if (showQuickActions)
-            Padding(
-              padding: const EdgeInsets.only(top: 14.0),
-              child: _quickActionsRow(context),
-            ),
-        ],
-      );
-    });
-  }
-
-  Widget _quickActionsRow(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _QuickAction(
-          icon: Icons.restaurant,
-          current: '0',
-          total: '3',
-          onAdd: () => debugPrint('Add meal'),
-        ),
-        const SizedBox(width: 18),
-        _QuickAction(
-          icon: Icons.water_drop,
-          current: '0.0',
-          total: '3.2 L',
-          onAdd: () => debugPrint('Add water'),
-        ),
-        const SizedBox(width: 18),
-        _QuickAction(
-          icon: Icons.fitness_center,
-          current: '0',
-          total: '60',
-          onAdd: () => debugPrint('Add exercise'),
-        ),
-        const SizedBox(width: 18),
-        const _HydrationReminder(),
-      ],
-    );
-  }
-}
-
-/// Center widget that shows steps, heart rate and percent.
-class _CenterContent extends StatelessWidget {
-  final HealthMetrics? metrics;
-  final int goalSteps;
-  final double progress;
-
-  const _CenterContent({
     required this.metrics,
-    required this.goalSteps,
-    required this.progress,
+    this.goalSteps = 10000,
+    this.size = 280,
+    this.animateDuration = const Duration(milliseconds: 800),
   });
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final steps = metrics?.steps ?? 0;
-    final hr = metrics?.heartRate;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          steps.toString(),
-          style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          hr != null ? '${hr.toStringAsFixed(1)} bpm' : 'No HR',
-          style: theme.textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '${(progress * 100).toStringAsFixed(0)}% of $goalSteps',
-          style: theme.textTheme.bodySmall,
-        ),
-      ],
-    );
-  }
+  State<CircularScoreCard> createState() => _CircularScoreCardState();
 }
 
-/// Painter that draws either a full circular ring or a half-arc progress
-class _ArcPainter extends CustomPainter {
-  final double progress; // 0..1
-  final Color backgroundColor;
-  final Color progressColor;
-  final double strokeWidth;
-  final bool fullCircle;
-
-  _ArcPainter({
-    required this.progress,
-    required this.backgroundColor,
-    required this.progressColor,
-    this.strokeWidth = 10.0,
-    this.fullCircle = false,
-  });
+class _CircularScoreCardState extends State<CircularScoreCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _progressAnimation;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final Paint bg = Paint()
-      ..color = backgroundColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(duration: widget.animateDuration, vsync: this);
+    _progressAnimation = Tween<double>(begin: 0, end: _progress).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _controller.forward();
+  }
 
-    final Paint fg = Paint()
-      ..color = progressColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    if (fullCircle) {
-      final double radius = (min(size.width, size.height) - strokeWidth) / 2;
-      final Offset center = Offset(size.width / 2, size.height / 2);
-      final Rect rect = Rect.fromCircle(center: center, radius: radius);
-      final double start = -pi / 2; // start at top
-      final double sweep = 2 * pi * progress;
-      canvas.drawArc(rect, 0, 2 * pi, false, bg); // full background circle
-      if (progress > 0) canvas.drawArc(rect, start, sweep, false, fg);
-    } else {
-      // semi-circle (half) — use larger rect height as original design did
-      final Rect rect = Rect.fromLTWH(0, 0, size.width, size.height * 2);
-      final double start = -pi; // left
-      final double sweep = pi * progress; // up to 180deg
-      canvas.drawArc(rect, start, pi, false, bg);
-      if (progress > 0) canvas.drawArc(rect, start, sweep, false, fg);
+  @override
+  void didUpdateWidget(CircularScoreCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.metrics?.steps != oldWidget.metrics?.steps) {
+      _progressAnimation =
+          Tween<double>(begin: _progressAnimation.value, end: _progress)
+              .animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      );
+      _controller
+        ..value = 0
+        ..forward();
     }
   }
 
   @override
-  bool shouldRepaint(covariant _ArcPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.backgroundColor != backgroundColor ||
-        oldDelegate.progressColor != progressColor ||
-        oldDelegate.strokeWidth != strokeWidth ||
-        oldDelegate.fullCircle != fullCircle;
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
-}
 
-/// Small quick action widget
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String current;
-  final String total;
-  final VoidCallback onAdd;
-
-  const _QuickAction({
-    required this.icon,
-    required this.current,
-    required this.total,
-    required this.onAdd,
-  });
+  double get _progress {
+    // ignore: unused_local_variable
+    final steps = widget.metrics?.steps;
+    if (steps == null || steps.value <= 0) return 0.0;
+    return math.min(steps.value / widget.goalSteps, 1.0);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 64,
-          height: 64,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
+    const primaryColor = Color(0xFFEE374D);
+
+    return ClipOval(
+      child: SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Dashed Progress Circle
+            SizedBox(
+              width: widget.size * 0.85,
+              height: widget.size * 0.85,
+              child: AnimatedBuilder(
+                animation: _progressAnimation,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: _DashedCirclePainter(
+                      progress: _progressAnimation.value,
+                      color: Colors
+                          .grey.shade300, // Darker gray for better visibility
+                      activeGradient: const LinearGradient(
+                        colors: [Color(0xFFEE374D), Color(0xFFFF8A65)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      strokeWidth: 14, // Height of the pipe bars
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Center Content - Circular Button
+            GestureDetector(
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => di.sl<HealthMetricsBloc>(),
+                      child: const HealthMetricsPage(),
+                    ),
+                  ),
+                );
+                if (context.mounted) {
+                  // Refresh the DASHBOARD bloc upon return to catch any new syncs
+                  // Does NOT change the date, just refreshes data for "Today"
+                  context.read<HealthMetricsBloc>().add(const RefreshMetrics());
+                  _controller.forward(from: 0);
+                }
+              },
+              child: Container(
+                width: 160,
+                height: 160,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.15),
+                      blurRadius: 20,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onAdd,
-                    customBorder: const CircleBorder(),
-                    child: Icon(icon, color: color, size: 28),
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Start',
+                        style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500)),
+                    const Text(
+                      'Logging',
+                      style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text('to score',
+                        style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500)),
+                    if ((widget.metrics?.steps?.value ?? 0) > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          '${widget.metrics!.steps!.value.toInt()}',
+                          style: const TextStyle(
+                              color: primaryColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              Positioned(
-                bottom: -2,
-                right: -2,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: color.withOpacity(0.2), width: 2),
-                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                  ),
-                  child: Icon(Icons.add, size: 16, color: color),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Text('$current / $total', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
+      ),
     );
   }
 }
 
-class _HydrationReminder extends StatelessWidget {
-  const _HydrationReminder();
+class _DashedCirclePainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final Gradient? activeGradient;
+  final double strokeWidth; // Length of the pipe (radial height)
+
+  _DashedCirclePainter({
+    required this.progress,
+    required this.color,
+    this.activeGradient,
+    required this.strokeWidth,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 64,
-          height: 64,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 64,
-                height: 64,
-                child: Transform.rotate(
-                  angle: -pi / 2,
-                  child: CircularProgressIndicator(
-                    value: 0.75,
-                    strokeWidth: 6,
-                    backgroundColor: color.withOpacity(0.12),
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                  ),
-                ),
-              ),
-              Icon(Icons.water_drop, color: Colors.grey.shade700, size: 24),
-              Positioned(
-                bottom: 4,
-                right: 4,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 14),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text('In 3 h', style: TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
-    );
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    // Config for "Pipes"
+    const int totalPipes = 50; // Total number of bars in the gauge
+    const double pipeThickness = 3.0; // Width of each pipe
+
+    // Geometry
+    final double startAngleRad = 125 * (math.pi / 180);
+    final double sweepAngle = 290 * (math.pi / 180);
+
+    final double stepAngle = sweepAngle / (totalPipes - 1);
+
+    // Paint Setup
+    final backgroundPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = pipeThickness
+      ..strokeCap = StrokeCap.round;
+
+    final activePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = pipeThickness
+      ..strokeCap = StrokeCap.round;
+
+    if (activeGradient != null) {
+      activePaint.shader = activeGradient!
+          .createShader(Rect.fromCircle(center: center, radius: radius));
+    } else {
+      activePaint.color = const Color(0xFFEE374D);
+    }
+
+    // Draw Loop
+    for (int i = 0; i < totalPipes; i++) {
+      final double currentAngle = startAngleRad + (i * stepAngle);
+      final bool isActive = (i / (totalPipes - 1)) <= progress;
+
+      // Calculate radial line segment
+      // We want the pipe to be centered on 'radius' circle, with length 'strokeWidth'
+      final double innerR = radius - (strokeWidth / 2);
+      final double outerR = radius + (strokeWidth / 2);
+
+      final p1 = Offset(center.dx + innerR * math.cos(currentAngle),
+          center.dy + innerR * math.sin(currentAngle));
+      final p2 = Offset(center.dx + outerR * math.cos(currentAngle),
+          center.dy + outerR * math.sin(currentAngle));
+
+      canvas.drawLine(p1, p2, isActive ? activePaint : backgroundPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }

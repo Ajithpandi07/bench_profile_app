@@ -5,10 +5,10 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel;
-class MainActivity: FlutterActivity(), SensorEventListener {	private lateinit var sensorManager: SensorManager
+class MainActivity: FlutterFragmentActivity(), SensorEventListener {	private lateinit var sensorManager: SensorManager
 	private var stepCounter: Sensor? = null
 	private var heartRateSensor: Sensor? = null
 

@@ -34,27 +34,37 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  workmanager: ^0.9.0+3
   # Firebase
-  firebase_core: ^4.2.1
+  firebase_core: ^3.3.0
   # Simple DI / state helper for small apps
   provider: ^6.1.2
   equatable: ^2.0.5
   health: ^13.2.1
-  firebase_auth: ^6.1.2
+  firebase_auth: ^5.1.2
   dartz: ^0.10.1
   bloc: ^9.1.0
   flutter_bloc: ^9.1.1
   permission_handler: ^12.0.1
-  cloud_firestore: ^6.1.0
+  cloud_firestore: ^5.1.0
   shared_preferences: ^2.2.3
   get_it: ^9.1.1
   go_router: ^17.0.0
-  intl: ^0.20.2
+  intl: ^0.19.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.3
+  isar: ^3.1.0
+  isar_flutter_libs: ^3.1.0
+  connectivity_plus: ^5.0.2 # Or latest version
+  
+# dependency_overrides:
+#   isar_flutter_libs: ^3.2.0
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -62,8 +72,35 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  isar_generator: ^3.1.0+1
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.11
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+  # ... existing dev_dependencies
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.1
+
+# Configuration for App Logo (Launcher Icon)
+flutter_launcher_icons:
+  name: "Bench Profile"
+  android: "launcher_icon"
+  ios: true
+  image_path: "lib/assets/images/bench_profile_logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#AB47BC"
+  adaptive_icon_foreground: "lib/assets/images/bench_profile_logo.png"
+
+# Configuration for Loading Logo (Native Splash Screen)
+flutter_native_splash:
+  color: "#AB47BC" # Background color of the loading screen
+  image: "lib/assets/images/bench_profile_logo.png"
+  branding: "lib/assets/images/bench_profile_logo.png" # Optional: Branding image at bottom
+  color_dark: "#000000" # Optional: Dark mode background
+  android_12:
+    image: "lib/assets/images/bench_profile_logo.png"
+    color: "#AB47BC"
 
 # The following section is specific to Flutter packages.
 flutter:

@@ -1,93 +1,151 @@
+// lib/core/util/metric_aggregator.dart
+
+import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 
-/// Processes a raw list of health data records from Health Connect into a
-/// structured summary map.
+/// MetricAggregator that computes both average and latest heart rate.
+/// `useAverageHeartRate` selects which value is placed at the canonical
+/// `HealthDataType.HEART_RATE.name` key for backward compatibility.
 class MetricAggregator {
-  /// Aggregates a list of raw health records.
-  ///
-  /// The [records] list is expected to contain `HealthDataPoint` objects from
-  /// the `health` package.
-  Map<String, dynamic> aggregateRecords(List<HealthDataPoint> records) {
-    final aggregated = <String, dynamic>{
-      HealthDataType.STEPS.name: 0.0,
-      HealthDataType.ACTIVE_ENERGY_BURNED.name: 0.0,
-      HealthDataType.FLIGHTS_CLIMBED.name: 0.0,
-      HealthDataType.SLEEP_ASLEEP.name: 0.0,
-      HealthDataType.SLEEP_AWAKE.name: 0.0,
-      'sleepLight': 0.0, // Custom keys for sleep stages not in HealthDataType
-      'sleepDeep': 0.0,
-      'sleepRem': 0.0,
-      HealthDataType.WATER.name: 0.0,
-    };
+  final bool useAverageHeartRate;
 
-    // Use a map to store the latest record for point-in-time metrics
-    final latestRecords = <HealthDataType, HealthDataPoint>{};
+  MetricAggregator({bool? useAverageHeartRate})
+      : useAverageHeartRate = useAverageHeartRate ?? false;
 
-    for (final record in records) {
-      final recordType = record.type;
-      final value = (record.value as NumericHealthValue).numericValue;
+  Map<String, dynamic> aggregate(List<HealthMetrics> records) {
+    try {
+      final doubles = <String, double>{};
+      final units = <String, String>{};
 
-      // --- AGGREGATION LOGIC ---
+      // INIT
+      doubles[HealthDataType.STEPS.name] = 0.0;
+      units[HealthDataType.STEPS.name] = 'COUNT';
 
-      // 1. Summation for cumulative types
-      switch (recordType) {
-        case HealthDataType.STEPS:
-        case HealthDataType.ACTIVE_ENERGY_BURNED:
-        case HealthDataType.FLIGHTS_CLIMBED:
-        case HealthDataType.WATER:
-        case HealthDataType.SLEEP_ASLEEP:
-        case HealthDataType.SLEEP_AWAKE:
-          aggregated[recordType.name] = (aggregated[recordType.name] ?? 0.0) + value;
-          break;
-        // 2. Complex calculation for Sleep Stages (if available)
-        // Note: The new API provides SLEEP_ASLEEP, SLEEP_AWAKE, etc directly.
-        // If you were getting raw stage data, you would handle it here.
-        // For now, we assume the direct values are sufficient.
-        // Example for custom stage aggregation:
-        // case HealthDataType.SLEEP_SESSION:
-        //   if (record.value is SleepHealthValue) {
-        //      final sleepValue = record.value as SleepHealthValue;
-        //      // aggregate sleepValue.level
-        //   }
-        //   break;
+      doubles[HealthDataType.ACTIVE_ENERGY_BURNED.name] = 0.0;
+      doubles[HealthDataType.FLIGHTS_CLIMBED.name] = 0.0;
+      doubles[HealthDataType.SLEEP_ASLEEP.name] = 0.0;
+      doubles[HealthDataType.SLEEP_AWAKE.name] = 0.0;
+      doubles[HealthDataType.WATER.name] = 0.0;
 
-        // 3. Store latest record for point-in-time metrics
-        case HealthDataType.BASAL_ENERGY_BURNED:
-        case HealthDataType.HEIGHT:
-        case HealthDataType.WEIGHT:
-        case HealthDataType.BODY_FAT_PERCENTAGE:
-        case HealthDataType.BODY_TEMPERATURE:
-        case HealthDataType.HEART_RATE:
-        case HealthDataType.BLOOD_PRESSURE_SYSTOLIC:
-        case HealthDataType.BLOOD_PRESSURE_DIASTOLIC:
-        case HealthDataType.BLOOD_OXYGEN:
-        case HealthDataType.BLOOD_GLUCOSE:
-        case HealthDataType.RESPIRATORY_RATE:
-        case HealthDataType.RESTING_HEART_RATE:
-          final existingRecord = latestRecords[recordType];
-          if (existingRecord == null || record.dateFrom.isAfter(existingRecord.dateFrom)) {
-            latestRecords[recordType] = record;
-          }
-          break;
-        default:
-          // Other types not handled
-          break;
+      // Heart rate specific
+      double hrSum = 0.0;
+      int hrCount = 0;
+      String hrUnit = 'BEATS_PER_MINUTE'; // default
+      HealthMetrics? latestHrRecord;
+
+      final latestRecords = <String, HealthMetrics>{};
+
+      for (final record in records) {
+        if (record == null) continue;
+        final type = record.type ?? 'UNKNOWN';
+        double val;
+        try {
+          val = record.value;
+        } catch (_) {
+          val = 0.0;
+        }
+        if (val.isNaN) val = 0.0;
+
+        // Clean Unit
+        String u = record.unit;
+        // simplistic normalization
+        if (u == 'NO_UNIT' || u == 'null') u = '';
+
+        final isSummable = type == HealthDataType.STEPS.name ||
+            type == HealthDataType.ACTIVE_ENERGY_BURNED.name ||
+            type == HealthDataType.WATER.name ||
+            type == HealthDataType.FLIGHTS_CLIMBED.name ||
+            type == HealthDataType.SLEEP_ASLEEP.name ||
+            type == HealthDataType.SLEEP_AWAKE.name;
+
+        if (isSummable && val <= 0) continue;
+
+        switch (type) {
+          // Summable
+          case var s when s == HealthDataType.STEPS.name:
+          case var s when s == HealthDataType.ACTIVE_ENERGY_BURNED.name:
+          case var s when s == HealthDataType.FLIGHTS_CLIMBED.name:
+          case var s when s == HealthDataType.WATER.name:
+          case var s when s == HealthDataType.SLEEP_ASLEEP.name:
+          case var s when s == HealthDataType.SLEEP_AWAKE.name:
+            doubles[type] = (doubles[type] ?? 0.0) + val;
+            if (u.isNotEmpty) units[type] = u;
+            break;
+
+          // Heart Rate
+          case var s when s == HealthDataType.HEART_RATE.name:
+            hrSum += val;
+            hrCount++;
+            if (u.isNotEmpty) hrUnit = u;
+            if (latestHrRecord == null ||
+                record.dateFrom.isAfter(latestHrRecord.dateFrom)) {
+              latestHrRecord = record;
+            }
+            break;
+
+          // Latest
+          case var s when s == HealthDataType.BASAL_ENERGY_BURNED.name:
+          case var s when s == HealthDataType.HEIGHT.name:
+          case var s when s == HealthDataType.WEIGHT.name:
+          case var s when s == HealthDataType.BODY_FAT_PERCENTAGE.name:
+          case var s when s == HealthDataType.BODY_TEMPERATURE.name:
+          case var s when s == HealthDataType.BLOOD_PRESSURE_SYSTOLIC.name:
+          case var s when s == HealthDataType.BLOOD_PRESSURE_DIASTOLIC.name:
+          case var s when s == HealthDataType.BLOOD_OXYGEN.name:
+          case var s when s == HealthDataType.BLOOD_GLUCOSE.name:
+          case var s when s == HealthDataType.RESPIRATORY_RATE.name:
+          case var s when s == HealthDataType.RESTING_HEART_RATE.name:
+            final existing = latestRecords[type];
+            if (existing == null ||
+                record.dateFrom.isAfter(existing.dateFrom)) {
+              latestRecords[type] = record;
+            }
+            break;
+
+          default:
+            final otherKey = 'other_$type';
+            doubles[otherKey] = (doubles[otherKey] ?? 0.0) + val;
+            if (u.isNotEmpty) units[otherKey] = u;
+            break;
+        }
       }
+
+      final result = <String, dynamic>{};
+
+      // Fill result with MetricValue objects
+      // 1. Summables
+      doubles.forEach((k, v) {
+        // Round steps
+        double finalVal = v;
+        if (k == HealthDataType.STEPS.name) finalVal = v.roundToDouble();
+        result[k] = MetricValue(finalVal, units[k] ?? '');
+      });
+
+      // 2. Heart Rate
+      MetricValue? hrVal;
+      if (useAverageHeartRate) {
+        if (hrCount > 0) {
+          hrVal = MetricValue(hrSum / hrCount, hrUnit);
+        }
+      } else {
+        if (latestHrRecord != null) {
+          hrVal = MetricValue(latestHrRecord.value, latestHrRecord.unit);
+        }
+      }
+      if (hrVal != null) result[HealthDataType.HEART_RATE.name] = hrVal;
+
+      // 3. Latest
+      latestRecords.forEach((k, rec) {
+        result[k] = MetricValue(rec.value, rec.unit);
+      });
+
+      debugPrint('Aggregated MetricValues: $result');
+      return result;
+    } catch (e, st) {
+      debugPrint('MetricAggregator.aggregate FAILED: $e\n$st');
+      return {};
     }
-
-    // --- FINALIZATION ---
-    // Extract values from the latest records and populate aggregated map
-    latestRecords.forEach((type, record) {
-      aggregated[type.name] = (record.value as NumericHealthValue).numericValue;
-    });
-
-    // Note: The new API returns sleep data as total minutes for SLEEP_ASLEEP,
-    // SLEEP_AWAKE, etc. The old logic for parsing stages is no longer needed
-    // unless you fetch raw SLEEP_SESSION data. The current _types list fetches
-    // the aggregated values directly.
-
-    debugPrint('Aggregated Metrics: $aggregated');
-    return aggregated;
   }
 }

@@ -44,6 +44,26 @@
         }
       }
     }
+    ,
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026841609191:android:7cbd45937ac31a787df342",
+        "android_client_info": {
+          "package_name": "dev.isar.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUn-FL2B5mNzx9FyIcKAali-UiH64aKas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
   ],
   "configuration_version": "1"
 }

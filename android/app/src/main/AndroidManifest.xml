@@ -13,23 +13,62 @@
   <uses-permission android:name="android.permission.BODY_SENSORS"/>
 
   <!-- Health Connect permissions (example: steps, heart rate, sleep) -->
+  <!-- Health Connect permissions -->
+  <!-- Activity & Sleep -->
   <uses-permission android:name="android.permission.health.READ_STEPS"/>
   <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
   <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
   <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
   <uses-permission android:name="android.permission.health.READ_SLEEP"/>
   <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
-  <!-- Add other permissions as required for your data types -->
+  <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+  <uses-permission android:name="android.permission.health.WRITE_DISTANCE"/>
+  <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+  <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"/>
+  <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED"/>
+  <uses-permission android:name="android.permission.health.WRITE_FLOORS_CLIMBED"/>
+  <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+  <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+  
+  <!-- Body Measurements -->
+  <uses-permission android:name="android.permission.health.READ_HEIGHT"/>
+  <uses-permission android:name="android.permission.health.WRITE_HEIGHT"/>
+  <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+  <uses-permission android:name="android.permission.health.WRITE_WEIGHT"/>
+  <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+  <uses-permission android:name="android.permission.health.WRITE_BODY_FAT"/>
+  
+  <!-- Vitals -->
+  <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
+  <uses-permission android:name="android.permission.health.WRITE_BLOOD_PRESSURE"/>
+  <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE"/>
+  <uses-permission android:name="android.permission.health.WRITE_RESPIRATORY_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE"/>
+  <uses-permission android:name="android.permission.health.WRITE_BODY_TEMPERATURE"/>
+  
+  <!-- Nutrition & Metabolism -->
+  <uses-permission android:name="android.permission.health.READ_HYDRATION"/>
+  <uses-permission android:name="android.permission.health.WRITE_HYDRATION"/>
+  <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE"/>
+  <uses-permission android:name="android.permission.health.WRITE_BASAL_METABOLIC_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE"/>
+  <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE"/>
+  <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
+  <uses-permission android:name="android.permission.health.WRITE_NUTRITION"/>
 
   <application
       android:label="Bench Profile"
-      android:icon="@mipmap/ic_launcher"
+      android:icon="@mipmap/launcher_icon"
       tools:replace="android:label">
 
     <activity
         android:name=".MainActivity"
         android:exported="true"
-        android:launchMode="singleTop">
+        android:launchMode="singleTop"
+        android:theme="@style/LaunchTheme"
+        android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+        android:hardwareAccelerated="true"
+        android:windowSoftInputMode="adjustResize">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
