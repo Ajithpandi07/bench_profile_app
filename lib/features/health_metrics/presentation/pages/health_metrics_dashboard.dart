@@ -2,14 +2,22 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/core.dart';
 import '../../../auth/auth.dart';
 
-import '../bloc/bloc.dart';
-import '../widgets/widgets.dart';
-import '../../domain/entities/entities.dart';
+import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
+import 'package:bench_profile_app/features/auth/presentation/pages/profile_page.dart';
+
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/widgets/permission_required_dialog.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/widgets/health_connect_install_dialog.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/widgets/permission_required_view.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/widgets/circular_score_card.dart';
+
+import 'package:bench_profile_app/features/health_metrics/presentation/widgets/custom_bottom_navigation_bar.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -45,10 +53,11 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Refresh metrics when returning from settings/background
-      // But only if this page is actually visible (top of stack)
-      // If we are in Detail Page, that page will handle its own lifecycle if needed.
+      // When returning from background or settings, re-check permissions first
+      // then refresh metrics. This helps clear the permission UI if user granted
+      // permissions externally (Settings / Health app).
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        context.read<HealthMetricsBloc>().add(RequestPermissions());
         context
             .read<HealthMetricsBloc>()
             .add(GetMetricsForDate(DateTime.now()));
@@ -82,7 +91,8 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
           }
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFFF8F8F8),
+          extendBodyBehindAppBar: true,
+          backgroundColor: Colors.transparent,
           appBar: _buildAppBar(),
           body: Stack(
             children: [
@@ -206,18 +216,51 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
   }
 }
 
-class _HomeTab extends StatelessWidget {
+class _HomeTab extends StatefulWidget {
   const _HomeTab();
+
+  @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
+  final GlobalKey _scoreKey = GlobalKey();
+  Offset? _scoreCenter;
+
+  void _measureScoreCenter() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final stackBox = context.findRenderObject() as RenderBox?;
+        final scoreBox = _scoreKey.currentContext?.findRenderObject() as RenderBox?;
+        if (stackBox == null || scoreBox == null) return;
+
+        final globalCenter = scoreBox.localToGlobal(scoreBox.size.center(Offset.zero));
+        final localCenter = stackBox.globalToLocal(globalCenter);
+
+        if (_scoreCenter == null || (_scoreCenter! - localCenter).distance > 0.5) {
+          setState(() {
+            _scoreCenter = localCenter;
+          });
+        }
+      } catch (_) {
+        // ignore measurement errors
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _measureScoreCenter();
+  }
 
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
     final size = MediaQuery.of(context).size;
 
-    // Calculate Vertical Center of the Card to align background
-    // StatusBar + HeaderPadding(16) + HeaderHeight(56 approx) + Spacing(20) + CardRadius(240/2)
-    final double statusBarHeight = MediaQuery.of(context).padding.top;
-    final double cardCenterY = statusBarHeight + 16 + 56 + 20 + (240 / 2);
+    // Run a measurement every build to keep alignment updated on orientation/size changes
+    _measureScoreCenter();
 
     return BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
       builder: (context, state) {
@@ -228,8 +271,11 @@ class _HomeTab extends StatelessWidget {
 
         // Persistent Permission State UI
         if (state is HealthMetricsPermissionRequired) {
+          // Fallback center if we haven't measured yet
+          final double statusBarHeight = MediaQuery.of(context).padding.top;
+          final double fallbackY = statusBarHeight + 16 + 56 + 20 + (240 / 2);
           return PermissionRequiredView(
-            cardCenterY: cardCenterY,
+            cardCenterY: _scoreCenter?.dy ?? fallbackY,
             size: size,
             primaryColor: primaryColor,
           );
@@ -239,45 +285,39 @@ class _HomeTab extends StatelessWidget {
           value: SystemUiOverlayStyle.dark,
           child: Stack(
             children: [
-              // Massive Background Single Circle - Concentric with Card
-              Positioned(
-                top: cardCenterY - size.width, // CenterY - Radius
-                left: -size.width * 0.5,
-                right: -size.width * 0.5,
-                height: size.width * 1.50, // Radius = width
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: primaryColor.withOpacity(0.08),
-                      width: 1.5,
-                    ),
-                    gradient: RadialGradient(
-                      colors: [
-                        Color.fromARGB(255, 207, 2, 153).withOpacity(
-                            0.08), // Increased opacity for visibility
-                        Color.fromARGB(255, 147, 21, 21).withOpacity(0.02),
-                      ],
-                      stops: const [0.7, 1.0],
-                    ),
+              // Massive background using SVG asset, aligned to the measured score center
+              if (_scoreCenter != null) ...[
+                Positioned(
+                  // slightly smaller so rings remain visible during refresh
+                  left: _scoreCenter!.dx - (size.width * 1.2) / 2,
+                  top: _scoreCenter!.dy - (size.width * 2.5) / 2 - MediaQuery.of(context).padding.top,
+                  width: size.width * 1.2,
+                  height: size.width * 1.2,
+                  child: SvgPicture.asset(
+                    'lib/assets/images/massive_bg.svg',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
                   ),
                 ),
-              ),
-              Positioned(
-                top: cardCenterY - size.width * 1, // CenterY - Radius
-                left: -size.width * 0.5,
-                right: -size.width * 0.5,
-                height: size.width * 1.31, // Radius = width
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: primaryColor.withOpacity(0.08),
-                      width: 1.5,
-                    ),
+              ] else ...[
+                // Initial fallback until we can measure
+                Positioned(
+                  top: () {
+                    final double bgHeight = size.width * 1.2;
+                    final double statusBarHeight = MediaQuery.of(context).padding.top;
+                    final double cardCenterY = statusBarHeight + 16 + 56 + 20 + (240 / 2);
+                    return cardCenterY - (bgHeight / 2);
+                  }(),
+                  left: -size.width * 0.3,
+                  right: -size.width * 0.3,
+                  height: size.width * 1.2,
+                  child: SvgPicture.asset(
+                    'lib/assets/images/massive_bg.svg',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
                   ),
                 ),
-              ),
+              ],
 
               // Main Scrollable Content
               SafeArea(
@@ -306,6 +346,7 @@ class _HomeTab extends StatelessWidget {
 
                         // Circular Progress (Now smaller and tighter)
                         CircularScoreCard(
+                          key: _scoreKey,
                           metrics: metrics,
                           goalSteps: 10000,
                           size:
@@ -483,3 +524,5 @@ class _StatItem extends StatelessWidget {
     );
   }
 }
+
+

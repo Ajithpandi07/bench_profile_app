@@ -1,0 +1,19 @@
+<svg width="390" height="391" viewBox="0 0 390 391" fill="none" xmlns="http://www.w3.org/2000/svg">
+<mask id="mask0_563_1286" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="-66" y="-124" width="510" height="515">
+<ellipse cx="189" cy="133.5" rx="255" ry="257.5" fill="url(#paint0_linear_563_1286)" fill-opacity="0.26"/>
+</mask>
+<g mask="url(#mask0_563_1286)">
+  <!-- Simplified: 5 concentric rings, thinner strokes for visibility during refresh -->
+  <ellipse cx="196" cy="237" rx="280" ry="282" stroke="#FFCED8" stroke-width="0.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="196" cy="237" rx="220" ry="222" stroke="#FFCED8" stroke-width="0.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="196" cy="237" rx="160" ry="162" stroke="#FFCED8" stroke-width="0.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="196" cy="237" rx="110" ry="112" stroke="#FFCED8" stroke-width="0.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="196" cy="237" rx="60" ry="62" stroke="#FFCED8" stroke-width="0.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_563_1286" x1="189" y1="-124" x2="189" y2="391" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#FFCED8"/>
+</linearGradient>
+</defs>
+</svg>

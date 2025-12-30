@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
+import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
 
 class PermissionRequiredView extends StatelessWidget {
   final double cardCenterY;
@@ -57,22 +60,48 @@ class PermissionRequiredView extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Health permissions are required to show your dashboard. Please grant them in settings.',
+                  'Health permissions are required to show your dashboard. Grant the permissions in Health Connect (Android) or Health app (iOS), or use the button below to request them directly from the app.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey),
                 ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24)),
-                  ),
-                  onPressed: () => openAppSettings(),
-                  child: const Text('Open Settings'),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                      ),
+                      onPressed: () {
+                        // Trigger in-app permission request
+                        try {
+                          context
+                              .read<HealthMetricsBloc>()
+                              .add(const RequestPermissions());
+                        } catch (_) {
+                          openAppSettings();
+                        }
+                      },
+                      child: const Text('Grant Permissions'),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                      ),
+                      onPressed: () => openAppSettings(),
+                      child: const Text('Open Settings'),
+                    ),
+                  ],
                 ),
               ],
             ),
