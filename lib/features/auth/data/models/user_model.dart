@@ -1,6 +1,6 @@
 // lib/features/auth/data/models/user_model.dart
 
-import 'package:bench_profile_app/features/auth/domain/entities/user_profile.dart';
+import '../../domain/entities/entities.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel extends UserProfile {

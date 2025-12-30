@@ -8,32 +8,11 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:bench_profile_app/core/network/network_info.dart';
-import 'package:bench_profile_app/core/util/metric_aggregator.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/health_metrics_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/health_metrics_data_source_impl.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/local/health_metrics_local_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/local/health_metrics_local_data_source_isar_impl.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/remote/health_metrics_remote_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/remote/health_metrics_remote_data_source_impl.dart';
-import 'package:bench_profile_app/features/health_metrics/data/repositories/health_metrics_repository_impl.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/repositories/health_repository.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/usecases/get_health_metrics.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/usecases/get_health_metrics_for_date.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart'
-    hide SyncManager;
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
-import 'package:bench_profile_app/core/network/network_info_impl.dart';
-
-// SyncManager import (adjust path if different)
-import 'package:bench_profile_app/core/services/sync_manager.dart';
-// /home/support/bench_profile_app/lib/core/services/sync_manager
+import 'core.dart';
+import '../features/health_metrics/health_metrics.dart' hide SyncManager;
 
 // Auth imports
-import 'package:bench_profile_app/features/auth/data/datasources/firebase_auth_remote.dart';
-import 'package:bench_profile_app/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:bench_profile_app/features/auth/domain/repositories/auth_repository.dart';
-import 'package:bench_profile_app/features/auth/presentation/bloc/auth_bloc.dart';
+import '../features/auth/auth.dart';
 
 final sl = GetIt.instance;
 

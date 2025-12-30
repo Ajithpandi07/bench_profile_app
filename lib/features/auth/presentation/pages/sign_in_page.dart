@@ -1,8 +1,8 @@
 // lib/features/auth/presentation/pages/sign_in_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_dashboard.dart';
-import 'package:bench_profile_app/features/auth/presentation/pages/sign_up_page.dart';
+import '../../../health_metrics/health_metrics.dart';
+import 'sign_up_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';

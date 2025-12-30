@@ -1,7 +1,7 @@
 // lib/core/util/metric_aggregator.dart
 
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
+import '../../features/health_metrics/domain/entities/health_metrics.dart';
+import '../../features/health_metrics/domain/entities/health_metrics_summary.dart';
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 

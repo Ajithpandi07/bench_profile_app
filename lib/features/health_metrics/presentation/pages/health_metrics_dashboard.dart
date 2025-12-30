@@ -4,20 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_state.dart';
-import 'package:bench_profile_app/core/services/app_theme.dart';
+import '../../../../core/core.dart';
+import '../../../auth/auth.dart';
 
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
-import 'package:bench_profile_app/features/auth/presentation/pages/profile_page.dart';
-
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/permission_required_dialog.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/health_connect_install_dialog.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/permission_required_view.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/circular_score_card.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/check_in_card.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/custom_bottom_navigation_bar.dart';
+import '../bloc/bloc.dart';
+import '../widgets/widgets.dart';
+import '../../domain/entities/entities.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});

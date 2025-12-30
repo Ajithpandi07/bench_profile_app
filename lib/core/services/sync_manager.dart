@@ -3,9 +3,8 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/local/health_metrics_local_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/remote/health_metrics_remote_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
+import '../../features/health_metrics/data/datasources/local/health_metrics_local_data_source.dart';
+import '../../features/health_metrics/data/datasources/remote/health_metrics_remote_data_source.dart';
 
 /// Coordinates upload (local -> remote) and optional pull (remote -> local).
 /// Designed to be safe running in both main isolate and background isolates.

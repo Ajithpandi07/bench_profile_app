@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io' show Platform;
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
-import 'package:bench_profile_app/core/error/exceptions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:bench_profile_app/core/util/metric_aggregator.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/remote/health_metrics_remote_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
-import 'package:bench_profile_app/features/health_metrics/data/models/health_model.dart';
+import '../../../../../../core/core.dart';
+
+import '../../../domain/entities/entities.dart';
+import 'health_metrics_remote_data_source.dart';
+import '../../models/models.dart';
 
 class HealthMetricsRemoteDataSourceImpl
     implements HealthMetricsRemoteDataSource {

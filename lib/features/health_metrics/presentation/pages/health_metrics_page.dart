@@ -2,13 +2,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_state.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/horizontal_date_selector.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/metric_card.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/widgets/empty_metrics_state.dart';
+import '../bloc/bloc.dart';
+import '../../domain/entities/entities.dart';
+import '../widgets/widgets.dart';
 
 class HealthMetricsPage extends StatefulWidget {
   const HealthMetricsPage({super.key});

@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/auth/presentation/pages/profile_page.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_state.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
-import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../../auth/auth.dart';
+import '../bloc/bloc.dart';
 import 'health_metrics_page.dart';
-
 
 class NavigationContainer extends StatefulWidget {
   const NavigationContainer({super.key});
@@ -45,12 +40,11 @@ class _NavigationContainerState extends State<NavigationContainer> {
         actions: [
           if (_selectedIndex == 0) // Only show on Health Metrics tab
             IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                // Refresh the currently selected date logic via BLoC
-                context.read<HealthMetricsBloc>().add(const RefreshMetrics());
-              }
-            ),
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  // Refresh the currently selected date logic via BLoC
+                  context.read<HealthMetricsBloc>().add(const RefreshMetrics());
+                }),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -88,6 +82,7 @@ class _NavigationContainerState extends State<NavigationContainer> {
     );
   }
 }
+
 /// A wrapper for the profile tab that provides HealthMetrics to the ProfilePage.
 class _ProfileTab extends StatelessWidget {
   const _ProfileTab();
@@ -103,10 +98,13 @@ class _ProfileTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is HealthMetricsError) {
-          return Center(child: Text('Could not load profile data: ${state.message}'));
+          return Center(
+              child: Text('Could not load profile data: ${state.message}'));
         }
         // For initial / empty
-        return const Center(child: Text('No health data available. Visit the dashboard to fetch it.'));
+        return const Center(
+            child: Text(
+                'No health data available. Visit the dashboard to fetch it.'));
       },
     );
   }

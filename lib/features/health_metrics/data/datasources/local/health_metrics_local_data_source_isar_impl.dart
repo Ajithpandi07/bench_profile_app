@@ -1,7 +1,7 @@
 import 'package:isar/isar.dart';
-import 'package:bench_profile_app/core/error/exceptions.dart';
-import 'package:bench_profile_app/features/health_metrics/data/datasources/local/health_metrics_local_data_source.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
+import '../../../../../../core/core.dart';
+import 'health_metrics_local_data_source.dart';
+import '../../../domain/entities/entities.dart';
 
 /// Isar-based local datasource which expects an already-open Isar instance.
 /// This implementation assumes your generated Isar accessor is `healthMetrics`

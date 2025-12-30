@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
+import '../../../../core/core.dart';
 import '../../../auth/domain/entities/user_profile.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/firebase_auth_remote.dart';
@@ -8,9 +8,10 @@ import '../datasources/firebase_auth_remote.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final FirebaseAuthRemote remote;
   AuthRepositoryImpl({required this.remote});
-  
+
   @override
-  Future<Either<Failure, UserProfile>> signInWithEmail({required String email, required String password}) async {
+  Future<Either<Failure, UserProfile>> signInWithEmail(
+      {required String email, required String password}) async {
     try {
       final user = await remote.signInWithEmail(email, password);
       return Right(user);
@@ -26,7 +27,8 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> signOut() => remote.signOut();
 
   @override
-  Future<Either<Failure, UserProfile>> signUpWithEmail({required String email, required String password}) async {
+  Future<Either<Failure, UserProfile>> signUpWithEmail(
+      {required String email, required String password}) async {
     try {
       final user = await remote.signUpWithEmail(email, password);
       return Right(user);

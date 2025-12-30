@@ -17,68 +17,78 @@ const HealthMetricsSchema = CollectionSchema(
   name: r'HealthMetrics',
   id: -3348921803634179751,
   properties: {
-    r'dateFrom': PropertySchema(
+    r'createdAt': PropertySchema(
       id: 0,
+      name: r'createdAt',
+      type: IsarType.dateTime,
+    ),
+    r'dateFrom': PropertySchema(
+      id: 1,
       name: r'dateFrom',
       type: IsarType.dateTime,
     ),
     r'dateTo': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'dateTo',
       type: IsarType.dateTime,
     ),
     r'hashCode': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'hashCode',
       type: IsarType.long,
     ),
     r'lastModified': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'lastModified',
       type: IsarType.dateTime,
     ),
     r'lastSyncedAt': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'lastSyncedAt',
       type: IsarType.dateTime,
     ),
     r'sourceId': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'sourceId',
       type: IsarType.string,
     ),
     r'sourceName': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'sourceName',
       type: IsarType.string,
     ),
     r'synced': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'synced',
       type: IsarType.bool,
     ),
     r'syncedAt': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'syncedAt',
       type: IsarType.dateTime,
     ),
     r'type': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'type',
       type: IsarType.string,
     ),
     r'unit': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'unit',
       type: IsarType.string,
     ),
+    r'updatedAt': PropertySchema(
+      id: 12,
+      name: r'updatedAt',
+      type: IsarType.dateTime,
+    ),
     r'uuid': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'uuid',
       type: IsarType.string,
     ),
     r'value': PropertySchema(
-      id: 12,
+      id: 14,
       name: r'value',
       type: IsarType.double,
     )
@@ -117,19 +127,21 @@ void _healthMetricsSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDateTime(offsets[0], object.dateFrom);
-  writer.writeDateTime(offsets[1], object.dateTo);
-  writer.writeLong(offsets[2], object.hashCode);
-  writer.writeDateTime(offsets[3], object.lastModified);
-  writer.writeDateTime(offsets[4], object.lastSyncedAt);
-  writer.writeString(offsets[5], object.sourceId);
-  writer.writeString(offsets[6], object.sourceName);
-  writer.writeBool(offsets[7], object.synced);
-  writer.writeDateTime(offsets[8], object.syncedAt);
-  writer.writeString(offsets[9], object.type);
-  writer.writeString(offsets[10], object.unit);
-  writer.writeString(offsets[11], object.uuid);
-  writer.writeDouble(offsets[12], object.value);
+  writer.writeDateTime(offsets[0], object.createdAt);
+  writer.writeDateTime(offsets[1], object.dateFrom);
+  writer.writeDateTime(offsets[2], object.dateTo);
+  writer.writeLong(offsets[3], object.hashCode);
+  writer.writeDateTime(offsets[4], object.lastModified);
+  writer.writeDateTime(offsets[5], object.lastSyncedAt);
+  writer.writeString(offsets[6], object.sourceId);
+  writer.writeString(offsets[7], object.sourceName);
+  writer.writeBool(offsets[8], object.synced);
+  writer.writeDateTime(offsets[9], object.syncedAt);
+  writer.writeString(offsets[10], object.type);
+  writer.writeString(offsets[11], object.unit);
+  writer.writeDateTime(offsets[12], object.updatedAt);
+  writer.writeString(offsets[13], object.uuid);
+  writer.writeDouble(offsets[14], object.value);
 }
 
 HealthMetrics _healthMetricsDeserialize(
@@ -139,21 +151,25 @@ HealthMetrics _healthMetricsDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = HealthMetrics(
-    dateFrom: reader.readDateTime(offsets[0]),
-    dateTo: reader.readDateTime(offsets[1]),
+    createdAt:
+        reader.readDateTimeOrNull(offsets[0]) ?? const _DefaultDateTime(),
+    dateFrom: reader.readDateTime(offsets[1]),
+    dateTo: reader.readDateTime(offsets[2]),
     id: id,
     lastModified:
-        reader.readDateTimeOrNull(offsets[3]) ?? const _DefaultDateTime(),
-    sourceId: reader.readString(offsets[5]),
-    sourceName: reader.readString(offsets[6]),
-    synced: reader.readBoolOrNull(offsets[7]) ?? false,
-    syncedAt: reader.readDateTimeOrNull(offsets[8]),
-    type: reader.readString(offsets[9]),
-    unit: reader.readString(offsets[10]),
-    uuid: reader.readString(offsets[11]),
-    value: reader.readDouble(offsets[12]),
+        reader.readDateTimeOrNull(offsets[4]) ?? const _DefaultDateTime(),
+    sourceId: reader.readString(offsets[6]),
+    sourceName: reader.readString(offsets[7]),
+    synced: reader.readBoolOrNull(offsets[8]) ?? false,
+    syncedAt: reader.readDateTimeOrNull(offsets[9]),
+    type: reader.readString(offsets[10]),
+    unit: reader.readString(offsets[11]),
+    updatedAt:
+        reader.readDateTimeOrNull(offsets[12]) ?? const _DefaultDateTime(),
+    uuid: reader.readString(offsets[13]),
+    value: reader.readDouble(offsets[14]),
   );
-  object.lastSyncedAt = reader.readDateTimeOrNull(offsets[4]);
+  object.lastSyncedAt = reader.readDateTimeOrNull(offsets[5]);
   return object;
 }
 
@@ -165,31 +181,37 @@ P _healthMetricsDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset) ?? const _DefaultDateTime())
+          as P;
     case 1:
       return (reader.readDateTime(offset)) as P;
     case 2:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 3:
+      return (reader.readLong(offset)) as P;
+    case 4:
       return (reader.readDateTimeOrNull(offset) ?? const _DefaultDateTime())
           as P;
-    case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readBoolOrNull(offset) ?? false) as P;
-    case 8:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 9:
       return (reader.readString(offset)) as P;
+    case 8:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 9:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
       return (reader.readString(offset)) as P;
     case 12:
+      return (reader.readDateTimeOrNull(offset) ?? const _DefaultDateTime())
+          as P;
+    case 13:
+      return (reader.readString(offset)) as P;
+    case 14:
       return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -292,6 +314,62 @@ extension HealthMetricsQueryWhere
 
 extension HealthMetricsQueryFilter
     on QueryBuilder<HealthMetrics, HealthMetrics, QFilterCondition> {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      createdAtEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      createdAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      createdAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      createdAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'createdAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
       dateFromEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
@@ -1270,6 +1348,62 @@ extension HealthMetricsQueryFilter
     });
   }
 
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      updatedAtEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'updatedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      updatedAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'updatedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      updatedAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'updatedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition>
+      updatedAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'updatedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterFilterCondition> uuidEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1480,6 +1614,19 @@ extension HealthMetricsQueryLinks
 
 extension HealthMetricsQuerySortBy
     on QueryBuilder<HealthMetrics, HealthMetrics, QSortBy> {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByCreatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
+      sortByCreatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByDateFrom() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateFrom', Sort.asc);
@@ -1621,6 +1768,19 @@ extension HealthMetricsQuerySortBy
     });
   }
 
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByUpdatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
+      sortByUpdatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> sortByUuid() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'uuid', Sort.asc);
@@ -1648,6 +1808,19 @@ extension HealthMetricsQuerySortBy
 
 extension HealthMetricsQuerySortThenBy
     on QueryBuilder<HealthMetrics, HealthMetrics, QSortThenBy> {
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByCreatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
+      thenByCreatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByDateFrom() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateFrom', Sort.asc);
@@ -1801,6 +1974,19 @@ extension HealthMetricsQuerySortThenBy
     });
   }
 
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByUpdatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy>
+      thenByUpdatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QAfterSortBy> thenByUuid() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'uuid', Sort.asc);
@@ -1828,6 +2014,12 @@ extension HealthMetricsQuerySortThenBy
 
 extension HealthMetricsQueryWhereDistinct
     on QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> {
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByCreatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'createdAt');
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByDateFrom() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'dateFrom');
@@ -1900,6 +2092,12 @@ extension HealthMetricsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByUpdatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'updatedAt');
+    });
+  }
+
   QueryBuilder<HealthMetrics, HealthMetrics, QDistinct> distinctByUuid(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1919,6 +2117,12 @@ extension HealthMetricsQueryProperty
   QueryBuilder<HealthMetrics, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<HealthMetrics, DateTime, QQueryOperations> createdAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'createdAt');
     });
   }
 
@@ -1987,6 +2191,12 @@ extension HealthMetricsQueryProperty
   QueryBuilder<HealthMetrics, String, QQueryOperations> unitProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'unit');
+    });
+  }
+
+  QueryBuilder<HealthMetrics, DateTime, QQueryOperations> updatedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'updatedAt');
     });
   }
 

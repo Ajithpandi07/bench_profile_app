@@ -1,4 +1,4 @@
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
+import '../../../domain/entities/health_metrics.dart';
 
 /// Data source contract for uploading health metrics to a remote store (e.g., Firestore).
 abstract class HealthMetricsRemoteDataSource {

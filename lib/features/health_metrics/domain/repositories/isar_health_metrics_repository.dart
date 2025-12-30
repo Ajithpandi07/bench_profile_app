@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:isar/isar.dart';
-import '../../../../core/error/failures.dart';
+import '../../../../core/core.dart';
 import '../../data/datasources/health_metrics_data_source.dart';
 import '../../data/datasources/remote/health_metrics_remote_data_source.dart';
 import '../entities/health_metrics.dart';

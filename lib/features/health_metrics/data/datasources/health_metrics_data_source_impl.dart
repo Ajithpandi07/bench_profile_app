@@ -3,10 +3,9 @@
 import 'dart:developer' as dev;
 import 'dart:io' show Platform;
 import 'package:health/health.dart';
-import 'package:bench_profile_app/core/util/metric_aggregator.dart';
-import 'package:bench_profile_app/core/error/exceptions.dart';
+import '../../../../../core/core.dart';
 import 'health_metrics_data_source.dart';
-import '../../domain/entities/health_metrics.dart';
+import '../../domain/entities/entities.dart';
 
 /// Simple global guard to avoid Health Connect rate limits
 class _HealthConnectRateGuard {

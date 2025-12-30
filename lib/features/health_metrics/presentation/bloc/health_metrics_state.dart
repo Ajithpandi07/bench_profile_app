@@ -1,7 +1,6 @@
 // lib/features/health_metrics/presentation/bloc/health_metrics_state.dart
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/health_metrics.dart';
-import '../../domain/entities/health_metrics_summary.dart';
+import '../../domain/entities/entities.dart';
 
 abstract class HealthMetricsState extends Equatable {
   final DateTime selectedDate;

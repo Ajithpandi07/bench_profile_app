@@ -1,4 +1,4 @@
-import 'package:bench_profile_app/core/network/network_info.dart';
+import 'network_info.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class NetworkInfoImpl implements NetworkInfo {

@@ -1,21 +1,13 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:bench_profile_app/core/services/background_sync_service.dart';
+import 'core/core.dart';
+import 'features/auth/auth.dart';
+import 'features/health_metrics/health_metrics.dart' hide SyncManager;
+// import 'core/services/background_sync_service.dart'; // Exported via core.dart
+import 'core/injection_container.dart' as di;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/auth/presentation/pages/auth_wrapper.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart'
-    hide SyncManager;
-import 'package:bench_profile_app/core/injection_container.dart' as di;
-import 'package:bench_profile_app/features/health_metrics/domain/usecases/get_health_metrics.dart';
-import 'package:bench_profile_app/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/usecases/get_health_metrics_for_date.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
-import 'package:bench_profile_app/core/services/sync_manager.dart';
-import 'package:bench_profile_app/core/services/app_theme.dart';
-import 'package:bench_profile_app/core/services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

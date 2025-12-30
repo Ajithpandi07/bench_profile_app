@@ -1,8 +1,7 @@
 import 'dart:io';
 
-import 'package:bench_profile_app/core/injection_container.dart' as di;
-import 'package:bench_profile_app/core/services/sync_manager.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/repositories/health_repository.dart';
+import '../injection_container.dart' as di;
+import '../../features/health_metrics/domain/repositories/health_repository.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';

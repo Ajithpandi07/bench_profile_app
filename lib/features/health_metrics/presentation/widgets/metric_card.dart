@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bench_profile_app/core/services/app_theme.dart';
+import '../../../../../core/core.dart';
 
 class MetricCard extends StatelessWidget {
   final String title;

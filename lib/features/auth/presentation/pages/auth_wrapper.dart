@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:bench_profile_app/features/auth/presentation/pages/sign_in_page.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_dashboard.dart';
+import 'sign_in_page.dart';
+import '../../../health_metrics/health_metrics.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});

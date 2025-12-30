@@ -1,11 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_event.dart';
-import 'package:bench_profile_app/core/injection_container.dart' as di;
+import '../../domain/entities/entities.dart';
+import '../pages/pages.dart';
+import '../bloc/bloc.dart';
+import '../../../../../core/injection_container.dart' as di;
 
 class CircularScoreCard extends StatefulWidget {
   final HealthMetricsSummary? metrics;

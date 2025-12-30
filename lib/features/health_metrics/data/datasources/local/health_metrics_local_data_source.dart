@@ -1,5 +1,5 @@
 // lib/features/health_metrics/data/datasources/local/health_metrics_local_data_source.dart
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics.dart';
+import '../../../domain/entities/health_metrics.dart';
 
 /// Local data source contract for health metrics.
 /// This defines the contract for a local cache.

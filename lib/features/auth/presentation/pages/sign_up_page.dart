@@ -1,8 +1,8 @@
 // lib/features/auth/presentation/pages/sign_up_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/pages/navigation_container.dart';
-import 'package:bench_profile_app/features/auth/presentation/pages/sign_in_page.dart';
+import '../../../health_metrics/health_metrics.dart';
+import 'sign_in_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -55,7 +55,9 @@ class _SignUpPageState extends State<SignUpPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     // Adjust event signature if your AuthBloc expects different params
-    context.read<AuthBloc>().add(SignUpRequested(email: email, password: password));
+    context
+        .read<AuthBloc>()
+        .add(SignUpRequested(email: email, password: password));
   }
 
   @override
@@ -71,7 +73,8 @@ class _SignUpPageState extends State<SignUpPage> {
             (route) => false,
           );
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(state.message)));
         }
       },
       builder: (context, state) {
@@ -109,7 +112,8 @@ class _SignUpPageState extends State<SignUpPage> {
               SafeArea(
                 child: Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32.0, vertical: 24),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -118,7 +122,10 @@ class _SignUpPageState extends State<SignUpPage> {
                           const Text(
                             'CREATE ACCOUNT',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                            style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5),
                           ),
                           const SizedBox(height: 36),
 
@@ -128,13 +135,17 @@ class _SignUpPageState extends State<SignUpPage> {
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               hintText: 'Email',
-                              prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
+                              prefixIcon: const Icon(Icons.email_outlined,
+                                  color: Colors.grey),
                               filled: true,
                               fillColor: Colors.white,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: primary, width: 2),
+                                borderSide:
+                                    BorderSide(color: primary, width: 2),
                               ),
                             ),
                             validator: _validateEmail,
@@ -148,17 +159,26 @@ class _SignUpPageState extends State<SignUpPage> {
                             obscureText: !_showPassword,
                             decoration: InputDecoration(
                               hintText: 'Password',
-                              prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                              prefixIcon: const Icon(Icons.lock_outline,
+                                  color: Colors.grey),
                               suffixIcon: IconButton(
-                                icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
-                                onPressed: () => setState(() => _showPassword = !_showPassword),
+                                icon: Icon(
+                                    _showPassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Colors.grey),
+                                onPressed: () => setState(
+                                    () => _showPassword = !_showPassword),
                               ),
                               filled: true,
                               fillColor: Colors.white,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: primary, width: 2),
+                                borderSide:
+                                    BorderSide(color: primary, width: 2),
                               ),
                             ),
                             validator: _validatePassword,
@@ -172,17 +192,26 @@ class _SignUpPageState extends State<SignUpPage> {
                             obscureText: !_showConfirm,
                             decoration: InputDecoration(
                               hintText: 'Confirm password',
-                              prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                              prefixIcon: const Icon(Icons.lock_outline,
+                                  color: Colors.grey),
                               suffixIcon: IconButton(
-                                icon: Icon(_showConfirm ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
-                                onPressed: () => setState(() => _showConfirm = !_showConfirm),
+                                icon: Icon(
+                                    _showConfirm
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Colors.grey),
+                                onPressed: () => setState(
+                                    () => _showConfirm = !_showConfirm),
                               ),
                               filled: true,
                               fillColor: Colors.white,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: primary, width: 2),
+                                borderSide:
+                                    BorderSide(color: primary, width: 2),
                               ),
                             ),
                             validator: _validateConfirm,
@@ -195,12 +224,20 @@ class _SignUpPageState extends State<SignUpPage> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: primary,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: loading ? null : _submit,
                             child: loading
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : const Text('CREATE ACCOUNT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white))
+                                : const Text('CREATE ACCOUNT',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold)),
                           ),
 
                           const SizedBox(height: 16),
@@ -210,7 +247,9 @@ class _SignUpPageState extends State<SignUpPage> {
                             children: [
                               const Text("Already have an account?"),
                               TextButton(
-                                onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignInPage())),
+                                onPressed: () => Navigator.of(context)
+                                    .pushReplacement(MaterialPageRoute(
+                                        builder: (_) => const SignInPage())),
                                 child: const Text('Sign in'),
                               )
                             ],

@@ -2,11 +2,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:bench_profile_app/core/services/theme_service.dart';
-import 'package:bench_profile_app/features/health_metrics/domain/entities/health_metrics_summary.dart';
+import '../../../../core/core.dart';
+import '../../../health_metrics/health_metrics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:bench_profile_app/features/auth/presentation/bloc/auth_event.dart';
+import '../bloc/bloc.dart';
 
 class ProfilePage extends StatelessWidget {
   final HealthMetricsSummary? metrics; // optional summary to show quick stats

@@ -1,10 +1,9 @@
 // lib/features/health_metrics/domain/usecases/get_health_metrics.dart
 
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/usecase/usecase.dart';
-import '../entities/health_metrics.dart';
-import '../repositories/health_repository.dart';
+import '../../../../core/core.dart';
+import '../entities/entities.dart';
+import '../repositories/repositories.dart';
 
 class GetCachedMetrics implements UseCase<List<HealthMetrics>, NoParams> {
   final HealthRepository repository;

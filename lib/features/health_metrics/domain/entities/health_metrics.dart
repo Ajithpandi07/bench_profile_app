@@ -50,13 +50,9 @@ class HealthMetrics extends Equatable {
     this.synced = false,
     this.syncedAt,
     this.lastModified = const _DefaultDateTime(),
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    final now = DateTime.now();
-    this.createdAt = createdAt ?? now;
-    this.updatedAt = updatedAt ?? now;
-  }
+    this.createdAt = const _DefaultDateTime(),
+    this.updatedAt = const _DefaultDateTime(),
+  });
 
   /// Create from a Health package data point safely
   static HealthMetrics? tryParse(HealthDataPoint p) {

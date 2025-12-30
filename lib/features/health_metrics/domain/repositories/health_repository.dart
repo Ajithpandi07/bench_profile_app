@@ -2,7 +2,7 @@
 
 import 'package:dartz/dartz.dart';
 import 'package:health/health.dart';
-import '../../../../core/error/failures.dart';
+import '../../../../core/core.dart';
 import '../entities/health_metrics.dart';
 
 /// Repository interface for health metrics. Implementations live in data/.
