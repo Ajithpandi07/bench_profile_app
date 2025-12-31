@@ -6,28 +6,67 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/bloc.dart';
 
 class AddReminderModal extends StatefulWidget {
-  const AddReminderModal({super.key});
+  final int initialStep;
+  final String? initialName;
+  final String? initialCategory;
+  final String? initialQuantity;
+  final String? initialUnit;
+  final String? initialScheduleType;
+  final DateTime? initialStartDate;
+  final DateTime? initialEndDate;
+  final bool initialSmartReminder;
+
+  const AddReminderModal({
+    super.key,
+    this.initialStep = 0,
+    this.initialName,
+    this.initialCategory,
+    this.initialQuantity,
+    this.initialUnit,
+    this.initialScheduleType,
+    this.initialStartDate,
+    this.initialEndDate,
+    this.initialSmartReminder = false,
+  });
 
   @override
   State<AddReminderModal> createState() => _AddReminderModalState();
 }
 
 class _AddReminderModalState extends State<AddReminderModal> {
-  int _currentStep = 0;
-  final PageController _pageController = PageController();
+  late int _currentStep;
+  late PageController _pageController;
 
   // Step 1: Details
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _unitController = TextEditingController();
-  String _selectedCategory = 'Water';
+  late TextEditingController _nameController;
+  late TextEditingController _quantityController;
+  late TextEditingController _unitController;
+  late String _selectedCategory;
 
   // Step 2: Schedule
-  String _scheduleType = 'Daily';
-  DateTime _startDate = DateTime.now();
-  DateTime _endDate =
-      DateTime.now().add(const Duration(days: 30)); // Default 1 month
-  bool _isSmartReminder = false;
+  late String _scheduleType;
+  late DateTime _startDate;
+  late DateTime _endDate;
+  late bool _isSmartReminder;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStep = widget.initialStep;
+    _pageController = PageController(initialPage: widget.initialStep);
+
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _quantityController =
+        TextEditingController(text: widget.initialQuantity ?? '');
+    _unitController = TextEditingController(text: widget.initialUnit ?? 'ml');
+    _selectedCategory = widget.initialCategory ?? 'Water';
+
+    _scheduleType = widget.initialScheduleType ?? 'Daily';
+    _startDate = widget.initialStartDate ?? DateTime.now();
+    _endDate =
+        widget.initialEndDate ?? DateTime.now().add(const Duration(days: 30));
+    _isSmartReminder = widget.initialSmartReminder;
+  }
 
   @override
   void dispose() {

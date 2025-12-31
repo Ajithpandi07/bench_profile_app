@@ -31,14 +31,10 @@ class PrimaryButton extends StatelessWidget {
           backgroundColor: const Color(0xFFEE374D), // Red background
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius ?? 30),
-            side: const BorderSide(
-              color: Color(0xFF2196F3), // Blue border
-              width: 2,
-            ),
           ),
           padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
-          elevation: 5,
-          shadowColor: const Color(0xFFEE374D).withOpacity(0.5),
+          elevation: 4,
+          shadowColor: const Color.fromRGBO(238, 55, 77, 0.3),
         ),
         child: Text(
           text,
@@ -46,6 +42,7 @@ class PrimaryButton extends StatelessWidget {
             fontSize: fontSize ?? 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            height: 20 / (fontSize ?? 18), // Enforce 20px line height
           ),
         ),
       ),

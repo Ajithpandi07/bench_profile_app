@@ -414,6 +414,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
           return MetricCard(
             title: config.label,
             value: config.formatter(metricInfo.value, metricInfo.unit),
+            unit: metricInfo.unit, // Pass unit explicitly
             icon: config.icon,
           );
         },
@@ -436,5 +437,7 @@ class _MetricConfig {
     required this.icon,
     required this.selector,
     String Function(double, String)? formatter,
-  }) : formatter = formatter ?? ((val, unit) => '$val $unit');
+  }) : formatter = formatter ??
+            ((val, unit) =>
+                '$val'); // Default only returns value, unit handled by card
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../primary_button.dart';
 
@@ -34,6 +35,7 @@ class SetScheduleStep extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Title
             Stack(
@@ -72,9 +74,11 @@ class SetScheduleStep extends StatelessWidget {
 
             // Frequency Selector (Segmented)
             Container(
+              width: 340,
+              height: 37,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(20),
+                color: const Color.fromRGBO(229, 231, 235, 0.3),
+                borderRadius: BorderRadius.circular(18.5),
               ),
               child: Row(
                 children: ['Daily', 'Weekly', 'Monthly', 'As needed']
@@ -82,12 +86,11 @@ class SetScheduleStep extends StatelessWidget {
                           child: GestureDetector(
                             onTap: () => onTypeChanged(type),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: scheduleType == type
                                     ? const Color(0xFFEE374D)
                                     : Colors.transparent,
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(18.5),
                               ),
                               alignment: Alignment.center,
                               child: Text(
@@ -115,7 +118,8 @@ class SetScheduleStep extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Container(
-              width: double.infinity,
+              width: 340,
+              height: 144,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey[200]!),
@@ -127,21 +131,21 @@ class SetScheduleStep extends StatelessWidget {
                     'Set this quantity and get reminders to take it at specific times.',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(height: 16),
+                  const Spacer(),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // Logic to set specific times
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEE374D),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: PrimaryButton(
+                        text: 'Set Time & Goal',
+                        width: 306,
+                        height: 32,
+                        borderRadius: 5,
+                        fontSize: 14,
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          // Logic to set specific times
+                        },
                       ),
-                      child: const Text('Set Time & Goal',
-                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],
@@ -175,7 +179,9 @@ class SetScheduleStep extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              width: 340,
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey[200]!),
                 borderRadius: BorderRadius.circular(16),
@@ -197,12 +203,14 @@ class SetScheduleStep extends StatelessWidget {
             ),
 
             const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
+            Center(
               child: PrimaryButton(
                 text: 'Next',
-                borderRadius: 12,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                width: 306,
+                height: 32,
+                borderRadius: 5,
+                fontSize: 14,
+                padding: EdgeInsets.zero,
                 onPressed: onNext,
               ),
             ),
@@ -217,44 +225,62 @@ class SetScheduleStep extends StatelessWidget {
       ValueChanged<DateTime> onChanged) {
     return InkWell(
       onTap: () async {
-        final picked = await showDatePicker(
+        showCupertinoModalPopup<void>(
           context: context,
-          initialDate: date,
-          firstDate: DateTime.now(),
-          lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: const ColorScheme.light(
-                  primary: Color(0xFFEE374D),
-                  onPrimary: Colors.white,
-                ),
+          builder: (BuildContext context) => Container(
+            height: 216,
+            padding: const EdgeInsets.only(top: 6.0),
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            color: CupertinoColors.systemBackground.resolveFrom(context),
+            child: SafeArea(
+              top: false,
+              child: CupertinoDatePicker(
+                initialDateTime: date,
+                mode: CupertinoDatePickerMode.date,
+                use24hFormat: true,
+                onDateTimeChanged: (DateTime newDate) {
+                  onChanged(newDate);
+                },
               ),
-              child: child!,
-            );
-          },
+            ),
+          ),
         );
-        if (picked != null) onChanged(picked);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        width: 340,
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[200]!),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              '${date.day}/${date.month}/${date.year}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              children: [
+                Text(
+                  '$hint: ', // Added hint prefix to match context
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  '${date.day}/${date.month}/${date.year}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
             const Icon(Icons.calendar_today_outlined,
-                size: 20, color: Color(0xFFEE374D)),
+                size: 18, color: Color(0xFFEE374D)),
           ],
         ),
       ),

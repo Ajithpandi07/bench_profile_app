@@ -122,7 +122,8 @@ class ReviewReminderStep extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildScheduleRow(Icons.wb_sunny_outlined, 'Every day'),
                   // Using placeholder time as per mock since we don't pick time yet
-                  _buildScheduleRow(Icons.access_time, '9.00 am, 1 ml'),
+                  _buildScheduleRow(
+                      Icons.access_time, '9.00 am, $quantity $unit'),
                   _buildScheduleRow(Icons.calendar_today_outlined,
                       'Starting ${startDate.day} ${_getMonth(startDate.month)}'),
                 ],
@@ -147,7 +148,7 @@ class ReviewReminderStep extends StatelessWidget {
                   const SizedBox(height: 12),
                   TextField(
                     decoration: InputDecoration(
-                      hintText: 'Volume remaining (ml)',
+                      hintText: 'Volume remaining ($unit)',
                       hintStyle:
                           TextStyle(fontSize: 14, color: Colors.grey[400]),
                       border: OutlineInputBorder(
@@ -169,12 +170,14 @@ class ReviewReminderStep extends StatelessWidget {
             const SizedBox(height: 40),
 
             // Save Button
-            SizedBox(
-              width: double.infinity,
+            Center(
               child: PrimaryButton(
                 text: 'Save',
-                borderRadius: 12,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                width: 306,
+                height: 32,
+                borderRadius: 5,
+                fontSize: 14,
+                padding: EdgeInsets.zero,
                 onPressed: onConfirm,
               ),
             ),

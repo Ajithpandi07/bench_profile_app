@@ -26,7 +26,7 @@ class _ReminderPageState extends State<ReminderPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         leading: Container(
           margin: const EdgeInsets.only(left: 16),
           child: IconButton(
@@ -113,7 +113,27 @@ class _ReminderPageState extends State<ReminderPage> {
                             icon: _getIconForCategory(reminder.category),
                             color: _getColorForCategory(reminder.category),
                             onEdit: () {
-                              // Handle Edit
+                              final reminderBloc = context.read<ReminderBloc>();
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => BlocProvider.value(
+                                  value: reminderBloc,
+                                  child: AddReminderModal(
+                                    initialStep: 2, // Start at Review step
+                                    initialName: reminder.name,
+                                    initialCategory: reminder.category,
+                                    initialQuantity: reminder.quantity,
+                                    initialUnit: reminder.unit,
+                                    initialScheduleType: reminder.scheduleType,
+                                    initialStartDate: reminder.startDate,
+                                    initialEndDate: reminder.endDate,
+                                    initialSmartReminder:
+                                        reminder.smartReminder,
+                                  ),
+                                ),
+                              );
                             },
                           );
                         },

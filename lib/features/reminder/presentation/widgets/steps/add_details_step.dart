@@ -26,11 +26,35 @@ class AddDetailsStep extends StatefulWidget {
 class _AddDetailsStepState extends State<AddDetailsStep> {
   final List<String> categories = ['Water', 'Workout', 'Activity'];
 
+  String? _nameError;
+  String? _quantityError;
+
+  @override
+  void initState() {
+    super.initState();
+    // Clear errors when user types
+    widget.nameController.addListener(() {
+      if (_nameError != null) {
+        setState(() => _nameError = null);
+      }
+    });
+    widget.quantityController.addListener(() {
+      if (_quantityError != null) {
+        setState(() => _quantityError = null);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+        padding: EdgeInsets.only(
+          left: 24.0,
+          right: 24.0,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -57,27 +81,33 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: widget.nameController,
-              decoration: InputDecoration(
-                hintText: 'eg.: Morning Water Intake',
-                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+            SizedBox(
+              width: 340,
+              // Height needs to adapt to error text, removing fixed height
+              // height: 40,
+              child: TextField(
+                controller: widget.nameController,
+                decoration: InputDecoration(
+                  hintText: 'eg.: Morning Water Intake',
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  errorText: _nameError,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFEE374D)),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.grey[200]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFFEE374D)),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
             const SizedBox(height: 24),
@@ -101,9 +131,9 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                     return GestureDetector(
                       onTap: () => widget.onCategoryChanged(category),
                       child: Container(
+                        height: 40,
                         margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFFEE374D)
@@ -183,57 +213,73 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
             ),
             const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   flex: 2,
-                  child: TextField(
-                    controller: widget.quantityController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: '300',
-                      hintStyle: const TextStyle(color: Color(0xFFEE374D)),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
+                  child: SizedBox(
+                    width: 270,
+                    // Remove fixed height to allow error text
+                    // height: 40,
+                    child: TextField(
+                      controller: widget.quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '',
+                        errorText: _quantityError,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE5E7EB)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFEE374D)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey[200]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFEE374D)),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
+                      style: const TextStyle(
+                          color: Color(0xFFEE374D),
+                          fontWeight: FontWeight.bold),
                     ),
-                    style: const TextStyle(
-                        color: Color(0xFFEE374D), fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   flex: 1,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    width: 66,
+                    height:
+                        48, // Adjusted height to match text field with padding
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[200]!),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white,
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: widget.unitController.text.isEmpty
                             ? 'ml'
                             : widget.unitController.text,
-                        icon: const Icon(Icons.keyboard_arrow_down),
-                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                        isExpanded: false,
                         items: ['ml', 'L', 'g', 'kg', 'min', 'hr']
                             .map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
-                            child: Text(value),
+                            child: Text(value,
+                                style: const TextStyle(fontSize: 14)),
                           );
                         }).toList(),
                         onChanged: (newValue) {
@@ -259,13 +305,30 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
             ),
 
             const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
+            Center(
               child: PrimaryButton(
                 text: 'Next',
-                borderRadius: 12,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                onPressed: widget.onNext,
+                width: 306,
+                height: 32,
+                borderRadius: 5,
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  bool isValid = true;
+                  setState(() {
+                    if (widget.nameController.text.trim().isEmpty) {
+                      _nameError = 'Name is required';
+                      isValid = false;
+                    }
+                    if (widget.quantityController.text.trim().isEmpty) {
+                      _quantityError = 'Quantity is required';
+                      isValid = false;
+                    }
+                  });
+
+                  if (isValid) {
+                    widget.onNext();
+                  }
+                },
               ),
             ),
           ],
