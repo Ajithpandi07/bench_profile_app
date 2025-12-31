@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/core.dart';
+import '../../../../core/injection_container.dart';
 import '../../../auth/auth.dart';
 
 import '../bloc/bloc.dart';
 import '../widgets/widgets.dart';
 import '../../domain/entities/entities.dart';
+import '../../../reminder/reminder.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -358,11 +360,27 @@ class _HomeTab extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsets.only(
                                     top: 0), // Highest point (outer)
-                                child: _StatItem(
-                                  icon: Icons.calendar_today,
-                                  sub: '+',
-                                  val: 'In 3',
-                                  unit: 'h',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            BlocProvider<ReminderBloc>(
+                                          create: (context) =>
+                                              sl<ReminderBloc>()
+                                                ..add(LoadReminders()),
+                                          child: const ReminderPage(),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: _StatItem(
+                                    icon: Icons.calendar_today,
+                                    sub: '+',
+                                    val: 'In 3',
+                                    unit: 'h',
+                                  ),
                                 ),
                               ),
                             ],

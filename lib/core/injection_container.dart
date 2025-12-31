@@ -14,6 +14,9 @@ import '../features/health_metrics/health_metrics.dart' hide SyncManager;
 // Auth imports
 import '../features/auth/auth.dart';
 
+// Reminder imports
+import '../features/reminder/reminder.dart';
+
 final sl = GetIt.instance;
 
 /// Full application init — used by the main isolate (UI).
@@ -37,11 +40,23 @@ Future<void> init() async {
 
     if (isar == null) {
       final dir = await getApplicationDocumentsDirectory();
-      isar = await Isar.open(
-        [HealthMetricsSchema],
-        directory: dir.path,
-        // optional: name: 'health_metrics_db',
-      );
+      try {
+        isar = await Isar.open(
+          [HealthMetricsSchema],
+          directory: dir.path,
+          // optional: name: 'health_metrics_db',
+        );
+      } catch (e) {
+        // MdbxError (11) means the database is locked by another process/isolate.
+        // This often happens during hot restart if a background task is running.
+        if (e.toString().contains('MdbxError (11)')) {
+          print(
+              'CRITICAL: Isar Database is locked. This usually happens during hot restart if a background task is active.');
+          print(
+              'ACTION REQUIRED: Please completely STOP the app and RUN it again (Cold Restart).');
+        }
+        rethrow;
+      }
     }
     // register the opened Isar as a singleton
     sl.registerSingleton<Isar>(isar);
@@ -138,6 +153,34 @@ Future<void> init() async {
           batchSize: 200,
           interval: const Duration(minutes: 15),
         ));
+  }
+
+  //================
+  // Features - Reminder
+  //================
+  if (!sl.isRegistered<ReminderRemoteDataSource>()) {
+    sl.registerLazySingleton<ReminderRemoteDataSource>(
+      () => ReminderRemoteDataSourceImpl(
+        firestore: sl<FirebaseFirestore>(),
+        auth: sl<FirebaseAuth>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<ReminderRepository>()) {
+    sl.registerLazySingleton<ReminderRepository>(
+      () => ReminderRepositoryImpl(
+        remoteDataSource: sl<ReminderRemoteDataSource>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<ReminderBloc>()) {
+    sl.registerFactory(
+      () => ReminderBloc(
+        repository: sl<ReminderRepository>(),
+      ),
+    );
   }
 
   // Optional debug logs

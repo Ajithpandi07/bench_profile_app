@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/bloc.dart';
 import '../../domain/entities/entities.dart';
+import '../../../../../core/presentation/widgets/app_date_selector.dart';
 import '../widgets/widgets.dart';
 
 class HealthMetricsPage extends StatefulWidget {
@@ -82,16 +83,11 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                   ),
                 ),
 
-                // Horizontal date selector
+                // App Date Selector (Shared)
                 Padding(
-                  padding: const EdgeInsets.only(
-                      top:
-                          0.0), // Removed top padding as header provides spacing
-                  child: HorizontalDateSelector(
-                    initialDate: selectedDate,
-                    daysBefore: 60,
-                    daysAfter:
-                        DateTime.now().difference(selectedDate).inDays.abs(),
+                  padding: const EdgeInsets.only(top: 0.0),
+                  child: AppDateSelector(
+                    selectedDate: selectedDate,
                     onDateSelected: (d) {
                       setState(() => selectedDate = d);
                       // UI event + load data for date
