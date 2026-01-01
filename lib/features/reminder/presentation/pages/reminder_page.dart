@@ -3,11 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/reminder_bloc.dart';
 import '../bloc/reminder_state.dart';
+import '../bloc/reminder_event.dart';
 import '../widgets/add_reminder_modal.dart';
 import '../../../../../core/presentation/widgets/app_date_selector.dart';
-import '../widgets/add_reminder_modal.dart';
+
 import '../widgets/reminder_item_card.dart';
 import '../widgets/primary_button.dart';
+import '../../../../core/services/app_theme.dart';
 
 class ReminderPage extends StatefulWidget {
   const ReminderPage({super.key});
@@ -18,6 +20,14 @@ class ReminderPage extends StatefulWidget {
 
 class _ReminderPageState extends State<ReminderPage> {
   DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    context
+        .read<ReminderBloc>()
+        .add(LoadReminders(selectedDate: _selectedDate));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,14 +48,14 @@ class _ReminderPageState extends State<ReminderPage> {
         title: const Text(
           'Reminder',
           style: TextStyle(
-            color: Color(0xFFEE374D), // Red title as per design
+            color: AppTheme.primaryColor, // Red title as per design
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Color(0xFFEE374D), size: 28),
+            icon: const Icon(Icons.add, color: AppTheme.primaryColor, size: 28),
             onPressed: () {
               final reminderBloc = context.read<ReminderBloc>();
               showModalBottomSheet(
@@ -61,7 +71,7 @@ class _ReminderPageState extends State<ReminderPage> {
           ),
           IconButton(
             icon: const Icon(Icons.info_outline,
-                color: Color(0xFFEE374D), size: 26),
+                color: AppTheme.primaryColor, size: 26),
             onPressed: () {},
           ),
           const SizedBox(width: 8),
@@ -81,7 +91,9 @@ class _ReminderPageState extends State<ReminderPage> {
                   setState(() {
                     _selectedDate = date;
                   });
-                  // TODO: Filter reminders by date
+                  context
+                      .read<ReminderBloc>()
+                      .add(LoadReminders(selectedDate: date));
                 },
               ),
               const SizedBox(height: 5),
@@ -104,38 +116,94 @@ class _ReminderPageState extends State<ReminderPage> {
                         itemCount: state.reminders.length,
                         itemBuilder: (context, index) {
                           final reminder = state.reminders[index];
-                          return ReminderItemCard(
-                            title: reminder.name.isNotEmpty
-                                ? reminder.name
-                                : 'Reminder',
-                            subtitle:
-                                '${reminder.quantity} ${reminder.unit} / ${_getDurationText(reminder.scheduleType)}',
-                            icon: _getIconForCategory(reminder.category),
-                            color: _getColorForCategory(reminder.category),
-                            onEdit: () {
-                              final reminderBloc = context.read<ReminderBloc>();
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (context) => BlocProvider.value(
-                                  value: reminderBloc,
-                                  child: AddReminderModal(
-                                    initialStep: 2, // Start at Review step
-                                    initialName: reminder.name,
-                                    initialCategory: reminder.category,
-                                    initialQuantity: reminder.quantity,
-                                    initialUnit: reminder.unit,
-                                    initialScheduleType: reminder.scheduleType,
-                                    initialStartDate: reminder.startDate,
-                                    initialEndDate: reminder.endDate,
-                                    initialSmartReminder:
-                                        reminder.smartReminder,
-                                  ),
+                          return Dismissible(
+                              key: Key(reminder.id), // Removed !
+                              direction: DismissDirection.endToStart,
+                              confirmDismiss: (direction) async {
+                                return await showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(15)),
+                                      title: const Text("Delete Reminder",
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      content: const Text(
+                                          "Are you sure you want to delete this reminder?"),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(false),
+                                          child: const Text("Cancel",
+                                              style: TextStyle(
+                                                  color: Colors.grey)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(true),
+                                          child: const Text("Delete",
+                                              style: TextStyle(
+                                                  color:
+                                                      AppTheme.primaryColor)),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor,
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                              );
-                            },
-                          );
+                                child: const Icon(Icons.delete,
+                                    color: Colors.white, size: 28),
+                              ),
+                              onDismissed: (direction) {
+                                context.read<ReminderBloc>().add(
+                                    DeleteReminder(reminder.id)); // Removed !
+                              },
+                              child: ReminderItemCard(
+                                title: reminder.name.isNotEmpty
+                                    ? reminder.name
+                                    : 'Reminder',
+                                subtitle:
+                                    '${reminder.quantity} ${reminder.unit}',
+                                scheduleType: reminder.scheduleType,
+                                icon: _getIconForCategory(reminder.category),
+                                color: _getColorForCategory(reminder.category),
+                                onEdit: () {
+                                  final reminderBloc =
+                                      context.read<ReminderBloc>();
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => BlocProvider.value(
+                                      value: reminderBloc,
+                                      child: AddReminderModal(
+                                        initialStep: 2, // Start at Review step
+                                        reminderId: reminder.id,
+                                        initialName: reminder.name,
+                                        initialCategory: reminder.category,
+                                        initialQuantity: reminder.quantity,
+                                        initialUnit: reminder.unit,
+                                        initialScheduleType:
+                                            reminder.scheduleType,
+                                        initialStartDate: reminder.startDate,
+                                        initialEndDate: reminder.endDate,
+                                        initialSmartReminder:
+                                            reminder.smartReminder,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ));
                         },
                       );
                     } else if (state is ReminderError) {
@@ -207,20 +275,7 @@ class _ReminderPageState extends State<ReminderPage> {
       case 'medication':
         return Colors.red;
       default:
-        return const Color(0xFFEE374D);
-    }
-  }
-
-  String _getDurationText(String scheduleType) {
-    switch (scheduleType.toLowerCase()) {
-      case 'daily':
-        return 'day';
-      case 'weekly':
-        return 'week';
-      case 'monthly':
-        return 'month';
-      default:
-        return 'day';
+        return AppTheme.primaryColor;
     }
   }
 }

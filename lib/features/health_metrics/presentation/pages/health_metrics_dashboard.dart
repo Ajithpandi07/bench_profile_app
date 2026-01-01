@@ -30,7 +30,7 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
     WidgetsBinding.instance.addObserver(this);
     // Trigger initial fetch when dashboard mounts
     context.read<HealthMetricsBloc>().add(GetMetricsForDate(DateTime.now()));
-    // Automatically trigger restore/sync on load (delayed to allow initial load to settle)
+    // Automatically trigger restore/sync on load (safe check for empty local data)
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         context.read<HealthMetricsBloc>().add(const RestoreAllData());

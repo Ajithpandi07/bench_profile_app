@@ -14,11 +14,15 @@ class Reminder extends Equatable {
 
   // Schedule
   final String scheduleType; // Daily, Weekly, Monthly, As Needed
+  final List<int>? daysOfWeek; // 1 = Monday, 7 = Sunday
+  final int? dayOfMonth; // 1-31
+  final String? time;
   final DateTime startDate;
   final DateTime endDate;
   final bool smartReminder;
-
   final bool isCompleted;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const Reminder({
     required this.id,
@@ -27,23 +31,33 @@ class Reminder extends Equatable {
     required this.quantity,
     required this.unit,
     required this.scheduleType,
+    this.daysOfWeek,
+    this.dayOfMonth,
+    this.time,
     required this.startDate,
     required this.endDate,
     this.smartReminder = false,
     this.isCompleted = false,
+    this.createdAt,
+    this.updatedAt,
   });
 
   @override
-  List<Object> get props => [
+  List<Object?> get props => [
         id,
         name,
         category,
         quantity,
         unit,
         scheduleType,
+        daysOfWeek,
+        dayOfMonth,
+        time,
         startDate,
         endDate,
         smartReminder,
         isCompleted,
+        createdAt,
+        updatedAt,
       ];
 }

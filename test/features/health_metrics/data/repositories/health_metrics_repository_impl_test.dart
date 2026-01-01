@@ -79,6 +79,11 @@ class FakeHealthMetricsLocalDataSource implements HealthMetricsLocalDataSource {
   Future<List<HealthMetrics>> getUnsyncedMetrics({int limit = 50}) async {
     return [];
   }
+
+  @override
+  Future<bool> hasAnyMetrics() async {
+    return localMetrics.isNotEmpty;
+  }
 }
 
 class FakeHealthMetricsRemoteDataSource

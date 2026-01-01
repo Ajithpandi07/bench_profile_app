@@ -315,22 +315,12 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
         return const Left(NetworkFailure('No internet connection.'));
       }
 
-      // Check local emptiness via localDataSource
-      // We assume localDataSource has a method or we rely on 'readFromCache' returning empty for today?
-      // Actually, localDataSource.readFromCacheForDate only checks one date.
-      // We need a 'hasAnyData' or 'count' on localDataSource.
-      // If not present, we can't safely enforce "only if empty" efficiently here without updating LocalDataSource interface.
-      // But for Isar implementation (which is what user is likely using), we did it directly.
-      // For this generic impl, we'll try to implement it safely or just fetch.
-      // Given the user constraint "only if local empty", we should verify.
-      // Let's assume for now we trust the repository call or just implement the fetch-remote-and-save.
-      // Strict correctness: We should add `hasAnyMetrics()` to LocalDataSource.
-      // But to avoid expanded scope refactor now, and assuming `IsarHealthMetricsRepository` is the primary one used (DI injection):
-      // We will implement the fetch but with a Todo or best-effort check if possible.
-      // Or just implement it as "Restore (Overwrite)".
-      // But wait, the user's explicit request was check emptiness.
-      // Since this class `HealthMetricsRepositoryImpl` might not be the active one (user seems to use Isar repo),
-      // we just need to satisfy the compiler.
+      // Local-First Check: Only restore if local DB is empty.
+      final hasLocalData = await localDataSource.hasAnyMetrics();
+      if (hasLocalData) {
+        debugPrint('Restore skipped: Local data already exists.');
+        return const Right(null);
+      }
 
       final remoteMetrics = await remoteDataSource.getAllHealthMetricsForUser();
       if (remoteMetrics.isNotEmpty) {

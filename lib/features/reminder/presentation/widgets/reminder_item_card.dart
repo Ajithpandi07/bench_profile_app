@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/app_theme.dart';
 
 class ReminderItemCard extends StatelessWidget {
   final String title;
   final String subtitle;
+  final String scheduleType;
   final VoidCallback? onEdit;
   final Color? color;
   final IconData? icon;
@@ -11,6 +13,7 @@ class ReminderItemCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
+    required this.scheduleType,
     this.onEdit,
     this.color,
     this.icon,
@@ -58,13 +61,38 @@ class ReminderItemCard extends StatelessWidget {
               mainAxisAlignment:
                   MainAxisAlignment.center, // Center text vertically
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14, // Slightly reduced font size
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1D1617),
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14, // Slightly reduced font size
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1D1617),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (color ?? Colors.blue).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        scheduleType,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: color ?? Colors.blue,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -86,7 +114,7 @@ class ReminderItemCard extends StatelessWidget {
                 color: Colors.transparent,
                 child: const Icon(
                   Icons.edit_square, // Matches the "square with pencil" look
-                  color: Color(0xFFEE374D),
+                  color: AppTheme.primaryColor,
                   size: 24,
                 ),
               ),

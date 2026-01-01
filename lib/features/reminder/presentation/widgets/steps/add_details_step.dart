@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../primary_button.dart';
+import '../../../../../core/services/app_theme.dart';
 
 class AddDetailsStep extends StatefulWidget {
   final TextEditingController nameController;
@@ -65,7 +66,7 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFEE374D),
+                  color: AppTheme.primaryColor,
                 ),
               ),
             ),
@@ -101,7 +102,7 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFEE374D)),
+                    borderSide: BorderSide(color: AppTheme.primaryColor),
                   ),
                   filled: true,
                   fillColor: Colors.white,
@@ -135,13 +136,12 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                         margin: const EdgeInsets.only(right: 12),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFFEE374D)
-                              : Colors.white,
+                          color:
+                              isSelected ? AppTheme.primaryColor : Colors.white,
                           borderRadius: BorderRadius.circular(30),
                           border: Border.all(
                             color: isSelected
-                                ? const Color(0xFFEE374D)
+                                ? AppTheme.primaryColor
                                 : Colors.grey[200]!,
                           ),
                         ),
@@ -192,10 +192,10 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                     width: 45,
                     height: 45,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEB),
+                      color: AppTheme.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.add, color: Color(0xFFEE374D)),
+                    child: Icon(Icons.add, color: AppTheme.primaryColor),
                   ),
                 ],
               ),
@@ -239,16 +239,15 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFEE374D)),
+                          borderSide: BorderSide(color: AppTheme.primaryColor),
                         ),
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
                       ),
-                      style: const TextStyle(
-                          color: Color(0xFFEE374D),
+                      style: TextStyle(
+                          color: AppTheme.primaryColor,
                           fontWeight: FontWeight.bold),
                     ),
                   ),

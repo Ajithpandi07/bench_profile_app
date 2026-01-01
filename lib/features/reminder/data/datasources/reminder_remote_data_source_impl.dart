@@ -26,24 +26,60 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
   }
 
   @override
-  Stream<List<ReminderModel>> getReminders() {
+  Future<void> updateReminder(ReminderModel reminder) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return const Stream.empty();
-
-      return _firestore
+      if (user == null) throw Exception('User not authenticated');
+      if (reminder.id == null) {
+        throw Exception('Reminder ID is null');
+      }
+      await _firestore
           .collection('bench_profile')
           .doc(user.uid)
           .collection('userreminders')
-          .snapshots()
-          .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => ReminderModel.fromSnapshot(doc))
-            .toList();
-      });
+          .doc(reminder.id)
+          .update(reminder.toMap());
     } catch (e) {
-      print('Error in getReminders: $e');
-      return const Stream.empty();
+      throw Exception('Failed to update reminder: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteReminder(String id) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+      await _firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('userreminders')
+          .doc(id)
+          .delete();
+    } catch (e) {
+      throw Exception('Failed to delete reminder: $e');
+    }
+  }
+
+  @override
+  Future<List<ReminderModel>> fetchReminders() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return [];
+
+      final snapshot = await _firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('userreminders')
+          .where('endDate', isGreaterThanOrEqualTo: Timestamp.now())
+          .orderBy('endDate')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ReminderModel.fromSnapshot(doc))
+          .toList();
+    } catch (e) {
+      print('Error in fetchReminders: $e');
+      return [];
     }
   }
 }

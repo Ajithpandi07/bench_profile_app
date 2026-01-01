@@ -6,27 +6,53 @@ import '../models/reminder_model.dart';
 class ReminderRepositoryImpl implements ReminderRepository {
   final ReminderRemoteDataSource remoteDataSource;
 
-  ReminderRepositoryImpl({required this.remoteDataSource});
+  ReminderRepositoryImpl({
+    required this.remoteDataSource,
+  });
 
   @override
   Future<void> addReminder(Reminder reminder) async {
-    final reminderModel = ReminderModel(
-      id: reminder.id,
-      name: reminder.name,
-      category: reminder.category,
-      quantity: reminder.quantity,
-      unit: reminder.unit,
-      scheduleType: reminder.scheduleType,
-      startDate: reminder.startDate,
-      endDate: reminder.endDate,
-      smartReminder: reminder.smartReminder,
-      isCompleted: reminder.isCompleted,
-    );
-    await remoteDataSource.addReminder(reminderModel);
+    try {
+      final now = DateTime.now();
+      final reminderModel = ReminderModel.fromEntity(reminder).copyWith(
+        createdAt: now,
+        updatedAt: now,
+      );
+      await remoteDataSource.addReminder(reminderModel);
+    } catch (e) {
+      throw Exception('Failed to add reminder: $e');
+    }
   }
 
   @override
-  Stream<List<Reminder>> getReminders() {
-    return remoteDataSource.getReminders();
+  Future<void> updateReminder(Reminder reminder) async {
+    try {
+      final reminderModel = ReminderModel.fromEntity(reminder).copyWith(
+        updatedAt: DateTime.now(),
+      );
+      await remoteDataSource.updateReminder(reminderModel);
+    } catch (e) {
+      throw Exception('Failed to update reminder: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteReminder(String id) async {
+    try {
+      await remoteDataSource.deleteReminder(id);
+    } catch (e) {
+      throw Exception('Failed to delete reminder: $e');
+    }
+  }
+
+  @override
+  Future<List<Reminder>> getReminders() async {
+    try {
+      final reminderModels = await remoteDataSource.fetchReminders();
+      return reminderModels.map((model) => model.toEntity()).toList();
+    } catch (e) {
+      print('Failed to fetch reminders: $e');
+      return []; // Return empty list on failure or rethrow based on requirement
+    }
   }
 }

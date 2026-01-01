@@ -7,6 +7,7 @@ import '../bloc/bloc.dart';
 
 class AddReminderModal extends StatefulWidget {
   final int initialStep;
+  final String? reminderId; // Add this
   final String? initialName;
   final String? initialCategory;
   final String? initialQuantity;
@@ -19,6 +20,7 @@ class AddReminderModal extends StatefulWidget {
   const AddReminderModal({
     super.key,
     this.initialStep = 0,
+    this.reminderId, // Add this
     this.initialName,
     this.initialCategory,
     this.initialQuantity,
@@ -48,6 +50,9 @@ class _AddReminderModalState extends State<AddReminderModal> {
   late DateTime _startDate;
   late DateTime _endDate;
   late bool _isSmartReminder;
+  List<int> _daysOfWeek = [];
+  int _dayOfMonth = 1;
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
 
   @override
   void initState() {
@@ -66,6 +71,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
     _endDate =
         widget.initialEndDate ?? DateTime.now().add(const Duration(days: 30));
     _isSmartReminder = widget.initialSmartReminder;
+    // _daysOfWeek and _dayOfMonth are initialized inline
   }
 
   @override
@@ -98,18 +104,41 @@ class _AddReminderModalState extends State<AddReminderModal> {
   }
 
   void _saveReminder() {
-    context.read<ReminderBloc>().add(
-          AddReminder(
-            name: _nameController.text,
-            category: _selectedCategory,
-            quantity: _quantityController.text,
-            unit: _unitController.text,
-            scheduleType: _scheduleType,
-            startDate: _startDate,
-            endDate: _endDate,
-            smartReminder: _isSmartReminder,
-          ),
-        );
+    final bloc = context.read<ReminderBloc>();
+    if (widget.reminderId != null) {
+      bloc.add(
+        UpdateReminder(
+          id: widget.reminderId!,
+          name: _nameController.text,
+          category: _selectedCategory,
+          quantity: _quantityController.text,
+          unit: _unitController.text,
+          scheduleType: _scheduleType,
+          daysOfWeek: _scheduleType == 'Weekly' ? _daysOfWeek : null,
+          dayOfMonth: _scheduleType == 'Monthly' ? _dayOfMonth : null,
+          time: _selectedTime.format(context),
+          startDate: _startDate,
+          endDate: _endDate,
+          smartReminder: _isSmartReminder,
+        ),
+      );
+    } else {
+      bloc.add(
+        AddReminder(
+          name: _nameController.text,
+          category: _selectedCategory,
+          quantity: _quantityController.text,
+          unit: _unitController.text,
+          scheduleType: _scheduleType,
+          daysOfWeek: _scheduleType == 'Weekly' ? _daysOfWeek : null,
+          dayOfMonth: _scheduleType == 'Monthly' ? _dayOfMonth : null,
+          time: _selectedTime.format(context),
+          startDate: _startDate,
+          endDate: _endDate,
+          smartReminder: _isSmartReminder,
+        ),
+      );
+    }
     Navigator.of(context).pop();
   }
 
@@ -153,10 +182,22 @@ class _AddReminderModalState extends State<AddReminderModal> {
                 ),
                 SetScheduleStep(
                   scheduleType: _scheduleType,
+                  daysOfWeek: _daysOfWeek,
+                  dayOfMonth: _dayOfMonth,
+                  selectedTime: _selectedTime,
+                  selectedGoal: _quantityController.text,
+                  selectedUnit: _unitController.text,
                   startDate: _startDate,
                   endDate: _endDate,
                   isSmartReminder: _isSmartReminder,
                   onTypeChanged: (val) => setState(() => _scheduleType = val),
+                  onDaysOfWeekChanged: (val) =>
+                      setState(() => _daysOfWeek = val),
+                  onDayOfMonthChanged: (val) =>
+                      setState(() => _dayOfMonth = val),
+                  onTimeChanged: (val) => setState(() => _selectedTime = val),
+                  onGoalChanged: (val) =>
+                      setState(() => _quantityController.text = val),
                   onStartDateChanged: (val) => setState(() => _startDate = val),
                   onEndDateChanged: (val) => setState(() => _endDate = val),
                   onSmartToggle: (val) =>
@@ -170,11 +211,23 @@ class _AddReminderModalState extends State<AddReminderModal> {
                   quantity: _quantityController.text,
                   unit: _unitController.text,
                   scheduleType: _scheduleType,
+                  daysOfWeek: _daysOfWeek,
+                  dayOfMonth: _dayOfMonth,
+                  time: _selectedTime.format(context),
                   startDate: _startDate,
                   endDate: _endDate,
                   smartReminder: _isSmartReminder,
                   onConfirm: _saveReminder,
                   onBack: _prevStep,
+                  onEditSchedule: () {
+                    // Navigate back to Details step (index 0)
+                    _pageController.animateToPage(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                    setState(() => _currentStep = 0);
+                  },
                 ),
               ],
             ),

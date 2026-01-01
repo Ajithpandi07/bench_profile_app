@@ -26,4 +26,7 @@ abstract class HealthMetricsLocalDataSource {
 
   /// (Optional) delete all local data — useful for a "Clear local" button
   Future<void> clearAllLocalMetrics();
+
+  /// Checks if there are any metrics stored locally.
+  Future<bool> hasAnyMetrics();
 }
