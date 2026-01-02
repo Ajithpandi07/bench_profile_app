@@ -21,9 +21,10 @@ class NotificationService {
     tz_data.initializeTimeZones();
     final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
     tz.setLocalLocation(tz.getLocation(timeZoneInfo.identifier));
+    print('DEBUG: Local Timezone set to: ${tz.local.name}');
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
@@ -63,6 +64,11 @@ class NotificationService {
               AndroidFlutterLocalNotificationsPlugin>();
 
       await androidImplementation?.requestNotificationsPermission();
+      await androidImplementation?.requestExactAlarmsPermission();
+
+      final bool? canScheduleExact =
+          await androidImplementation?.canScheduleExactNotifications();
+      print('DEBUG: Can Schedule Exact Notifications: $canScheduleExact');
     }
   }
 
@@ -130,7 +136,15 @@ class NotificationService {
       }
     }
 
-    print('DEBUG: Final ScheduledTZDate: $scheduledTZDate');
+    // DEBUG: Check permission right before scheduling
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final androidImplementation =
+          flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      final canExact =
+          await androidImplementation?.canScheduleExactNotifications();
+      print('DEBUG: [scheduleReminder] Can Schedule Exact: $canExact');
+    }
 
     DateTimeComponents? matchComponent;
     if (scheduleType == 'Daily') {
@@ -143,7 +157,7 @@ class NotificationService {
 
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
-      'reminder_channel',
+      'reminder_channel_v1',
       'Reminders',
       channelDescription: 'Channel for user reminders',
       importance: Importance.max,
@@ -153,15 +167,21 @@ class NotificationService {
     const NotificationDetails notificationDetails =
         NotificationDetails(android: androidNotificationDetails);
 
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledTZDate,
-      notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: matchComponent,
-    );
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTZDate,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        matchDateTimeComponents: matchComponent,
+      );
+      print('DEBUG: Successfully called zonedSchedule for ID: $id');
+    } catch (e, st) {
+      print('ERROR: Failed to schedule notification: $e');
+      print(st);
+    }
   }
 
   Future<void> cancelNotification(int id) async {
@@ -170,5 +190,30 @@ class NotificationService {
 
   Future<void> cancelAll() async {
     await flutterLocalNotificationsPlugin.cancelAll();
+  }
+
+  Future<void> showInstantNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails(
+      'reminder_channel_v1',
+      'Reminders',
+      channelDescription: 'Channel for user reminders',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails notificationDetails =
+        NotificationDetails(android: androidNotificationDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      id,
+      title,
+      body,
+      notificationDetails,
+    );
   }
 }

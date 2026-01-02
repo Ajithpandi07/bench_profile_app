@@ -152,20 +152,24 @@ class _TimeGoalModalState extends State<TimeGoalModal> {
           const SizedBox(height: 12),
           Container(
             width: 340,
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            constraints: const BoxConstraints(minHeight: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(color: const Color(0xFFE5E7EB)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: TextField(
                     controller: _goalController,
+                    maxLines: 5,
+                    minLines: 1,
+                    textInputAction: TextInputAction.done,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      hintText: 'Enter quantity',
+                      hintText: 'Enter goal or instruction',
                       hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
                       contentPadding: EdgeInsets.zero,
                       isDense: true,
@@ -174,15 +178,18 @@ class _TimeGoalModalState extends State<TimeGoalModal> {
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
-                    keyboardType: TextInputType.number,
+                    keyboardType: TextInputType.multiline,
                   ),
                 ),
-                Text(
-                  widget.unit,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: Text(
+                    widget.unit,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

@@ -54,7 +54,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
   late bool _isSmartReminder;
   List<int> _daysOfWeek = [];
   int _dayOfMonth = 1;
-  TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay? _selectedTime; // Changed to nullable
 
   @override
   void initState() {
@@ -65,7 +65,8 @@ class _AddReminderModalState extends State<AddReminderModal> {
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _quantityController =
         TextEditingController(text: widget.initialQuantity ?? '');
-    _unitController = TextEditingController(text: widget.initialUnit ?? 'ml');
+    _unitController = TextEditingController(
+        text: widget.initialUnit ?? ''); // Removed default 'ml'
     _selectedCategory = widget.initialCategory ?? 'Water';
 
     _scheduleType = widget.initialScheduleType ?? 'Daily';
@@ -77,25 +78,6 @@ class _AddReminderModalState extends State<AddReminderModal> {
     // Initialize Time
     if (widget.initialTime != null) {
       // Expect "HH:mm" (24h) or "h:mm a"
-      // Ideally we use TimeOfDay.fromDateTime or parse.
-      // For this app, earlier logic suggested "HH:mm".
-      // Let's assume consistent format "h:mm a" (e.g. 9:00 AM) or "HH:mm".
-      // The `ReviewReminderStep` shows `time` as is.
-      // `SetScheduleStep` uses `TimeOfDay`.
-      // Let's try to parse assuming "h:mm a" standard Flutter `format(context)` output which is locale dependent,
-      // OR simple "HH:mm".
-      // If the repository saves "HH:mm", we parse that.
-      // Let's check `ReminderBloc` _scheduleNotification, it splits by ':'. It assumes "HH:mm" (24h) likely?
-      // Wait, `_selectedTime.format(context)` returns "9:00 AM". `TimeOfDay` holds 24h internal.
-      // If we saved "9:00 AM", we need to parse that back.
-      // To be safe, let's look at how it's saved.
-      // `time: _selectedTime.format(context),` in `_saveReminder`.
-      // So it saves localized string "9:00 AM" or "21:00".
-      // This is risky to parse back.
-      // BETTER FIX: The `AddReminderModal` should arguably accept `TimeOfDay` or rely on a standard format.
-      // For now, I will try to parse robustly.
-
-      // Parsing "9:00 AM" manually or "14:30"
       try {
         // If contains AM/PM
         if (widget.initialTime!.toLowerCase().contains('pm') ||
@@ -118,8 +100,10 @@ class _AddReminderModalState extends State<AddReminderModal> {
         }
       } catch (e) {
         print("Error parsing time: $e");
-        _selectedTime = const TimeOfDay(hour: 9, minute: 0);
+        _selectedTime = null; // Default to null on error
       }
+    } else {
+      _selectedTime = null; // Explicitly null
     }
   }
 
@@ -134,6 +118,15 @@ class _AddReminderModalState extends State<AddReminderModal> {
 
   void _nextStep() {
     if (_currentStep < 2) {
+      // Validation can be added here
+      if (_currentStep == 1 && _selectedTime == null) {
+        // Force user to select time?
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please set a time and goal')),
+        );
+        return;
+      }
+
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -153,8 +146,9 @@ class _AddReminderModalState extends State<AddReminderModal> {
   }
 
   void _saveReminder() {
-    final formattedTime =
-        '${_selectedTime.hour}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+    final formattedTime = _selectedTime != null
+        ? '${_selectedTime!.hour}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
+        : '';
 
     final bloc = context.read<ReminderBloc>();
     if (widget.reminderId != null) {
@@ -265,7 +259,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
                   scheduleType: _scheduleType,
                   daysOfWeek: _daysOfWeek,
                   dayOfMonth: _dayOfMonth,
-                  time: _selectedTime.format(context),
+                  time: _selectedTime?.format(context), // formatting null safe
                   startDate: _startDate,
                   endDate: _endDate,
                   smartReminder: _isSmartReminder,

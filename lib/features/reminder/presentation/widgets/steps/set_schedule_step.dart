@@ -11,7 +11,7 @@ class SetScheduleStep extends StatelessWidget {
   final bool isSmartReminder;
   final List<int> daysOfWeek;
   final int dayOfMonth;
-  final TimeOfDay selectedTime;
+  final TimeOfDay? selectedTime; // Changed to nullable
   final String selectedGoal;
   final String selectedUnit;
 
@@ -161,49 +161,95 @@ class SetScheduleStep extends StatelessWidget {
             const SizedBox(height: 12),
             Container(
               width: 340,
-              height: 144,
+              constraints: const BoxConstraints(minHeight: 144),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey[200]!),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
-                children: [
-                  Text(
-                    selectedGoal.isNotEmpty
-                        ? 'Remind me at ${selectedTime.format(context)} to take $selectedGoal $selectedUnit'
-                        : 'Set this quantity and get reminders to take it at specific times.',
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                  const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Center(
-                      child: PrimaryButton(
-                        text: 'Set Time & Goal',
-                        fontSize: 14,
-                        padding: EdgeInsets.zero,
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) => TimeGoalModal(
-                              initialTime: selectedTime,
-                              initialGoal: selectedGoal,
-                              unit: selectedUnit,
-                              onTimeChanged: onTimeChanged,
-                              onGoalChanged: onGoalChanged,
-                              onConfirm: () {}, // State updated via callbacks
+              child: (selectedGoal.isNotEmpty && selectedTime != null)
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Text(
+                            'Remind me at ${selectedTime!.format(context)} to take $selectedGoal $selectedUnit',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Center(
+                            child: PrimaryButton(
+                              text: 'Edit Time & Goal',
+                              fontSize: 14,
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => TimeGoalModal(
+                                    initialTime: selectedTime,
+                                    initialGoal: selectedGoal,
+                                    unit: selectedUnit,
+                                    onTimeChanged: onTimeChanged,
+                                    onGoalChanged: onGoalChanged,
+                                    onConfirm:
+                                        () {}, // State updated via callbacks
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Set this quantity and get reminders to take it at specific times.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                        // Only add Spacer if we have a fixed height which we don't anymore.
+                        // Instead, we can use a SizedBox for spacing.
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Center(
+                            child: PrimaryButton(
+                              text: 'Set Time & Goal',
+                              fontSize: 14,
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => TimeGoalModal(
+                                    initialTime: selectedTime,
+                                    initialGoal: selectedGoal,
+                                    unit: selectedUnit,
+                                    onTimeChanged: onTimeChanged,
+                                    onGoalChanged: onGoalChanged,
+                                    onConfirm:
+                                        () {}, // State updated via callbacks
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
 
             const SizedBox(height: 24),

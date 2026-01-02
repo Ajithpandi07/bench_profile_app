@@ -14,6 +14,7 @@
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
   <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
   <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
   <!-- Health Connect permissions (example: steps, heart rate, sleep) -->
   <!-- Health Connect permissions -->
@@ -88,6 +89,8 @@
     <activity
       android:name="androidx.health.connect.client.permission.HealthConnectPermissionDelegateActivity"
       android:exported="true"/>
+
+    <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
 
     <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
       <intent-filter>
