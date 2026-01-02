@@ -14,15 +14,17 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
         _auth = auth ?? FirebaseAuth.instance;
 
   @override
-  Future<void> addReminder(ReminderModel reminder) async {
+  Future<String> addReminder(ReminderModel reminder) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('User not authenticated');
 
-    await _firestore
+    final docRef = await _firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('userreminders')
         .add(reminder.toMap());
+
+    return docRef.id;
   }
 
   @override

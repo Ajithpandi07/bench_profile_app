@@ -182,9 +182,6 @@ class SetScheduleStep extends StatelessWidget {
                     child: Center(
                       child: PrimaryButton(
                         text: 'Set Time & Goal',
-                        width: 306,
-                        height: 32,
-                        borderRadius: 5,
                         fontSize: 14,
                         padding: EdgeInsets.zero,
                         onPressed: () {
@@ -263,9 +260,6 @@ class SetScheduleStep extends StatelessWidget {
             Center(
               child: PrimaryButton(
                 text: 'Next',
-                width: 306,
-                height: 32,
-                borderRadius: 5,
                 fontSize: 14,
                 padding: EdgeInsets.zero,
                 onPressed: onNext,

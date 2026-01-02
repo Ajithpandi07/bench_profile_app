@@ -42,6 +42,42 @@ class Reminder extends Equatable {
     this.updatedAt,
   });
 
+  Reminder copyWith({
+    String? id,
+    String? name,
+    String? category,
+    String? quantity,
+    String? unit,
+    String? scheduleType,
+    List<int>? daysOfWeek,
+    int? dayOfMonth,
+    String? time,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool? smartReminder,
+    bool? isCompleted,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Reminder(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      quantity: quantity ?? this.quantity,
+      unit: unit ?? this.unit,
+      scheduleType: scheduleType ?? this.scheduleType,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      dayOfMonth: dayOfMonth ?? this.dayOfMonth,
+      time: time ?? this.time,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      smartReminder: smartReminder ?? this.smartReminder,
+      isCompleted: isCompleted ?? this.isCompleted,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,

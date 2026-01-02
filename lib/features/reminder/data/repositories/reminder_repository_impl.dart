@@ -11,14 +11,14 @@ class ReminderRepositoryImpl implements ReminderRepository {
   });
 
   @override
-  Future<void> addReminder(Reminder reminder) async {
+  Future<String> addReminder(Reminder reminder) async {
     try {
       final now = DateTime.now();
       final reminderModel = ReminderModel.fromEntity(reminder).copyWith(
         createdAt: now,
         updatedAt: now,
       );
-      await remoteDataSource.addReminder(reminderModel);
+      return await remoteDataSource.addReminder(reminderModel);
     } catch (e) {
       throw Exception('Failed to add reminder: $e');
     }

@@ -27,6 +27,8 @@ class _ReminderPageState extends State<ReminderPage> {
     context
         .read<ReminderBloc>()
         .add(LoadReminders(selectedDate: _selectedDate));
+    // Ensure notifications are in sync with the DB (e.g. after reinstall or clear data)
+    context.read<ReminderBloc>().add(RescheduleAllNotifications());
   }
 
   @override
@@ -197,6 +199,8 @@ class _ReminderPageState extends State<ReminderPage> {
                                             reminder.scheduleType,
                                         initialStartDate: reminder.startDate,
                                         initialEndDate: reminder.endDate,
+                                        initialTime:
+                                            reminder.time, // Pass time here
                                         initialSmartReminder:
                                             reminder.smartReminder,
                                       ),
@@ -219,11 +223,7 @@ class _ReminderPageState extends State<ReminderPage> {
                 child: Center(
                   child: PrimaryButton(
                     text: 'Add Reminder',
-                    width: 306,
-                    height: 32,
-                    borderRadius: 5,
                     fontSize: 14,
-                    padding: EdgeInsets.zero,
                     onPressed: () {
                       final reminderBloc = context.read<ReminderBloc>();
                       showModalBottomSheet(

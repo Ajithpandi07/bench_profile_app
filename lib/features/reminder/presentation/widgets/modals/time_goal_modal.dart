@@ -192,9 +192,6 @@ class _TimeGoalModalState extends State<TimeGoalModal> {
           Center(
             child: PrimaryButton(
               text: 'Save',
-              width: 306,
-              height: 32,
-              borderRadius: 5,
               fontSize: 14,
               padding: EdgeInsets.zero,
               onPressed: () {

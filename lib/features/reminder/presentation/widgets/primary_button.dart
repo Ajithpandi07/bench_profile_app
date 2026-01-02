@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/app_theme.dart';
+import '../../../../core/constants/app_dimensions.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String text;
@@ -23,27 +24,47 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
+    final w = width ?? AppDimensions.primaryButtonWidth;
+    final h = height ?? AppDimensions.primaryButtonHeight;
+
+    return Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: Colors.transparent, // Button handles color
+        borderRadius: BorderRadius.circular(
+            borderRadius ?? AppDimensions.primaryButtonRadius),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.3),
+            offset: const Offset(0, 4),
+            blurRadius: 9.2,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
+          fixedSize: Size(w, h),
+          minimumSize: Size(w, h),
           backgroundColor: AppTheme.primaryColor, // Red background
+          foregroundColor: Colors.white, // Text color
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius ?? 30),
+            borderRadius: BorderRadius.circular(
+                borderRadius ?? AppDimensions.primaryButtonRadius),
           ),
-          padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
-          elevation: 4,
-          shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+          padding: padding ?? EdgeInsets.zero,
+          elevation: 0, // Disable material shadow
+          shadowColor: Colors.transparent,
         ),
         child: Text(
           text,
           style: TextStyle(
-            fontSize: fontSize ?? 18,
+            fontSize: fontSize ?? 14,
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            height: 20 / (fontSize ?? 18), // Enforce 20px line height
+            height: 20 / (fontSize ?? 14), // Enforce 20px line height
           ),
         ),
       ),

@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'core.dart';
 import '../features/health_metrics/health_metrics.dart' hide SyncManager;
+import 'services/notification_service.dart';
 
 // Auth imports
 import '../features/auth/auth.dart';
@@ -167,6 +168,10 @@ Future<void> init() async {
     );
   }
 
+  if (!sl.isRegistered<NotificationService>()) {
+    sl.registerLazySingleton<NotificationService>(() => NotificationService());
+  }
+
   if (!sl.isRegistered<ReminderRepository>()) {
     sl.registerLazySingleton<ReminderRepository>(
       () => ReminderRepositoryImpl(
@@ -179,6 +184,7 @@ Future<void> init() async {
     sl.registerFactory(
       () => ReminderBloc(
         repository: sl<ReminderRepository>(),
+        notificationService: sl<NotificationService>(),
       ),
     );
   }

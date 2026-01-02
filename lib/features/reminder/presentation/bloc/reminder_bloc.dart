@@ -4,27 +4,41 @@ import 'reminder_state.dart';
 import '../../domain/repositories/reminder_repository.dart';
 import '../../domain/entities/reminder.dart';
 
+import '../../../../core/services/notification_service.dart';
+
 class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
   final ReminderRepository _repository;
+  final NotificationService _notificationService;
   DateTime? _currentSelectedDate;
+  List<Reminder>? _cachedAllReminders;
 
-  ReminderBloc({required ReminderRepository repository})
-      : _repository = repository,
+  ReminderBloc({
+    required ReminderRepository repository,
+    required NotificationService notificationService,
+  })  : _repository = repository,
+        _notificationService = notificationService,
         super(ReminderInitial()) {
     on<LoadReminders>(_onLoadReminders);
     on<AddReminder>(_onAddReminder);
     on<UpdateReminder>(_onUpdateReminder);
     on<DeleteReminder>(_onDeleteReminder);
+    on<RescheduleAllNotifications>(_onRescheduleAllNotifications);
   }
 
   Future<void> _onLoadReminders(
       LoadReminders event, Emitter<ReminderState> emit) async {
     emit(ReminderLoading());
     try {
-      final allReminders = await _repository.getReminders();
-
       if (event.selectedDate != null) {
         _currentSelectedDate = event.selectedDate;
+      }
+
+      List<Reminder> allReminders;
+      if (_cachedAllReminders != null && !event.forceRefresh) {
+        allReminders = _cachedAllReminders!;
+      } else {
+        allReminders = await _repository.getReminders();
+        _cachedAllReminders = allReminders;
       }
 
       if (_currentSelectedDate == null) {
@@ -60,25 +74,13 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
             return true;
           case 'Weekly':
             if (reminder.daysOfWeek == null || reminder.daysOfWeek!.isEmpty) {
-              return true; // Assume all days if not specified, or handle as error? defaulting to true
+              return true; // Assume all days if not specified
             }
-            // dataValues logic from set_schedule_step:
-            // 1=Mon, ..., 7=Sun.
-            // DateTime.weekday: 1=Mon, ..., 7=Sun.
-            // But wait, the previous code had a specific mapping for the UI:
-            // final dayValues = [7, 1, 2, 3, 4, 5, 6]; -> S, M, T, W, T, F, S
-            // So 7 is Sunday, 1 is Monday.
-            // specific mapping check:
-            // database stores: [7, 1, 2] etc.
-            // selectedDate.weekday gives 1-7 (Mon-Sun).
             return reminder.daysOfWeek!.contains(selectedDate.weekday);
           case 'Monthly':
             if (reminder.dayOfMonth == null) return false;
             return selectedDate.day == reminder.dayOfMonth;
           case 'As needed':
-            // 'As needed' might technically be always visible or only on start date?
-            // Usually 'As needed' implies no specific schedule, but if valid in range, maybe show it?
-            // For now, let's assume it shows if within range.
             return true;
           default:
             return true;
@@ -108,8 +110,12 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
         endDate: event.endDate,
         smartReminder: event.smartReminder,
       );
-      await _repository.addReminder(reminder);
-      add(LoadReminders());
+      final id = await _repository.addReminder(reminder);
+
+      // Schedule notification
+      await _scheduleNotification(reminder.copyWith(id: id));
+
+      add(const LoadReminders(forceRefresh: true));
     } catch (e) {
       emit(ReminderError(e.toString()));
     }
@@ -133,7 +139,12 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
         smartReminder: event.smartReminder,
       );
       await _repository.updateReminder(reminder);
-      add(LoadReminders());
+
+      // Cancel old and schedule new
+      await _notificationService.cancelNotification(event.id.hashCode);
+      await _scheduleNotification(reminder);
+
+      add(const LoadReminders(forceRefresh: true));
     } catch (e) {
       emit(ReminderError(e.toString()));
     }
@@ -143,9 +154,66 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       DeleteReminder event, Emitter<ReminderState> emit) async {
     try {
       await _repository.deleteReminder(event.id);
-      add(LoadReminders());
+      await _notificationService.cancelNotification(event.id.hashCode);
+      add(const LoadReminders(forceRefresh: true));
     } catch (e) {
       emit(ReminderError(e.toString()));
     }
+  }
+
+  Future<void> _onRescheduleAllNotifications(
+      RescheduleAllNotifications event, Emitter<ReminderState> emit) async {
+    try {
+      // 1. Cancel all existing notifications to match current DB state
+      // (Optional, but safer to avoid ghosts if IDs changed or deletions happened outside)
+      await _notificationService.cancelAll();
+
+      // 2. Fetch all reminders
+      final reminders = await _repository.getReminders();
+
+      // 3. Schedule each valid reminder
+      for (final reminder in reminders) {
+        if (reminder.endDate.isAfter(DateTime.now())) {
+          await _scheduleNotification(reminder);
+        }
+      }
+
+      // 4. Update cache/state if needed, though this might be background
+      // If the UI is listening, we might want to refresh the list too
+      add(const LoadReminders(forceRefresh: true));
+    } catch (e) {
+      // Log error or emit state, but this might run in background/startup
+      print('Failed to reschedule all notifications: $e');
+    }
+  }
+
+  Future<void> _scheduleNotification(Reminder reminder) async {
+    if (reminder.time == null || reminder.time!.isEmpty) return;
+
+    // Parse time string "HH:mm"
+    final parts = reminder.time!.split(':');
+    if (parts.length != 2) return;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return;
+
+    print('DEBUG: Bloc Scheduling - Parsed Time: $hour:$minute');
+
+    // Create a base date using start date + time
+    final scheduledDate = DateTime(
+      reminder.startDate.year,
+      reminder.startDate.month,
+      reminder.startDate.day,
+      hour,
+      minute,
+    );
+
+    await _notificationService.scheduleReminder(
+      id: reminder.id.hashCode,
+      title: 'Time to take ${reminder.name}',
+      body: '${reminder.quantity} ${reminder.unit}',
+      scheduledDate: scheduledDate,
+      scheduleType: reminder.scheduleType,
+    );
   }
 }

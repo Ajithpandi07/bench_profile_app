@@ -15,6 +15,7 @@ class AddReminderModal extends StatefulWidget {
   final String? initialScheduleType;
   final DateTime? initialStartDate;
   final DateTime? initialEndDate;
+  final String? initialTime; // Add this
   final bool initialSmartReminder;
 
   const AddReminderModal({
@@ -28,6 +29,7 @@ class AddReminderModal extends StatefulWidget {
     this.initialScheduleType,
     this.initialStartDate,
     this.initialEndDate,
+    this.initialTime, // Add this
     this.initialSmartReminder = false,
   });
 
@@ -71,7 +73,54 @@ class _AddReminderModalState extends State<AddReminderModal> {
     _endDate =
         widget.initialEndDate ?? DateTime.now().add(const Duration(days: 30));
     _isSmartReminder = widget.initialSmartReminder;
-    // _daysOfWeek and _dayOfMonth are initialized inline
+
+    // Initialize Time
+    if (widget.initialTime != null) {
+      // Expect "HH:mm" (24h) or "h:mm a"
+      // Ideally we use TimeOfDay.fromDateTime or parse.
+      // For this app, earlier logic suggested "HH:mm".
+      // Let's assume consistent format "h:mm a" (e.g. 9:00 AM) or "HH:mm".
+      // The `ReviewReminderStep` shows `time` as is.
+      // `SetScheduleStep` uses `TimeOfDay`.
+      // Let's try to parse assuming "h:mm a" standard Flutter `format(context)` output which is locale dependent,
+      // OR simple "HH:mm".
+      // If the repository saves "HH:mm", we parse that.
+      // Let's check `ReminderBloc` _scheduleNotification, it splits by ':'. It assumes "HH:mm" (24h) likely?
+      // Wait, `_selectedTime.format(context)` returns "9:00 AM". `TimeOfDay` holds 24h internal.
+      // If we saved "9:00 AM", we need to parse that back.
+      // To be safe, let's look at how it's saved.
+      // `time: _selectedTime.format(context),` in `_saveReminder`.
+      // So it saves localized string "9:00 AM" or "21:00".
+      // This is risky to parse back.
+      // BETTER FIX: The `AddReminderModal` should arguably accept `TimeOfDay` or rely on a standard format.
+      // For now, I will try to parse robustly.
+
+      // Parsing "9:00 AM" manually or "14:30"
+      try {
+        // If contains AM/PM
+        if (widget.initialTime!.toLowerCase().contains('pm') ||
+            widget.initialTime!.toLowerCase().contains('am')) {
+          // Basic parse for "h:mm a"
+          final timeParts = widget.initialTime!.split(' ');
+          final hm = timeParts[0].split(':');
+          int h = int.parse(hm[0]);
+          final m = int.parse(hm[1]);
+          if (timeParts[1].toLowerCase() == 'pm' && h != 12) h += 12;
+          if (timeParts[1].toLowerCase() == 'am' && h == 12) h = 0;
+          _selectedTime = TimeOfDay(hour: h, minute: m);
+        } else {
+          // Assume HH:mm
+          final parts = widget.initialTime!.split(':');
+          if (parts.length == 2) {
+            _selectedTime = TimeOfDay(
+                hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+          }
+        }
+      } catch (e) {
+        print("Error parsing time: $e");
+        _selectedTime = const TimeOfDay(hour: 9, minute: 0);
+      }
+    }
   }
 
   @override
@@ -104,6 +153,9 @@ class _AddReminderModalState extends State<AddReminderModal> {
   }
 
   void _saveReminder() {
+    final formattedTime =
+        '${_selectedTime.hour}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+
     final bloc = context.read<ReminderBloc>();
     if (widget.reminderId != null) {
       bloc.add(
@@ -116,7 +168,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
           scheduleType: _scheduleType,
           daysOfWeek: _scheduleType == 'Weekly' ? _daysOfWeek : null,
           dayOfMonth: _scheduleType == 'Monthly' ? _dayOfMonth : null,
-          time: _selectedTime.format(context),
+          time: formattedTime,
           startDate: _startDate,
           endDate: _endDate,
           smartReminder: _isSmartReminder,
@@ -132,7 +184,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
           scheduleType: _scheduleType,
           daysOfWeek: _scheduleType == 'Weekly' ? _daysOfWeek : null,
           dayOfMonth: _scheduleType == 'Monthly' ? _dayOfMonth : null,
-          time: _selectedTime.format(context),
+          time: formattedTime,
           startDate: _startDate,
           endDate: _endDate,
           smartReminder: _isSmartReminder,

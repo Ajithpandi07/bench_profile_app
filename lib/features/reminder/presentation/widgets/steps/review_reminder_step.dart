@@ -53,10 +53,7 @@ class ReviewReminderStep extends StatelessWidget {
                   const SizedBox(height: 24),
                   Center(
                     child: PrimaryButton(
-                      text: 'Save Reminder',
-                      width: 306,
-                      height: 32,
-                      borderRadius: 5,
+                      text: 'Save',
                       fontSize: 14,
                       padding: EdgeInsets.zero,
                       onPressed: onConfirm,

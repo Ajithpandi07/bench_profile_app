@@ -9,11 +9,12 @@ abstract class ReminderEvent extends Equatable {
 
 class LoadReminders extends ReminderEvent {
   final DateTime? selectedDate;
+  final bool forceRefresh;
 
-  const LoadReminders({this.selectedDate});
+  const LoadReminders({this.selectedDate, this.forceRefresh = false});
 
   @override
-  List<Object?> get props => [selectedDate];
+  List<Object?> get props => [selectedDate, forceRefresh];
 }
 
 class AddReminder extends ReminderEvent {
@@ -113,3 +114,5 @@ class DeleteReminder extends ReminderEvent {
   @override
   List<Object?> get props => [id];
 }
+
+class RescheduleAllNotifications extends ReminderEvent {}

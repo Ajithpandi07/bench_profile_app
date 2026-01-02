@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
 import 'core/core.dart';
 import 'features/auth/auth.dart';
+import 'core/services/notification_service.dart';
 import 'features/health_metrics/health_metrics.dart' hide SyncManager;
 // import 'core/services/background_sync_service.dart'; // Exported via core.dart
 import 'core/injection_container.dart' as di;
@@ -21,6 +22,11 @@ void main() async {
 
   // init theme service before runApp
   await ThemeService().init();
+
+  // init notifications
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.requestPermissions();
 
   // Initialize dependency injection for main isolate
   try {

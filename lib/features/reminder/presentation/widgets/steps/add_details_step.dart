@@ -307,9 +307,6 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
             Center(
               child: PrimaryButton(
                 text: 'Next',
-                width: 306,
-                height: 32,
-                borderRadius: 5,
                 padding: EdgeInsets.zero,
                 onPressed: () {
                   bool isValid = true;
