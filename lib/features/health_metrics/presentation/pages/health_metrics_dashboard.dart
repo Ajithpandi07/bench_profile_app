@@ -328,33 +328,85 @@ class _HomeTab extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsets.only(
                                     top: 0), // Highest point (outer)
-                                child: _StatItem(
-                                  icon: Icons.restaurant,
-                                  sub: '+',
-                                  val: '0/3',
-                                  unit: '',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            BlocProvider<ReminderBloc>(
+                                          create: (context) =>
+                                              sl<ReminderBloc>()
+                                                ..add(LoadReminders()),
+                                          child: const ReminderPage(
+                                              initialCategory:
+                                                  'Meal'), // Changed to Meal
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: _StatItem(
+                                    icon: Icons.restaurant,
+                                    sub: '+',
+                                    val: '0/3',
+                                    unit: '',
+                                  ),
                                 ),
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(
                                     top: 40), // Lower point (inner)
-                                child: _StatItem(
-                                  icon: Icons.water_drop,
-                                  sub: '+',
-                                  val:
-                                      '${metrics?.water?.value.toStringAsFixed(1) ?? 0}/3.2',
-                                  unit: 'l',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            BlocProvider<ReminderBloc>(
+                                          create: (context) =>
+                                              sl<ReminderBloc>()
+                                                ..add(LoadReminders()),
+                                          child: const ReminderPage(
+                                              initialCategory: 'Water'),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: _StatItem(
+                                    icon: Icons.water_drop,
+                                    sub: '+',
+                                    val:
+                                        '${metrics?.water?.value.toStringAsFixed(1) ?? 0}/3.2',
+                                    unit: 'l', // Fixed unit letter
+                                  ),
                                 ),
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(
                                     top: 40), // Lower point (inner)
-                                child: _StatItem(
-                                  icon: Icons.directions_run,
-                                  sub: '+',
-                                  val:
-                                      '0/${(metrics?.activeEnergyBurned?.value ?? 60).toInt()}',
-                                  unit: 'min',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            BlocProvider<ReminderBloc>(
+                                          create: (context) =>
+                                              sl<ReminderBloc>()
+                                                ..add(LoadReminders()),
+                                          child: const ReminderPage(
+                                              initialCategory: 'Activity'),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: _StatItem(
+                                    icon: Icons.directions_run,
+                                    sub: '+',
+                                    val:
+                                        '0/${(metrics?.activeEnergyBurned?.value ?? 60).toInt()}',
+                                    unit: 'min',
+                                  ),
                                 ),
                               ),
                               Padding(

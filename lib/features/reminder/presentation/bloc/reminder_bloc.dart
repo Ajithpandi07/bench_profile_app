@@ -115,13 +115,6 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       // Schedule notification
       await _scheduleNotification(reminder.copyWith(id: id));
 
-      // DEBUG: Show instant notification to verify permissions
-      await _notificationService.showInstantNotification(
-        id: id.hashCode + 1, // Different ID to avoid conflict
-        title: 'Reminder Set: ${reminder.name}',
-        body: 'This is a test notification to verify permissions.',
-      );
-
       add(const LoadReminders(forceRefresh: true));
     } catch (e) {
       emit(ReminderError(e.toString()));

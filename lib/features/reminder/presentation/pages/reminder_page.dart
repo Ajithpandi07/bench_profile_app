@@ -12,7 +12,12 @@ import '../widgets/primary_button.dart';
 import '../../../../core/services/app_theme.dart';
 
 class ReminderPage extends StatefulWidget {
-  const ReminderPage({super.key});
+  final String? initialCategory; // Added support for initialCategory
+
+  const ReminderPage({
+    super.key,
+    this.initialCategory,
+  });
 
   @override
   State<ReminderPage> createState() => _ReminderPageState();
@@ -66,7 +71,9 @@ class _ReminderPageState extends State<ReminderPage> {
                 backgroundColor: Colors.transparent,
                 builder: (context) => BlocProvider.value(
                   value: reminderBloc,
-                  child: const AddReminderModal(),
+                  child: AddReminderModal(
+                    initialCategory: widget.initialCategory, // Pass it here
+                  ),
                 ),
               );
             },
@@ -177,6 +184,7 @@ class _ReminderPageState extends State<ReminderPage> {
                                 subtitle:
                                     '${reminder.quantity} ${reminder.unit}',
                                 scheduleType: reminder.scheduleType,
+                                time: reminder.time, // Passing time
                                 icon: _getIconForCategory(reminder.category),
                                 color: _getColorForCategory(reminder.category),
                                 onEdit: () {
@@ -232,7 +240,10 @@ class _ReminderPageState extends State<ReminderPage> {
                         backgroundColor: Colors.transparent,
                         builder: (context) => BlocProvider.value(
                           value: reminderBloc,
-                          child: const AddReminderModal(),
+                          child: AddReminderModal(
+                            initialCategory:
+                                widget.initialCategory, // Use passed category
+                          ),
                         ),
                       );
                     },
@@ -251,6 +262,7 @@ class _ReminderPageState extends State<ReminderPage> {
       case 'water':
         return Icons.water_drop;
       case 'food':
+      case 'meal': // Added meal
         return Icons.restaurant;
       case 'workout':
       case 'activity':
@@ -268,6 +280,7 @@ class _ReminderPageState extends State<ReminderPage> {
       case 'water':
         return Colors.blue;
       case 'food':
+      case 'meal': // Added meal
         return Colors.green;
       case 'workout':
       case 'activity':

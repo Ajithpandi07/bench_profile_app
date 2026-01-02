@@ -25,7 +25,7 @@ class AddDetailsStep extends StatefulWidget {
 }
 
 class _AddDetailsStepState extends State<AddDetailsStep> {
-  final List<String> categories = ['Water', 'Workout', 'Activity'];
+  final List<String> categories = ['Water', 'Meal', 'Workout', 'Activity'];
 
   String? _nameError;
   String? _quantityError;
@@ -84,14 +84,14 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
             const SizedBox(height: 12),
             SizedBox(
               width: 340,
-              // Height needs to adapt to error text, removing fixed height
-              // height: 40,
+              height: 40,
               child: TextField(
                 controller: widget.nameController,
+                style: const TextStyle(fontSize: 14), // Ensure text fits
                 decoration: InputDecoration(
                   hintText: 'eg.: Morning Water Intake',
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                  errorText: _nameError,
+                  // errorText moved outside
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -102,15 +102,23 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppTheme.primaryColor),
+                    borderSide: const BorderSide(color: AppTheme.primaryColor),
                   ),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 0), // Centered text
                 ),
               ),
             ),
+            if (_nameError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 4),
+                child: Text(
+                  _nameError!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
             const SizedBox(height: 24),
 
             // Category
@@ -217,39 +225,54 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
               children: [
                 Expanded(
                   flex: 2,
-                  child: SizedBox(
-                    width: 270,
-                    // Remove fixed height to allow error text
-                    // height: 40,
-                    child: TextField(
-                      controller: widget.quantityController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: '',
-                        errorText: _quantityError,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE5E7EB)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 270,
+                        height: 40,
+                        child: TextField(
+                          controller: widget.quantityController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: '',
+                            // errorText moved outside
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE5E7EB)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE5E7EB)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                  color: AppTheme.primaryColor),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 0),
+                          ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE5E7EB)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.primaryColor),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
                       ),
-                      style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold),
-                    ),
+                      if (_quantityError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, left: 4),
+                          child: Text(
+                            _quantityError!,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -257,8 +280,7 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                   flex: 1,
                   child: Container(
                     width: 66,
-                    height:
-                        48, // Adjusted height to match text field with padding
+                    height: 40, // Changed to 40
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(

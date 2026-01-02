@@ -5,6 +5,7 @@ class ReminderItemCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String scheduleType;
+  final String? time; // Added time field
   final VoidCallback? onEdit;
   final Color? color;
   final IconData? icon;
@@ -14,6 +15,7 @@ class ReminderItemCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.scheduleType,
+    this.time,
     this.onEdit,
     this.color,
     this.icon,
@@ -83,13 +85,29 @@ class ReminderItemCard extends StatelessWidget {
                         color: (color ?? Colors.blue).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text(
-                        scheduleType,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: color ?? Colors.blue,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            scheduleType,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: color ?? Colors.blue,
+                            ),
+                          ),
+                          if (time != null && time!.isNotEmpty) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              "| $time",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: color ?? Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
