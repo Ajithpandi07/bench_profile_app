@@ -28,8 +28,9 @@ class HealthMetricsRemoteDataSourceImpl
       }
       if (metrics.isEmpty) return;
 
-      final platformCollection =
-          Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
+      final platformCollection = Platform.isIOS
+          ? 'healthmetriceios'
+          : 'healthmetricesandroid';
 
       // Group metrics by day to ensure they go into the correct document
       final Map<String, List<HealthMetrics>> groupedByDate = {};
@@ -45,7 +46,10 @@ class HealthMetricsRemoteDataSourceImpl
         // Parse date from key for the summary timestamp
         final parts = docId.split('-');
         final date = DateTime(
-            int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+          int.parse(parts[0]),
+          int.parse(parts[1]),
+          int.parse(parts[2]),
+        );
 
         final summaryDocRef = firestore
             .collection('bench_profile')
@@ -102,14 +106,14 @@ class HealthMetricsRemoteDataSourceImpl
   Future<List<HealthMetrics>> getHealthMetricsForDate(DateTime date) async {
     final userId = auth.currentUser?.uid;
     if (userId == null) {
-      // Or return empty list if this is not considered an exception
       throw ServerException('User is not authenticated.');
     }
 
     try {
-      // Platform-specific collection name
-      final platformCollection =
-          Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
+      // 1. Fetch Existing Health Metrics (bench_profile/...)
+      final platformCollection = Platform.isIOS
+          ? 'healthmetriceios'
+          : 'healthmetricesandroid';
 
       final docId =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -122,29 +126,24 @@ class HealthMetricsRemoteDataSourceImpl
           .collection('health_metrics');
 
       final snapshot = await pointsCollectionRef.orderBy('dateFrom').get();
+      final healthMetrics = snapshot.docs
+          .map((doc) => HealthModel.fromMap(doc.data()))
+          .toList();
 
-      if (snapshot.docs.isEmpty) {
-        return []; // No data found for this date
-      }
-
-      final metrics =
-          snapshot.docs.map((doc) => HealthModel.fromMap(doc.data())).toList();
-      return metrics;
+      return healthMetrics;
     } catch (e) {
-      // Wrap Firestore/other errors in a ServerException
       throw ServerException('Failed to fetch remote metrics: ${e.toString()}');
     }
   }
-
-  // lib/features/health_metrics/data/datasources/remote/health_metrics_remote_data_source_impl.dart
 
   @override
   Future<List<HealthMetrics>> getAllHealthMetricsForUser() async {
     final userId = auth.currentUser?.uid;
     if (userId == null) throw ServerException('User is not authenticated.');
 
-    final platformCollection =
-        Platform.isIOS ? 'healthmetriceios' : 'healthmetricesandroid';
+    final platformCollection = Platform.isIOS
+        ? 'healthmetriceios'
+        : 'healthmetricesandroid';
     final parentRef = firestore
         .collection('bench_profile')
         .doc(userId)

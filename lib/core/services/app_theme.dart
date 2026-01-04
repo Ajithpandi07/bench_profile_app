@@ -15,15 +15,13 @@ class AppTheme {
 
   static const primaryVariant = Color(0xFFA72740);
   static const primaryLight = Color.fromRGBO(226, 146, 146, 1);
+  static const rippleBackground = Color(0xFFFFCED8);
 
   /// Defines the base text theme for the application.
   /// These styles will be adapted with appropriate colors by the ColorScheme.
   static final TextTheme _textTheme = TextTheme(
     // Example: Customizing the 'titleLarge' style used for screen titles.
-    titleLarge: const TextStyle(
-      fontWeight: FontWeight.bold,
-      fontSize: 22.0,
-    ),
+    titleLarge: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22.0),
     // Example: Customizing 'bodyMedium' for standard text.
     bodyMedium: const TextStyle(
       fontSize: 14.0,

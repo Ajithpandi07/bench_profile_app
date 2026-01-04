@@ -10,14 +10,12 @@ import '../../../../../core/presentation/widgets/app_date_selector.dart';
 import '../widgets/reminder_item_card.dart';
 import '../widgets/primary_button.dart';
 import '../../../../core/services/app_theme.dart';
+import '../../../../core/utils/snackbar_utils.dart';
 
 class ReminderPage extends StatefulWidget {
   final String? initialCategory; // Added support for initialCategory
 
-  const ReminderPage({
-    super.key,
-    this.initialCategory,
-  });
+  const ReminderPage({super.key, this.initialCategory});
 
   @override
   State<ReminderPage> createState() => _ReminderPageState();
@@ -29,9 +27,9 @@ class _ReminderPageState extends State<ReminderPage> {
   @override
   void initState() {
     super.initState();
-    context
-        .read<ReminderBloc>()
-        .add(LoadReminders(selectedDate: _selectedDate));
+    context.read<ReminderBloc>().add(
+      LoadReminders(selectedDate: _selectedDate),
+    );
     // Ensure notifications are in sync with the DB (e.g. after reinstall or clear data)
     context.read<ReminderBloc>().add(RescheduleAllNotifications());
   }
@@ -47,8 +45,11 @@ class _ReminderPageState extends State<ReminderPage> {
         leading: Container(
           margin: const EdgeInsets.only(left: 16),
           child: IconButton(
-            icon:
-                const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Colors.black,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -79,53 +80,64 @@ class _ReminderPageState extends State<ReminderPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.info_outline,
-                color: AppTheme.primaryColor, size: 26),
+            icon: const Icon(
+              Icons.info_outline,
+              color: AppTheme.primaryColor,
+              size: 26,
+            ),
             onPressed: () {},
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 2),
-              // App Date Selector (Shared)
-              AppDateSelector(
-                selectedDate: _selectedDate,
-                onDateSelected: (date) {
-                  setState(() {
-                    _selectedDate = date;
-                  });
-                  context
-                      .read<ReminderBloc>()
-                      .add(LoadReminders(selectedDate: date));
-                },
-              ),
-              const SizedBox(height: 5),
-              // Reminders List
-              Expanded(
-                child: BlocBuilder<ReminderBloc, ReminderState>(
-                  builder: (context, state) {
-                    if (state is ReminderLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (state is ReminderLoaded) {
-                      if (state.reminders.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'No reminders for today',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        );
-                      }
-                      return ListView.builder(
-                        itemCount: state.reminders.length,
-                        itemBuilder: (context, index) {
-                          final reminder = state.reminders[index];
-                          return Dismissible(
+      body: BlocListener<ReminderBloc, ReminderState>(
+        listener: (context, state) {
+          if (state is ReminderOperationSuccess) {
+            showModernSnackbar(context, state.message);
+          } else if (state is ReminderError) {
+            showModernSnackbar(context, state.message, isError: true);
+          }
+        },
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 2),
+                // App Date Selector (Shared)
+                AppDateSelector(
+                  selectedDate: _selectedDate,
+                  onDateSelected: (date) {
+                    setState(() {
+                      _selectedDate = date;
+                    });
+                    context.read<ReminderBloc>().add(
+                      LoadReminders(selectedDate: date),
+                    );
+                  },
+                ),
+                const SizedBox(height: 5),
+                // Reminders List
+                Expanded(
+                  child: BlocBuilder<ReminderBloc, ReminderState>(
+                    builder: (context, state) {
+                      if (state is ReminderLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (state is ReminderLoaded) {
+                        if (state.reminders.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No reminders for today',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: state.reminders.length,
+                          itemBuilder: (context, index) {
+                            final reminder = state.reminders[index];
+                            return Dismissible(
                               key: Key(reminder.id), // Removed !
                               direction: DismissDirection.endToStart,
                               confirmDismiss: (direction) async {
@@ -134,28 +146,37 @@ class _ReminderPageState extends State<ReminderPage> {
                                   builder: (BuildContext context) {
                                     return AlertDialog(
                                       shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(15)),
-                                      title: const Text("Delete Reminder",
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      title: const Text(
+                                        "Delete Reminder",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                       content: const Text(
-                                          "Are you sure you want to delete this reminder?"),
+                                        "Are you sure you want to delete this reminder?",
+                                      ),
                                       actions: <Widget>[
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.of(context).pop(false),
-                                          child: const Text("Cancel",
-                                              style: TextStyle(
-                                                  color: Colors.grey)),
+                                          child: const Text(
+                                            "Cancel",
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
                                         ),
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.of(context).pop(true),
-                                          child: const Text("Delete",
-                                              style: TextStyle(
-                                                  color:
-                                                      AppTheme.primaryColor)),
+                                          child: const Text(
+                                            "Delete",
+                                            style: TextStyle(
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     );
@@ -170,12 +191,16 @@ class _ReminderPageState extends State<ReminderPage> {
                                   color: AppTheme.primaryColor,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: const Icon(Icons.delete,
-                                    color: Colors.white, size: 28),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
                               ),
                               onDismissed: (direction) {
                                 context.read<ReminderBloc>().add(
-                                    DeleteReminder(reminder.id)); // Removed !
+                                  DeleteReminder(reminder.id),
+                                ); // Removed !
                               },
                               child: ReminderItemCard(
                                 title: reminder.name.isNotEmpty
@@ -188,8 +213,8 @@ class _ReminderPageState extends State<ReminderPage> {
                                 icon: _getIconForCategory(reminder.category),
                                 color: _getColorForCategory(reminder.category),
                                 onEdit: () {
-                                  final reminderBloc =
-                                      context.read<ReminderBloc>();
+                                  final reminderBloc = context
+                                      .read<ReminderBloc>();
                                   showModalBottomSheet(
                                     context: context,
                                     isScrollControlled: true,
@@ -215,42 +240,44 @@ class _ReminderPageState extends State<ReminderPage> {
                                     ),
                                   );
                                 },
-                              ));
-                        },
-                      );
-                    } else if (state is ReminderError) {
-                      return Center(child: Text(state.message));
-                    }
-                    return const SizedBox();
-                  },
-                ),
-              ),
-              // Add Reminder Button (Bottom)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24.0, top: 16),
-                child: Center(
-                  child: PrimaryButton(
-                    text: 'Add Reminder',
-                    fontSize: 14,
-                    onPressed: () {
-                      final reminderBloc = context.read<ReminderBloc>();
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => BlocProvider.value(
-                          value: reminderBloc,
-                          child: AddReminderModal(
-                            initialCategory:
-                                widget.initialCategory, // Use passed category
-                          ),
-                        ),
-                      );
+                              ),
+                            );
+                          },
+                        );
+                      } else if (state is ReminderError) {
+                        return Center(child: Text(state.message));
+                      }
+                      return const SizedBox();
                     },
                   ),
                 ),
-              ),
-            ],
+                // Add Reminder Button (Bottom)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0, top: 16),
+                  child: Center(
+                    child: PrimaryButton(
+                      text: 'Add Reminder',
+                      fontSize: 14,
+                      onPressed: () {
+                        final reminderBloc = context.read<ReminderBloc>();
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => BlocProvider.value(
+                            value: reminderBloc,
+                            child: AddReminderModal(
+                              initialCategory:
+                                  widget.initialCategory, // Use passed category
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -29,3 +29,12 @@ class ReminderError extends ReminderState {
   @override
   List<Object> get props => [message];
 }
+
+class ReminderOperationSuccess extends ReminderState {
+  final String message;
+
+  const ReminderOperationSuccess(this.message);
+
+  @override
+  List<Object> get props => [message];
+}

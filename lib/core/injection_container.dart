@@ -17,6 +17,12 @@ import '../features/auth/auth.dart';
 
 // Reminder imports
 import '../features/reminder/reminder.dart';
+import 'package:bench_profile_app/features/hydration/domain/domain.dart';
+import 'package:bench_profile_app/features/hydration/data/data.dart';
+import 'package:bench_profile_app/features/hydration/presentation/presentation.dart';
+import 'package:bench_profile_app/features/meals/data/data.dart';
+import 'package:bench_profile_app/features/meals/domain/repositories/meal_repository.dart';
+import 'package:bench_profile_app/features/meals/presentation/bloc/bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -27,7 +33,8 @@ Future<void> init() async {
     sl.registerLazySingleton<Health>(() => Health());
   if (!sl.isRegistered<FirebaseFirestore>())
     sl.registerLazySingleton<FirebaseFirestore>(
-        () => FirebaseFirestore.instance);
+      () => FirebaseFirestore.instance,
+    );
   if (!sl.isRegistered<FirebaseAuth>())
     sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
   if (!sl.isRegistered<Connectivity>())
@@ -52,9 +59,11 @@ Future<void> init() async {
         // This often happens during hot restart if a background task is running.
         if (e.toString().contains('MdbxError (11)')) {
           print(
-              'CRITICAL: Isar Database is locked. This usually happens during hot restart if a background task is active.');
+            'CRITICAL: Isar Database is locked. This usually happens during hot restart if a background task is active.',
+          );
           print(
-              'ACTION REQUIRED: Please completely STOP the app and RUN it again (Cold Restart).');
+            'ACTION REQUIRED: Please completely STOP the app and RUN it again (Cold Restart).',
+          );
         }
         rethrow;
       }
@@ -66,7 +75,8 @@ Future<void> init() async {
   // Core
   if (!sl.isRegistered<NetworkInfo>())
     sl.registerLazySingleton<NetworkInfo>(
-        () => NetworkInfoImpl(sl<Connectivity>()));
+      () => NetworkInfoImpl(sl<Connectivity>()),
+    );
   if (!sl.isRegistered<MetricAggregator>())
     sl.registerLazySingleton<MetricAggregator>(() => MetricAggregator());
 
@@ -74,7 +84,9 @@ Future<void> init() async {
   if (!sl.isRegistered<HealthMetricsDataSource>()) {
     sl.registerLazySingleton<HealthMetricsDataSource>(
       () => HealthMetricsDataSourceImpl(
-          health: sl<Health>(), aggregator: sl<MetricAggregator>()),
+        health: sl<Health>(),
+        aggregator: sl<MetricAggregator>(),
+      ),
     );
   }
 
@@ -111,21 +123,27 @@ Future<void> init() async {
   // Usecases
   if (!sl.isRegistered<GetCachedMetrics>()) {
     sl.registerLazySingleton<GetCachedMetrics>(
-        () => GetCachedMetrics(sl<HealthRepository>()));
+      () => GetCachedMetrics(sl<HealthRepository>()),
+    );
   }
   if (!sl.isRegistered<GetCachedMetricsForDate>()) {
     sl.registerLazySingleton<GetCachedMetricsForDate>(
-        () => GetCachedMetricsForDate(sl<HealthRepository>()));
+      () => GetCachedMetricsForDate(sl<HealthRepository>()),
+    );
   }
 
   // Bloc
   if (!sl.isRegistered<HealthMetricsBloc>()) {
-    sl.registerFactory<HealthMetricsBloc>(() => HealthMetricsBloc(
-          getCachedMetrics: sl<GetCachedMetrics>(),
-          getCachedMetricsForDate: sl<GetCachedMetricsForDate>(),
-          aggregator: sl<MetricAggregator>(),
-          repository: sl<HealthRepository>(),
-        ));
+    sl.registerFactory<HealthMetricsBloc>(
+      () => HealthMetricsBloc(
+        getCachedMetrics: sl<GetCachedMetrics>(),
+        getCachedMetricsForDate: sl<GetCachedMetricsForDate>(),
+        aggregator: sl<MetricAggregator>(),
+        repository: sl<HealthRepository>(),
+        mealRepository: sl<MealRepository>(),
+        reminderRepository: sl<ReminderRepository>(),
+      ),
+    );
   }
 
   //================
@@ -135,11 +153,13 @@ Future<void> init() async {
   // Data source, repo, bloc for auth
   if (!sl.isRegistered<FirebaseAuthRemote>()) {
     sl.registerLazySingleton<FirebaseAuthRemote>(
-        () => FirebaseAuthRemote(firebaseAuth: sl<FirebaseAuth>()));
+      () => FirebaseAuthRemote(firebaseAuth: sl<FirebaseAuth>()),
+    );
   }
   if (!sl.isRegistered<AuthRepository>()) {
     sl.registerLazySingleton<AuthRepository>(
-        () => AuthRepositoryImpl(remote: sl<FirebaseAuthRemote>()));
+      () => AuthRepositoryImpl(remote: sl<FirebaseAuthRemote>()),
+    );
   }
   if (!sl.isRegistered<AuthBloc>()) {
     sl.registerFactory(() => AuthBloc(repository: sl<AuthRepository>()));
@@ -147,13 +167,15 @@ Future<void> init() async {
 
   // SyncManager (foreground/background coordinator)
   if (!sl.isRegistered<SyncManager>()) {
-    sl.registerLazySingleton<SyncManager>(() => SyncManager(
-          local: sl<HealthMetricsLocalDataSource>(),
-          remote: sl<HealthMetricsRemoteDataSource>(),
-          connectivity: sl<Connectivity>(),
-          batchSize: 200,
-          interval: const Duration(minutes: 15),
-        ));
+    sl.registerLazySingleton<SyncManager>(
+      () => SyncManager(
+        local: sl<HealthMetricsLocalDataSource>(),
+        remote: sl<HealthMetricsRemoteDataSource>(),
+        connectivity: sl<Connectivity>(),
+        batchSize: 200,
+        interval: const Duration(minutes: 15),
+      ),
+    );
   }
 
   //================
@@ -189,6 +211,58 @@ Future<void> init() async {
     );
   }
 
+  //================
+  // Features - Hydration
+  //================
+  if (!sl.isRegistered<HydrationRemoteDataSource>()) {
+    sl.registerLazySingleton<HydrationRemoteDataSource>(
+      () => HydrationRemoteDataSourceImpl(
+        firestore: sl<FirebaseFirestore>(),
+        auth: sl<FirebaseAuth>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<HydrationRepository>()) {
+    sl.registerLazySingleton<HydrationRepository>(
+      () => HydrationRepositoryImpl(
+        remoteDataSource: sl<HydrationRemoteDataSource>(),
+        networkInfo: sl<NetworkInfo>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<HydrationBloc>()) {
+    sl.registerFactory(
+      () => HydrationBloc(repository: sl<HydrationRepository>()),
+    );
+  }
+
+  //================
+  // Features - Meals
+  //================
+  if (!sl.isRegistered<MealRemoteDataSource>()) {
+    sl.registerLazySingleton<MealRemoteDataSource>(
+      () => MealRemoteDataSourceImpl(
+        firestore: sl<FirebaseFirestore>(),
+        auth: sl<FirebaseAuth>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<MealRepository>()) {
+    sl.registerLazySingleton<MealRepository>(
+      () => MealRepositoryImpl(
+        remoteDataSource: sl<MealRemoteDataSource>(),
+        networkInfo: sl<NetworkInfo>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<MealBloc>()) {
+    sl.registerFactory(() => MealBloc(repository: sl<MealRepository>()));
+  }
+
   // Optional debug logs
   // print('DI init complete: HealthMetricsBloc registered=${sl.isRegistered<HealthMetricsBloc>()}');
 }
@@ -207,7 +281,8 @@ Future<void> initForBackground() async {
     sl.registerLazySingleton<Health>(() => Health());
   if (!sl.isRegistered<FirebaseFirestore>())
     sl.registerLazySingleton<FirebaseFirestore>(
-        () => FirebaseFirestore.instance);
+      () => FirebaseFirestore.instance,
+    );
   if (!sl.isRegistered<FirebaseAuth>())
     sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
   if (!sl.isRegistered<Connectivity>())
@@ -218,10 +293,7 @@ Future<void> initForBackground() async {
     Isar? isar = Isar.getInstance();
     if (isar == null) {
       final dir = await getApplicationDocumentsDirectory();
-      isar = await Isar.open(
-        [HealthMetricsSchema],
-        directory: dir.path,
-      );
+      isar = await Isar.open([HealthMetricsSchema], directory: dir.path);
     }
     sl.registerSingleton<Isar>(isar);
   }
@@ -229,53 +301,60 @@ Future<void> initForBackground() async {
   // Core helpers (guarded)
   if (!sl.isRegistered<NetworkInfo>())
     sl.registerLazySingleton<NetworkInfo>(
-        () => NetworkInfoImpl(sl<Connectivity>()));
+      () => NetworkInfoImpl(sl<Connectivity>()),
+    );
   if (!sl.isRegistered<MetricAggregator>())
     sl.registerLazySingleton<MetricAggregator>(() => MetricAggregator());
 
   // Local and remote datasources (background)
   if (!sl.isRegistered<HealthMetricsLocalDataSource>()) {
     sl.registerLazySingleton<HealthMetricsLocalDataSource>(
-        () => HealthMetricsLocalDataSourceIsarImpl(sl<Isar>()));
+      () => HealthMetricsLocalDataSourceIsarImpl(sl<Isar>()),
+    );
   }
 
   if (!sl.isRegistered<HealthMetricsRemoteDataSource>()) {
     sl.registerLazySingleton<HealthMetricsRemoteDataSource>(
-        () => HealthMetricsRemoteDataSourceImpl(
-              firestore: sl<FirebaseFirestore>(),
-              auth: sl<FirebaseAuth>(),
-              aggregator: sl<MetricAggregator>(),
-            ));
+      () => HealthMetricsRemoteDataSourceImpl(
+        firestore: sl<FirebaseFirestore>(),
+        auth: sl<FirebaseAuth>(),
+        aggregator: sl<MetricAggregator>(),
+      ),
+    );
   }
 
   // If your background sync needs the device data source (Health), register it
   if (!sl.isRegistered<HealthMetricsDataSource>()) {
     sl.registerLazySingleton<HealthMetricsDataSource>(
-        () => HealthMetricsDataSourceImpl(
-              health: sl<Health>(),
-              aggregator: sl<MetricAggregator>(),
-            ));
+      () => HealthMetricsDataSourceImpl(
+        health: sl<Health>(),
+        aggregator: sl<MetricAggregator>(),
+      ),
+    );
   }
 
   // Repository
   if (!sl.isRegistered<HealthRepository>()) {
     sl.registerLazySingleton<HealthRepository>(
-        () => HealthMetricsRepositoryImpl(
-              dataSource: sl<HealthMetricsDataSource>(),
-              localDataSource: sl<HealthMetricsLocalDataSource>(),
-              remoteDataSource: sl<HealthMetricsRemoteDataSource>(),
-              networkInfo: sl<NetworkInfo>(),
-            ));
+      () => HealthMetricsRepositoryImpl(
+        dataSource: sl<HealthMetricsDataSource>(),
+        localDataSource: sl<HealthMetricsLocalDataSource>(),
+        remoteDataSource: sl<HealthMetricsRemoteDataSource>(),
+        networkInfo: sl<NetworkInfo>(),
+      ),
+    );
   }
 
   // SyncManager used by background dispatcher
   if (!sl.isRegistered<SyncManager>()) {
-    sl.registerLazySingleton<SyncManager>(() => SyncManager(
-          local: sl<HealthMetricsLocalDataSource>(),
-          remote: sl<HealthMetricsRemoteDataSource>(),
-          connectivity: sl<Connectivity>(),
-          batchSize: 200,
-          interval: const Duration(minutes: 15),
-        ));
+    sl.registerLazySingleton<SyncManager>(
+      () => SyncManager(
+        local: sl<HealthMetricsLocalDataSource>(),
+        remote: sl<HealthMetricsRemoteDataSource>(),
+        connectivity: sl<Connectivity>(),
+        batchSize: 200,
+        interval: const Duration(minutes: 15),
+      ),
+    );
   }
 }

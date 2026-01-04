@@ -7,3 +7,4 @@ export 'health_connect_install_dialog.dart';
 export 'metric_card.dart';
 export 'permission_required_dialog.dart';
 export 'permission_required_view.dart';
+export 'ripple_background_painter.dart';
