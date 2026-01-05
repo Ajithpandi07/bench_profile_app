@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../../core/services/app_theme.dart';
 
 class ReminderItemCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final String scheduleType;
   final String? time; // Added time field
-  final VoidCallback? onEdit;
   final Color? color;
   final IconData? icon;
 
@@ -16,7 +14,6 @@ class ReminderItemCard extends StatelessWidget {
     required this.subtitle,
     required this.scheduleType,
     this.time,
-    this.onEdit,
     this.color,
     this.icon,
   });
@@ -25,12 +22,16 @@ class ReminderItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 65, // Fixed height as per user request
-      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(
-          horizontal: 16, vertical: 8), // Adjusted padding to fit height
+        horizontal: 16,
+        vertical: 8,
+      ), // Adjusted padding to fit height
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          bottomLeft: Radius.circular(20),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -43,8 +44,9 @@ class ReminderItemCard extends StatelessWidget {
         children: [
           // Icon Container
           Container(
-            padding:
-                const EdgeInsets.all(8), // Reduced padding for icon container
+            padding: const EdgeInsets.all(
+              8,
+            ), // Reduced padding for icon container
             decoration: BoxDecoration(
               color: (color ?? Colors.blue).withOpacity(0.1),
               borderRadius: BorderRadius.circular(15),
@@ -80,7 +82,9 @@ class ReminderItemCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: (color ?? Colors.blue).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -123,20 +127,6 @@ class ReminderItemCard extends StatelessWidget {
               ],
             ),
           ),
-          // Edit Button
-          if (onEdit != null)
-            GestureDetector(
-              onTap: onEdit,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                color: Colors.transparent,
-                child: const Icon(
-                  Icons.edit_square, // Matches the "square with pencil" look
-                  color: AppTheme.primaryColor,
-                  size: 24,
-                ),
-              ),
-            ),
         ],
       ),
     );

@@ -8,6 +8,9 @@ class MealLog extends Equatable {
   final String mealType; // Breakfast, Lunch, Dinner, Snack
   final List<FoodItem> items;
   final double totalCalories;
+  final List<String> userMealIds;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const MealLog({
     required this.id,
@@ -15,16 +18,22 @@ class MealLog extends Equatable {
     required this.timestamp,
     required this.mealType,
     required this.items,
+    this.userMealIds = const [],
     required this.totalCalories,
+    this.createdAt,
+    this.updatedAt,
   });
 
   @override
-  List<Object> get props => [
+  List<Object?> get props => [
     id,
     userId,
     timestamp,
     mealType,
     items,
+    userMealIds,
     totalCalories,
+    createdAt,
+    updatedAt,
   ];
 }

@@ -6,6 +6,7 @@ import '../bloc/bloc.dart';
 import '../../domain/entities/entities.dart';
 import '../../../../../core/presentation/widgets/app_date_selector.dart';
 import '../widgets/widgets.dart';
+import '../widgets/health_metrics_shimmer.dart';
 
 class HealthMetricsPage extends StatefulWidget {
   const HealthMetricsPage({super.key});
@@ -45,8 +46,9 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
           listener: (context, state) {
             // Optional: show snackbars for errors
             if (state is HealthMetricsError) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(state.message)));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
             }
           },
           builder: (context, state) {
@@ -55,7 +57,9 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                 // Custom Header
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 12.0),
+                    horizontal: 16.0,
+                    vertical: 12.0,
+                  ),
                   child: Row(
                     children: [
                       InkWell(
@@ -65,8 +69,9 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border:
-                                Border.all(color: Colors.grey.withOpacity(0.2)),
+                            border: Border.all(
+                              color: Colors.grey.withOpacity(0.2),
+                            ),
                           ),
                           child: const Icon(Icons.arrow_back, size: 24),
                         ),
@@ -143,7 +148,7 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
 
   Widget _buildStateContent(BuildContext context, HealthMetricsState state) {
     if (state is HealthMetricsLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const HealthMetricsListShimmer();
     }
 
     if (state is HealthMetricsError) {
@@ -191,14 +196,17 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
         const SizedBox(height: 40),
         Icon(Icons.security, size: 64, color: Colors.orange.shade400),
         const SizedBox(height: 20),
-        Text('Permissions Required',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Permissions Required',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         Text(
-            'To track your health metrics, we need permission to access Health Connect data.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade600)),
+          'To track your health metrics, we need permission to access Health Connect data.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey.shade600),
+        ),
         const SizedBox(height: 24),
         Center(
           child: ElevatedButton.icon(
@@ -210,9 +218,9 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
             label: const Text('Grant Permissions'),
             onPressed: () {
               // Triggering GetMetricsForDate will re-run _ensurePermissions in the datasource
-              context
-                  .read<HealthMetricsBloc>()
-                  .add(GetMetricsForDate(selectedDate));
+              context.read<HealthMetricsBloc>().add(
+                GetMetricsForDate(selectedDate),
+              );
             },
           ),
         ),
@@ -229,9 +237,9 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
             'Tap refresh or allow Health permissions to start collecting data.',
         icon: Icons.health_and_safety_outlined,
         actionLabel: 'Fetch Now',
-        onAction: () => context
-            .read<HealthMetricsBloc>()
-            .add(GetMetricsForDate(selectedDate)),
+        onAction: () => context.read<HealthMetricsBloc>().add(
+          GetMetricsForDate(selectedDate),
+        ),
       ),
     );
   }
@@ -244,21 +252,25 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
         const SizedBox(height: 40),
         Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
         const SizedBox(height: 20),
-        Text('Failed to load metrics',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Failed to load metrics',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
-        Text(message,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.red.shade300)),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.red.shade300),
+        ),
         const SizedBox(height: 24),
         Center(
           child: ElevatedButton.icon(
             icon: const Icon(Icons.replay),
             label: const Text('Try again'),
-            onPressed: () => context
-                .read<HealthMetricsBloc>()
-                .add(GetMetricsForDate(selectedDate)),
+            onPressed: () => context.read<HealthMetricsBloc>().add(
+              GetMetricsForDate(selectedDate),
+            ),
           ),
         ),
       ],
@@ -437,7 +449,8 @@ class _MetricConfig {
     required this.icon,
     required this.selector,
     String Function(double, String)? formatter,
-  }) : formatter = formatter ??
-            ((val, unit) =>
-                '$val'); // Default only returns value, unit handled by card
+  }) : formatter =
+           formatter ??
+           ((val, unit) =>
+               '$val'); // Default only returns value, unit handled by card
 }

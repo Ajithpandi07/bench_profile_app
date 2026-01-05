@@ -84,6 +84,34 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
             return selectedDate.day == reminder.dayOfMonth;
           case 'As needed':
             return true;
+          case 'Custom':
+            if (reminder.customFrequency == null || reminder.interval == null)
+              return true;
+
+            final diff = selectedDate.difference(start);
+            if (diff.isNegative) return false;
+
+            if (reminder.customFrequency == 'Days') {
+              return diff.inDays % reminder.interval! == 0;
+            } else if (reminder.customFrequency == 'Weeks') {
+              final weekDiff = (diff.inDays / 7).floor();
+              if (weekDiff % reminder.interval! != 0) return false;
+              if (reminder.daysOfWeek == null || reminder.daysOfWeek!.isEmpty)
+                return true;
+              return reminder.daysOfWeek!.contains(selectedDate.weekday);
+            } else if (reminder.customFrequency == 'Months') {
+              final monthDiff =
+                  (selectedDate.year - start.year) * 12 +
+                  selectedDate.month -
+                  start.month;
+              if (monthDiff % reminder.interval! != 0) return false;
+              if (reminder.dayOfMonth != null) {
+                return selectedDate.day == reminder.dayOfMonth!;
+              }
+              // If no day of month set, maybe fallback to start date's day?
+              return selectedDate.day == start.day;
+            }
+            return true;
           default:
             return true;
         }
@@ -113,6 +141,10 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
         startDate: event.startDate,
         endDate: event.endDate,
         smartReminder: event.smartReminder,
+        interval: event.interval,
+        customFrequency: event.customFrequency,
+        recurrenceEndType: event.recurrenceEndType,
+        recurrenceCount: event.recurrenceCount,
       );
       final id = await _repository.addReminder(reminder);
 
@@ -144,6 +176,10 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
         startDate: event.startDate,
         endDate: event.endDate,
         smartReminder: event.smartReminder,
+        interval: event.interval,
+        customFrequency: event.customFrequency,
+        recurrenceEndType: event.recurrenceEndType,
+        recurrenceCount: event.recurrenceCount,
       );
       await _repository.updateReminder(reminder);
 

@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bench_profile_app/core/core.dart';
@@ -18,50 +16,38 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
   @override
   Future<void> logWaterIntake(HydrationLog log) async {
     final user = auth.currentUser;
-    print('DEBUG: Current User: ${user?.uid}');
+
     if (user == null) {
       throw ServerException('User not authenticated');
     }
 
     try {
-      final platformCollection = Platform.isIOS
-          ? 'healthmetriceios'
-          : 'healthmetricesandroid';
-
-      final date = log.timestamp; // Use the log's timestamp
+      final date = log.timestamp;
       final dateId =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-      final path =
-          'bench_profile/${user.uid}/$platformCollection/$dateId/health_metrics/${log.id}';
-      print('DEBUG: Attempting to write to: $path');
-
+      // New Path: bench_profile/{userId}/water_logs/{dateId}/logs/{logId}
       final docRef = firestore
           .collection('bench_profile')
           .doc(user.uid)
-          .collection(platformCollection)
+          .collection('water_logs')
           .doc(dateId)
-          .collection('health_metrics')
+          .collection('logs')
           .doc(log.id);
 
-      // Map HydrationLog to HealthMetrics Schema
       final data = {
-        'id': 0, // Isar ID (auto-increment), 0 for remote-only/new
-        'uuid': log.id,
-        'type': 'WATER', // HealthDataType.WATER string equivalent
-        'value': log.amountLiters,
-        'unit': 'LITER', // HealthDataUnit.LITER string equivalent
-        'dateFrom': Timestamp.fromDate(log.timestamp),
-        'dateTo': Timestamp.fromDate(log.timestamp),
-        'sourceName': 'Manual (${log.beverageType})',
-        'sourceId': 'hydration_${log.id}',
-        'syncedAt': FieldValue.serverTimestamp(),
+        'id': log.id,
+        'userId': user.uid,
+        'timestamp': Timestamp.fromDate(log.timestamp),
+        'amountLiters': log.amountLiters,
+        'beverageType': log.beverageType,
+        'createdAt': log.createdAt != null
+            ? Timestamp.fromDate(log.createdAt!)
+            : FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
-
       await docRef.set(data);
-      print('DEBUG: Write successful');
     } catch (e) {
-      print('DEBUG: Write failed: $e');
       throw ServerException(e.toString());
     }
   }

@@ -489,7 +489,7 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
       amountLiters: volumeLiters,
       timestamp: _selectedDate,
       beverageType: _selectedType,
-      userId: '', // Will be filled by Repo/DataSource from Auth
+      userId: '', // Will be filled by Repo/DataSource
     );
 
     // Use Hydration Bloc to save

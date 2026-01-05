@@ -149,13 +149,17 @@ class ReviewReminderStep extends StatelessWidget {
                     onTap: onEditSchedule,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text('Edit',
-                          style: TextStyle(color: Colors.black)),
+                      child: const Text(
+                        'Edit',
+                        style: TextStyle(color: Colors.black),
+                      ),
                     ),
                   ),
                 ],
@@ -166,46 +170,15 @@ class ReviewReminderStep extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildDetailRow(Icons.access_time, 'Time', time!),
               ],
-              _buildDetailRow(Icons.calendar_today_outlined, 'Start Date',
-                  '${startDate.day} ${_getMonth(startDate.month)} ${startDate.year}'),
+              _buildDetailRow(
+                Icons.calendar_today_outlined,
+                'Start Date',
+                '${startDate.day} ${_getMonth(startDate.month)} ${startDate.year}',
+              ),
             ],
           ),
         ),
         const SizedBox(height: 20),
-
-        // Quantity Input Card
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[200]!),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Quantity',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Volume remaining ($unit)',
-                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[200]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[200]!),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -222,12 +195,18 @@ class ReviewReminderStep extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
                 const SizedBox(height: 4),
-                Text(text,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -256,18 +235,20 @@ class ReviewReminderStep extends StatelessWidget {
         return 'Every day';
       case 'Weekly':
         if (daysOfWeek == null || daysOfWeek!.isEmpty) return 'Every week';
-        final days = daysOfWeek!.map((d) {
-          const map = {
-            1: 'Mon',
-            2: 'Tue',
-            3: 'Wed',
-            4: 'Thu',
-            5: 'Fri',
-            6: 'Sat',
-            7: 'Sun'
-          };
-          return map[d] ?? '';
-        }).join(', ');
+        final days = daysOfWeek!
+            .map((d) {
+              const map = {
+                1: 'Mon',
+                2: 'Tue',
+                3: 'Wed',
+                4: 'Thu',
+                5: 'Fri',
+                6: 'Sat',
+                7: 'Sun',
+              };
+              return map[d] ?? '';
+            })
+            .join(', ');
         return 'Every week on $days';
       case 'Monthly':
         if (dayOfMonth == null) return 'Every month';
@@ -292,7 +273,7 @@ class ReviewReminderStep extends StatelessWidget {
       'September',
       'October',
       'November',
-      'December'
+      'December',
     ];
     return months[month - 1];
   }

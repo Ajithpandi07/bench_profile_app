@@ -15,7 +15,7 @@ class RippleBackgroundPainter extends CustomPainter {
     // Base radius starts around the score card (radius ~120)
     // We want ripples expanding outwards.
     double baseRadius = 80.0; // Slightly larger than the 120 radius card
-    double gap = 45.0; // Gap between ripples
+    double gap = 40.0; // Gap between ripples
 
     // Draw multiple concentric circles
     // We want them to go off screen, so we can draw until radius > screen max dimension

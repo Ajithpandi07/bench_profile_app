@@ -7,6 +7,7 @@ class TimeGoalModal extends StatefulWidget {
   final TimeOfDay? initialTime;
   final String? initialGoal;
   final String unit;
+  final bool showGoal;
   final ValueChanged<TimeOfDay> onTimeChanged;
   final ValueChanged<String> onGoalChanged;
   final VoidCallback onConfirm;
@@ -16,6 +17,7 @@ class TimeGoalModal extends StatefulWidget {
     this.initialTime,
     this.initialGoal,
     required this.unit,
+    this.showGoal = true,
     required this.onTimeChanged,
     required this.onGoalChanged,
     required this.onConfirm,
@@ -102,10 +104,10 @@ class _TimeGoalModalState extends State<TimeGoalModal> {
             ),
           ),
           const SizedBox(height: 24),
-          const Center(
+          Center(
             child: Text(
-              'Set Time & Goal',
-              style: TextStyle(
+              widget.showGoal ? 'Set Time & Goal' : 'Set Time',
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primaryColor,
@@ -118,83 +120,90 @@ class _TimeGoalModalState extends State<TimeGoalModal> {
             style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 12),
-          GestureDetector(
-            onTap: _showTimePicker,
-            child: Container(
-              width: 340,
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          Center(
+            child: GestureDetector(
+              onTap: _showTimePicker,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Today',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    _time.format(context).split(' ')[0], // hh:mm part
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _time.period == DayPeriod.am ? 'AM' : 'PM',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF131313),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (widget.showGoal) ...[
+            const SizedBox(height: 24),
+            const Text(
+              'Goal',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 border: Border.all(color: const Color(0xFFE5E7EB)),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _time.format(context),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: TextField(
+                      controller: _goalController,
+                      maxLines: 5,
+                      minLines: 1,
+                      textInputAction: TextInputAction.done,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Enter goal or instruction',
+                        hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
+                      ),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      keyboardType: TextInputType.multiline,
                     ),
                   ),
-                  const Icon(Icons.access_time,
-                      size: 20, color: AppTheme.primaryColor),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: Text(
+                      widget.unit,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Goal',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: 340,
-            constraints: const BoxConstraints(minHeight: 40),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _goalController,
-                    maxLines: 5,
-                    minLines: 1,
-                    textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Enter goal or instruction',
-                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
-                      contentPadding: EdgeInsets.zero,
-                      isDense: true,
-                    ),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    keyboardType: TextInputType.multiline,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 2.0),
-                  child: Text(
-                    widget.unit,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
           const SizedBox(height: 40),
           Center(
             child: PrimaryButton(

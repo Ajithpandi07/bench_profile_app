@@ -29,6 +29,10 @@ class AddReminder extends ReminderEvent {
   final DateTime startDate;
   final DateTime endDate;
   final bool smartReminder;
+  final int? interval;
+  final String? customFrequency;
+  final String? recurrenceEndType;
+  final int? recurrenceCount;
 
   const AddReminder({
     required this.name,
@@ -42,22 +46,30 @@ class AddReminder extends ReminderEvent {
     required this.startDate,
     required this.endDate,
     required this.smartReminder,
+    this.interval,
+    this.customFrequency,
+    this.recurrenceEndType,
+    this.recurrenceCount,
   });
 
   @override
   List<Object?> get props => [
-        name,
-        category,
-        quantity,
-        unit,
-        scheduleType,
-        daysOfWeek,
-        dayOfMonth,
-        time,
-        startDate,
-        endDate,
-        smartReminder,
-      ];
+    name,
+    category,
+    quantity,
+    unit,
+    scheduleType,
+    daysOfWeek,
+    dayOfMonth,
+    time,
+    startDate,
+    endDate,
+    smartReminder,
+    interval,
+    customFrequency,
+    recurrenceEndType,
+    recurrenceCount,
+  ];
 }
 
 class UpdateReminder extends ReminderEvent {
@@ -73,6 +85,10 @@ class UpdateReminder extends ReminderEvent {
   final DateTime startDate;
   final DateTime endDate;
   final bool smartReminder;
+  final int? interval;
+  final String? customFrequency;
+  final String? recurrenceEndType;
+  final int? recurrenceCount;
 
   const UpdateReminder({
     required this.id,
@@ -87,23 +103,31 @@ class UpdateReminder extends ReminderEvent {
     required this.startDate,
     required this.endDate,
     required this.smartReminder,
+    this.interval,
+    this.customFrequency,
+    this.recurrenceEndType,
+    this.recurrenceCount,
   });
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        category,
-        quantity,
-        unit,
-        scheduleType,
-        daysOfWeek,
-        dayOfMonth,
-        time,
-        startDate,
-        endDate,
-        smartReminder,
-      ];
+    id,
+    name,
+    category,
+    quantity,
+    unit,
+    scheduleType,
+    daysOfWeek,
+    dayOfMonth,
+    time,
+    startDate,
+    endDate,
+    smartReminder,
+    interval,
+    customFrequency,
+    recurrenceEndType,
+    recurrenceCount,
+  ];
 }
 
 class DeleteReminder extends ReminderEvent {

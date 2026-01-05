@@ -54,7 +54,13 @@ class _AddReminderModalState extends State<AddReminderModal> {
   late bool _isSmartReminder;
   List<int> _daysOfWeek = [];
   int _dayOfMonth = 1;
-  TimeOfDay? _selectedTime; // Changed to nullable
+  TimeOfDay? _selectedTime;
+
+  // Custom Fields
+  int _interval = 1;
+  String _customFrequency = 'Weeks'; // Weekly, Monthly
+  String _recurrenceEndType = 'Forever'; // Forever, Until, Count
+  int _recurrenceCount = 1;
 
   @override
   void initState() {
@@ -63,10 +69,10 @@ class _AddReminderModalState extends State<AddReminderModal> {
     _pageController = PageController(initialPage: widget.initialStep);
 
     _nameController = TextEditingController(text: widget.initialName ?? '');
-    _quantityController =
-        TextEditingController(text: widget.initialQuantity ?? '');
-    _unitController = TextEditingController(
-        text: widget.initialUnit ?? ''); // Removed default 'ml'
+    _quantityController = TextEditingController(
+      text: widget.initialQuantity ?? '',
+    );
+    _unitController = TextEditingController(text: widget.initialUnit ?? '');
     _selectedCategory = widget.initialCategory ?? 'Water';
 
     _scheduleType = widget.initialScheduleType ?? 'Daily';
@@ -77,12 +83,9 @@ class _AddReminderModalState extends State<AddReminderModal> {
 
     // Initialize Time
     if (widget.initialTime != null) {
-      // Expect "HH:mm" (24h) or "h:mm a"
       try {
-        // If contains AM/PM
         if (widget.initialTime!.toLowerCase().contains('pm') ||
             widget.initialTime!.toLowerCase().contains('am')) {
-          // Basic parse for "h:mm a"
           final timeParts = widget.initialTime!.split(' ');
           final hm = timeParts[0].split(':');
           int h = int.parse(hm[0]);
@@ -91,19 +94,20 @@ class _AddReminderModalState extends State<AddReminderModal> {
           if (timeParts[1].toLowerCase() == 'am' && h == 12) h = 0;
           _selectedTime = TimeOfDay(hour: h, minute: m);
         } else {
-          // Assume HH:mm
           final parts = widget.initialTime!.split(':');
           if (parts.length == 2) {
             _selectedTime = TimeOfDay(
-                hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+              hour: int.parse(parts[0]),
+              minute: int.parse(parts[1]),
+            );
           }
         }
       } catch (e) {
         print("Error parsing time: $e");
-        _selectedTime = null; // Default to null on error
+        _selectedTime = null;
       }
     } else {
-      _selectedTime = null; // Explicitly null
+      _selectedTime = null;
     }
   }
 
@@ -118,9 +122,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
 
   void _nextStep() {
     if (_currentStep < 2) {
-      // Validation can be added here
       if (_currentStep == 1 && _selectedTime == null) {
-        // Force user to select time?
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please set a time and goal')),
         );
@@ -150,6 +152,11 @@ class _AddReminderModalState extends State<AddReminderModal> {
         ? '${_selectedTime!.hour}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
         : '';
 
+    // Logic to determine recurrence parameters based on scheduleType
+    // If Custom, use custom values. If Standard (Daily/Weekly/Monthly), map if needed or leave null.
+    // For simplicity, we pass custom values if type is Custom.
+    final bool isCustom = _scheduleType == 'Custom';
+
     final bloc = context.read<ReminderBloc>();
     if (widget.reminderId != null) {
       bloc.add(
@@ -160,12 +167,24 @@ class _AddReminderModalState extends State<AddReminderModal> {
           quantity: _quantityController.text,
           unit: _unitController.text,
           scheduleType: _scheduleType,
-          daysOfWeek: _scheduleType == 'Weekly' ? _daysOfWeek : null,
-          dayOfMonth: _scheduleType == 'Monthly' ? _dayOfMonth : null,
+          daysOfWeek:
+              (_scheduleType == 'Weekly' ||
+                  (isCustom && _customFrequency == 'Weeks'))
+              ? _daysOfWeek
+              : null,
+          dayOfMonth:
+              (_scheduleType == 'Monthly' ||
+                  (isCustom && _customFrequency == 'Months'))
+              ? _dayOfMonth
+              : null,
           time: formattedTime,
           startDate: _startDate,
           endDate: _endDate,
           smartReminder: _isSmartReminder,
+          interval: isCustom ? _interval : null,
+          customFrequency: isCustom ? _customFrequency : null,
+          recurrenceEndType: isCustom ? _recurrenceEndType : null,
+          recurrenceCount: isCustom ? _recurrenceCount : null,
         ),
       );
     } else {
@@ -176,12 +195,24 @@ class _AddReminderModalState extends State<AddReminderModal> {
           quantity: _quantityController.text,
           unit: _unitController.text,
           scheduleType: _scheduleType,
-          daysOfWeek: _scheduleType == 'Weekly' ? _daysOfWeek : null,
-          dayOfMonth: _scheduleType == 'Monthly' ? _dayOfMonth : null,
+          daysOfWeek:
+              (_scheduleType == 'Weekly' ||
+                  (isCustom && _customFrequency == 'Weeks'))
+              ? _daysOfWeek
+              : null,
+          dayOfMonth:
+              (_scheduleType == 'Monthly' ||
+                  (isCustom && _customFrequency == 'Months'))
+              ? _dayOfMonth
+              : null,
           time: formattedTime,
           startDate: _startDate,
           endDate: _endDate,
           smartReminder: _isSmartReminder,
+          interval: isCustom ? _interval : null,
+          customFrequency: isCustom ? _customFrequency : null,
+          recurrenceEndType: isCustom ? _recurrenceEndType : null,
+          recurrenceCount: isCustom ? _recurrenceCount : null,
         ),
       );
     }
@@ -191,15 +222,13 @@ class _AddReminderModalState extends State<AddReminderModal> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height *
-          0.68, // Reduced height to show date selector
+      height: MediaQuery.of(context).size.height * 0.70,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
         children: [
-          // Handle bar
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
@@ -215,7 +244,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
           Expanded(
             child: PageView(
               controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(), // Disable swipe
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 AddDetailsStep(
                   nameController: _nameController,
@@ -236,6 +265,13 @@ class _AddReminderModalState extends State<AddReminderModal> {
                   startDate: _startDate,
                   endDate: _endDate,
                   isSmartReminder: _isSmartReminder,
+
+                  // Custom Fields
+                  interval: _interval,
+                  customFrequency: _customFrequency,
+                  recurrenceEndType: _recurrenceEndType,
+                  recurrenceCount: _recurrenceCount,
+
                   onTypeChanged: (val) => setState(() => _scheduleType = val),
                   onDaysOfWeekChanged: (val) =>
                       setState(() => _daysOfWeek = val),
@@ -248,6 +284,15 @@ class _AddReminderModalState extends State<AddReminderModal> {
                   onEndDateChanged: (val) => setState(() => _endDate = val),
                   onSmartToggle: (val) =>
                       setState(() => _isSmartReminder = val),
+
+                  onIntervalChanged: (val) => setState(() => _interval = val),
+                  onCustomFrequencyChanged: (val) =>
+                      setState(() => _customFrequency = val),
+                  onRecurrenceEndTypeChanged: (val) =>
+                      setState(() => _recurrenceEndType = val),
+                  onRecurrenceCountChanged: (val) =>
+                      setState(() => _recurrenceCount = val),
+
                   onNext: _nextStep,
                   onBack: _prevStep,
                 ),
@@ -259,14 +304,13 @@ class _AddReminderModalState extends State<AddReminderModal> {
                   scheduleType: _scheduleType,
                   daysOfWeek: _daysOfWeek,
                   dayOfMonth: _dayOfMonth,
-                  time: _selectedTime?.format(context), // formatting null safe
+                  time: _selectedTime?.format(context),
                   startDate: _startDate,
                   endDate: _endDate,
                   smartReminder: _isSmartReminder,
                   onConfirm: _saveReminder,
                   onBack: _prevStep,
                   onEditSchedule: () {
-                    // Navigate back to Details step (index 0)
                     _pageController.animateToPage(
                       0,
                       duration: const Duration(milliseconds: 300),

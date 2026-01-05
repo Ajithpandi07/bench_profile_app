@@ -23,6 +23,11 @@ class Reminder extends Equatable {
   final bool isCompleted;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  // Custom Schedule
+  final int? interval;
+  final String? customFrequency;
+  final String? recurrenceEndType;
+  final int? recurrenceCount;
 
   const Reminder({
     required this.id,
@@ -40,6 +45,10 @@ class Reminder extends Equatable {
     this.isCompleted = false,
     this.createdAt,
     this.updatedAt,
+    this.interval,
+    this.customFrequency,
+    this.recurrenceEndType,
+    this.recurrenceCount,
   });
 
   Reminder copyWith({
@@ -58,6 +67,10 @@ class Reminder extends Equatable {
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? interval,
+    String? customFrequency,
+    String? recurrenceEndType,
+    int? recurrenceCount,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -75,25 +88,33 @@ class Reminder extends Equatable {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      interval: interval ?? this.interval,
+      customFrequency: customFrequency ?? this.customFrequency,
+      recurrenceEndType: recurrenceEndType ?? this.recurrenceEndType,
+      recurrenceCount: recurrenceCount ?? this.recurrenceCount,
     );
   }
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        category,
-        quantity,
-        unit,
-        scheduleType,
-        daysOfWeek,
-        dayOfMonth,
-        time,
-        startDate,
-        endDate,
-        smartReminder,
-        isCompleted,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    name,
+    category,
+    quantity,
+    unit,
+    scheduleType,
+    daysOfWeek,
+    dayOfMonth,
+    time,
+    startDate,
+    endDate,
+    smartReminder,
+    isCompleted,
+    createdAt,
+    updatedAt,
+    interval,
+    customFrequency,
+    recurrenceEndType,
+    recurrenceCount,
+  ];
 }

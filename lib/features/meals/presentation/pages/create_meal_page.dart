@@ -44,7 +44,7 @@ class _CreateMealPageState extends State<CreateMealPage> {
           child: Builder(
             builder: (context) {
               return Container(
-                padding: const EdgeInsets.symmetric(vertical: 24),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,

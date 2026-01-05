@@ -18,6 +18,10 @@ class ReminderModel extends Reminder {
     super.isCompleted = false,
     super.createdAt,
     super.updatedAt,
+    super.interval,
+    super.customFrequency,
+    super.recurrenceEndType,
+    super.recurrenceCount,
   });
 
   factory ReminderModel.fromSnapshot(DocumentSnapshot doc) {
@@ -42,6 +46,10 @@ class ReminderModel extends Reminder {
           : data['isCompleted'].toString().toLowerCase() == 'true',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      interval: data['interval'] as int?,
+      customFrequency: data['customFrequency'] as String?,
+      recurrenceEndType: data['recurrenceEndType'] as String?,
+      recurrenceCount: data['recurrenceCount'] as int?,
     );
   }
 
@@ -61,6 +69,10 @@ class ReminderModel extends Reminder {
       'isCompleted': isCompleted,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'interval': interval,
+      'customFrequency': customFrequency,
+      'recurrenceEndType': recurrenceEndType,
+      'recurrenceCount': recurrenceCount,
     };
   }
 
@@ -81,6 +93,10 @@ class ReminderModel extends Reminder {
       isCompleted: reminder.isCompleted,
       createdAt: reminder.createdAt,
       updatedAt: reminder.updatedAt,
+      interval: reminder.interval,
+      customFrequency: reminder.customFrequency,
+      recurrenceEndType: reminder.recurrenceEndType,
+      recurrenceCount: reminder.recurrenceCount,
     );
   }
 
@@ -101,9 +117,14 @@ class ReminderModel extends Reminder {
       isCompleted: isCompleted,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      interval: interval,
+      customFrequency: customFrequency,
+      recurrenceEndType: recurrenceEndType,
+      recurrenceCount: recurrenceCount,
     );
   }
 
+  @override
   ReminderModel copyWith({
     String? id,
     String? name,
@@ -120,6 +141,10 @@ class ReminderModel extends Reminder {
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? interval,
+    String? customFrequency,
+    String? recurrenceEndType,
+    int? recurrenceCount,
   }) {
     return ReminderModel(
       id: id ?? this.id,
@@ -137,6 +162,10 @@ class ReminderModel extends Reminder {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      interval: interval ?? this.interval,
+      customFrequency: customFrequency ?? this.customFrequency,
+      recurrenceEndType: recurrenceEndType ?? this.recurrenceEndType,
+      recurrenceCount: recurrenceCount ?? this.recurrenceCount,
     );
   }
 }

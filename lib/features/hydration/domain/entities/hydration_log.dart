@@ -6,6 +6,8 @@ class HydrationLog extends Equatable {
   final DateTime timestamp;
   final String beverageType; // 'Regular', 'Carbonated', etc.
   final String userId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const HydrationLog({
     required this.id,
@@ -13,8 +15,18 @@ class HydrationLog extends Equatable {
     required this.timestamp,
     required this.beverageType,
     required this.userId,
+    this.createdAt,
+    this.updatedAt,
   });
 
   @override
-  List<Object> get props => [id, amountLiters, timestamp, beverageType, userId];
+  List<Object?> get props => [
+    id,
+    amountLiters,
+    timestamp,
+    beverageType,
+    userId,
+    createdAt,
+    updatedAt,
+  ];
 }

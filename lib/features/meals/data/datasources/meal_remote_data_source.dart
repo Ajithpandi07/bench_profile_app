@@ -36,31 +36,25 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .collection('logs')
         .doc(log.id);
 
+    // Normalize: Store only necessary fields
     await logRef.set({
       'id': log.id,
       'userId': user.uid,
       'timestamp': Timestamp.fromDate(log.timestamp),
       'mealType': log.mealType,
       'totalCalories': log.totalCalories,
+      'userMealIds': log.userMealIds,
+      'createdAt': log.createdAt != null
+          ? Timestamp.fromDate(log.createdAt!)
+          : FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
       'items': log.items
           .map(
             (item) => {
               'id': item.id,
-              'name': item.name,
               'calories': item.calories,
-              'carbs': item.carbs,
-              'protein': item.protein,
-              'fat': item.fat,
-              'servingSize': item.servingSize,
               'quantity': item.quantity,
-              'sodium': item.sodium,
-              'potassium': item.potassium,
-              'dietaryFibre': item.dietaryFibre,
-              'sugars': item.sugars,
-              'vitaminA': item.vitaminA,
-              'vitaminC': item.vitaminC,
-              'calcium': item.calcium,
-              'iron': item.iron,
+              'servingSize': item.servingSize,
             },
           )
           .toList(),
@@ -75,6 +69,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
+    // 1. Fetch the lean meal logs
     final query = await firestore
         .collection('bench_profile')
         .doc(user.uid)
@@ -84,36 +79,64 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .orderBy('timestamp')
         .get();
 
+    if (query.docs.isEmpty) return [];
+
+    // 2. Fetch User Foods to re-hydrate the full details
+    // Optimization: In a real app, query only needed IDs using whereIn (chunks of 10)
+    // For now, fetching all user foods is acceptable or we rely on what we have.
+    // Let's assume we need to fetch all to be safe or map them.
+    final userFoods = await getUserFoods();
+    final foodMap = {for (var f in userFoods) f.id: f};
+
     return query.docs.map((doc) {
       final data = doc.data();
+      final itemsList = (data['items'] as List);
+
+      // Re-hydrate items
+      final hydratedItems = itemsList.map((i) {
+        final id = i['id'] ?? '';
+        final snapshotCalories = (i['calories'] as num).toDouble();
+        final quantity = i['quantity'] ?? 1;
+        final serving = i['servingSize'] ?? '';
+
+        final definition = foodMap[id];
+        if (definition != null) {
+          // Merge definition with specific snapshot data (like quantity/calories)
+          // Note: Calories in definition are per unit. Snapshot calories might be total or per unit?
+          // Usually logs store total calories for that entry.
+          // FoodItem.calories generic is 'per serving/quantity 1' usually?
+          // Let's rely on the definitions macros but respect the logged quantities.
+          return definition.copyWith(
+            quantity: quantity,
+            calories: snapshotCalories, // keep the logged calorie value?
+            servingSize: serving,
+          );
+        } else {
+          // Fallback if food definition missing (deleted or legacy)
+          return FoodItem(
+            id: id,
+            name: 'Unknown Food', // or store name in log as fallback
+            calories: snapshotCalories,
+            quantity: quantity,
+            servingSize: serving,
+          );
+        }
+      }).toList();
+
       return MealLog(
         id: data['id'],
         userId: data['userId'],
         timestamp: (data['timestamp'] as Timestamp).toDate(),
         mealType: data['mealType'],
         totalCalories: (data['totalCalories'] as num).toDouble(),
-        items: (data['items'] as List)
-            .map(
-              (i) => FoodItem(
-                id: i['id'] ?? '',
-                name: i['name'] ?? 'Unknown',
-                calories: (i['calories'] as num).toDouble(),
-                carbs: (i['carbs'] as num?)?.toDouble() ?? 0,
-                protein: (i['protein'] as num?)?.toDouble() ?? 0,
-                fat: (i['fat'] as num?)?.toDouble() ?? 0,
-                servingSize: i['servingSize'] ?? '',
-                quantity: i['quantity'] ?? 1,
-                sodium: (i['sodium'] as num?)?.toDouble() ?? 0,
-                potassium: (i['potassium'] as num?)?.toDouble() ?? 0,
-                dietaryFibre: (i['dietaryFibre'] as num?)?.toDouble() ?? 0,
-                sugars: (i['sugars'] as num?)?.toDouble() ?? 0,
-                vitaminA: (i['vitaminA'] as num?)?.toDouble() ?? 0,
-                vitaminC: (i['vitaminC'] as num?)?.toDouble() ?? 0,
-                calcium: (i['calcium'] as num?)?.toDouble() ?? 0,
-                iron: (i['iron'] as num?)?.toDouble() ?? 0,
-              ),
-            )
-            .toList(),
+        items: hydratedItems,
+        userMealIds: List<String>.from(data['userMealIds'] ?? []),
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : null,
+        updatedAt: data['updatedAt'] != null
+            ? (data['updatedAt'] as Timestamp).toDate()
+            : null,
       );
     }).toList();
   }

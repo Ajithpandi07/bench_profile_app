@@ -158,28 +158,16 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
                   ),
                 );
               }
-              return CircleAvatar(
-                radius: 20,
-                backgroundColor: AppTheme.primaryLight,
-                child: Builder(
-                  builder: (context) {
-                    String initial = 'U';
-                    try {
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user?.email?.isNotEmpty == true) {
-                        initial = user!.email![0].toUpperCase();
-                      }
-                    } catch (_) {}
-
-                    return Text(
-                      initial,
-                      style: const TextStyle(
-                        color: Color.fromARGB(255, 19, 19, 19),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    );
-                  },
+              return Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFD9D9D9),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.transparent,
+                  backgroundImage: AssetImage('assets/images/user_avatar.png'),
                 ),
               );
             },
@@ -273,7 +261,7 @@ class _HomeTab extends StatelessWidget {
                   padding: EdgeInsets.only(
                     top:
                         MediaQuery.of(context).padding.top +
-                        60, // approximate header space
+                        10, // approximate header space
                   ),
                   child: Column(
                     children: [
@@ -293,18 +281,24 @@ class _HomeTab extends StatelessWidget {
                                 height: 1000,
                                 child: Stack(
                                   children: [
-                                    ClipPath(
-                                      clipper: _RippleBoxClipper(),
-                                      child: Container(
-                                        color: AppTheme.rippleBackground
-                                            .withOpacity(0.3),
+                                    Positioned.fill(
+                                      child: ClipPath(
+                                        clipper: _RippleBoxClipper(),
+                                        child: Container(
+                                          color: AppTheme.rippleBackground
+                                              .withOpacity(0.3),
+                                        ),
                                       ),
                                     ),
-                                    ClipPath(
-                                      clipper: _RippleBoxClipper(),
-                                      child: CustomPaint(
-                                        painter: RippleBackgroundPainter(
-                                          color: primaryColor.withOpacity(0.05),
+                                    Positioned.fill(
+                                      child: ClipPath(
+                                        clipper: _RippleBoxClipper(),
+                                        child: CustomPaint(
+                                          painter: RippleBackgroundPainter(
+                                            color: primaryColor.withOpacity(
+                                              0.05,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -643,19 +637,18 @@ class _RippleBoxClipper extends CustomClipper<Path> {
 
     // We draw the shape from Top-Left (0,0) -> Bottom-Left (0, 700) -> Curve -> Bottom-Right (1000, 700) -> Top-Right (1000, 0)
 
-    path.lineTo(0, 690); // Side height (Meal)
+    path.lineTo(0, 650); // Side height (Meal)
 
-    // Cubic allows for a flatter bottom or "squaricle" feel if needed, but Quadratic is smoother U.
-    // Let's use a tighter Quadratic.
-    // Control point at center X (500).
-    // Target Bottom Y: To clear 730, let's go to 780 for padding.
-    // Quadratic Math: Midpoint of curve is t=0.5. B(0.5) = 0.25*P0 + 0.5*P1 + 0.25*P2.
-    // If P0y=690, P2y=690.
-    // B(0.5)y = 0.25*690 + 0.5*Cy + 0.25*690 = 0.5*690 + 0.5*Cy = 345 + 0.5*Cy.
-    // We want B(0.5)y = 780.
-    // 780 = 345 + 0.5*Cy -> 435 = 0.5*Cy -> Cy = 870.
-
-    path.quadraticBezierTo(500, 870, 1000, 690);
+    // Cubic allows for a flatter bottom or "squaricle" feel if needed.
+    // We use a cubic curve to create a wider bottom that encompasses the stats buttons better.
+    path.cubicTo(
+      350,
+      870, // Control Point 1
+      650,
+      650, // Control Point 2
+      1000,
+      -1800, // End Point
+    );
 
     path.lineTo(1000, 0);
     path.close();

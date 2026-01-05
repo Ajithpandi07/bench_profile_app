@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import '../widgets/reminder_list_shimmer.dart';
 
 import '../bloc/reminder_bloc.dart';
 import '../bloc/reminder_state.dart';
@@ -123,7 +125,7 @@ class _ReminderPageState extends State<ReminderPage> {
                   child: BlocBuilder<ReminderBloc, ReminderState>(
                     builder: (context, state) {
                       if (state is ReminderLoading) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const ReminderListShimmer();
                       } else if (state is ReminderLoaded) {
                         if (state.reminders.isEmpty) {
                           return const Center(
@@ -137,109 +139,134 @@ class _ReminderPageState extends State<ReminderPage> {
                           itemCount: state.reminders.length,
                           itemBuilder: (context, index) {
                             final reminder = state.reminders[index];
-                            return Dismissible(
-                              key: Key(reminder.id), // Removed !
-                              direction: DismissDirection.endToStart,
-                              confirmDismiss: (direction) async {
-                                return await showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      title: const Text(
-                                        "Delete Reminder",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      content: const Text(
-                                        "Are you sure you want to delete this reminder?",
-                                      ),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(false),
-                                          child: const Text(
-                                            "Cancel",
-                                            style: TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(true),
-                                          child: const Text(
-                                            "Delete",
-                                            style: TextStyle(
-                                              color: AppTheme.primaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 20),
-                                margin: const EdgeInsets.only(bottom: 16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                              onDismissed: (direction) {
-                                context.read<ReminderBloc>().add(
-                                  DeleteReminder(reminder.id),
-                                ); // Removed !
-                              },
-                              child: ReminderItemCard(
-                                title: reminder.name.isNotEmpty
-                                    ? reminder.name
-                                    : 'Reminder',
-                                subtitle:
-                                    '${reminder.quantity} ${reminder.unit}',
-                                scheduleType: reminder.scheduleType,
-                                time: reminder.time, // Passing time
-                                icon: _getIconForCategory(reminder.category),
-                                color: _getColorForCategory(reminder.category),
-                                onEdit: () {
-                                  final reminderBloc = context
-                                      .read<ReminderBloc>();
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (context) => BlocProvider.value(
-                                      value: reminderBloc,
-                                      child: AddReminderModal(
-                                        initialStep: 2, // Start at Review step
-                                        reminderId: reminder.id,
-                                        initialName: reminder.name,
-                                        initialCategory: reminder.category,
-                                        initialQuantity: reminder.quantity,
-                                        initialUnit: reminder.unit,
-                                        initialScheduleType:
-                                            reminder.scheduleType,
-                                        initialStartDate: reminder.startDate,
-                                        initialEndDate: reminder.endDate,
-                                        initialTime:
-                                            reminder.time, // Pass time here
-                                        initialSmartReminder:
-                                            reminder.smartReminder,
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Slidable(
+                                key: Key(reminder.id),
+                                endActionPane: ActionPane(
+                                  motion: const ScrollMotion(),
+                                  extentRatio:
+                                      0.5, // Total width for actions (approx 25% each if 2 actions)
+                                  children: [
+                                    SlidableAction(
+                                      onPressed: (context) {
+                                        final reminderBloc = context
+                                            .read<ReminderBloc>();
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (context) =>
+                                              BlocProvider.value(
+                                                value: reminderBloc,
+                                                child: AddReminderModal(
+                                                  initialStep:
+                                                      2, // Start at Review step
+                                                  reminderId: reminder.id,
+                                                  initialName: reminder.name,
+                                                  initialCategory:
+                                                      reminder.category,
+                                                  initialQuantity:
+                                                      reminder.quantity,
+                                                  initialUnit: reminder.unit,
+                                                  initialScheduleType:
+                                                      reminder.scheduleType,
+                                                  initialStartDate:
+                                                      reminder.startDate,
+                                                  initialEndDate:
+                                                      reminder.endDate,
+                                                  initialTime: reminder
+                                                      .time, // Pass time here
+                                                  initialSmartReminder:
+                                                      reminder.smartReminder,
+                                                ),
+                                              ),
+                                        );
+                                      },
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                      icon: Icons.edit_square,
+                                      label: 'Edit',
+                                    ),
+                                    SlidableAction(
+                                      onPressed: (context) async {
+                                        final shouldDelete = await showDialog<bool>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(15),
+                                              ),
+                                              title: const Text(
+                                                "Delete Reminder",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              content: const Text(
+                                                "Are you sure you want to delete this reminder?",
+                                              ),
+                                              actions: <Widget>[
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(false),
+                                                  child: const Text(
+                                                    "Cancel",
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(true),
+                                                  child: const Text(
+                                                    "Delete",
+                                                    style: TextStyle(
+                                                      color:
+                                                          AppTheme.primaryColor,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+
+                                        if (shouldDelete == true &&
+                                            context.mounted) {
+                                          context.read<ReminderBloc>().add(
+                                            DeleteReminder(reminder.id),
+                                          );
+                                        }
+                                      },
+                                      backgroundColor: AppTheme.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      icon: Icons.delete,
+                                      label: 'Delete',
+                                      borderRadius: const BorderRadius.only(
+                                        topRight: Radius.circular(20),
+                                        bottomRight: Radius.circular(20),
                                       ),
                                     ),
-                                  );
-                                },
+                                  ],
+                                ),
+                                child: ReminderItemCard(
+                                  title: reminder.name.isNotEmpty
+                                      ? reminder.name
+                                      : 'Reminder',
+                                  subtitle:
+                                      '${reminder.quantity} ${reminder.unit}',
+                                  scheduleType: reminder.scheduleType,
+                                  time: reminder.time, // Passing time
+                                  icon: _getIconForCategory(reminder.category),
+                                  color: _getColorForCategory(
+                                    reminder.category,
+                                  ),
+                                ),
                               ),
                             );
                           },
