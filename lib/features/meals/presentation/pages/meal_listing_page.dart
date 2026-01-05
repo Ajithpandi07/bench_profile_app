@@ -104,10 +104,7 @@ class _MealListingPageState extends State<MealListingPage>
       body: BlocListener<MealBloc, MealState>(
         listener: (context, state) {
           if (state is MealSaveSuccess) {
-            // If we return from adding new item, maybe we select it?
-            // For now just show snackbar
-            // Note: If coming back from AddFoodPage, the Bloc should reload library?
-            // AddFoodPage likely adds it.
+            showModernSnackbar(context, 'Added successfully');
           } else if (state is MealOperationFailure) {
             showModernSnackbar(context, state.message, isError: true);
           }

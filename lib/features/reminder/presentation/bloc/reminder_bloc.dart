@@ -152,6 +152,10 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       await _scheduleNotification(reminder.copyWith(id: id));
 
       emit(const ReminderOperationSuccess('Reminder added successfully'));
+
+      // Small delay to ensure the BlocListener catches the success state
+      await Future.delayed(const Duration(milliseconds: 100));
+
       add(const LoadReminders(forceRefresh: true));
     } catch (e) {
       emit(ReminderError(e.toString()));
@@ -188,6 +192,10 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       await _scheduleNotification(reminder);
 
       emit(const ReminderOperationSuccess('Reminder updated successfully'));
+
+      // Small delay to ensure the BlocListener catches the success state
+      await Future.delayed(const Duration(milliseconds: 100));
+
       add(const LoadReminders(forceRefresh: true));
     } catch (e) {
       emit(ReminderError(e.toString()));
@@ -198,10 +206,16 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     DeleteReminder event,
     Emitter<ReminderState> emit,
   ) async {
+    print('DEBUG BLOC: _onDeleteReminder called with ID: ${event.id}');
     try {
+      print('DEBUG BLOC: Calling repository.deleteReminder');
       await _repository.deleteReminder(event.id);
       await _notificationService.cancelNotification(event.id.hashCode);
       emit(const ReminderOperationSuccess('Reminder deleted successfully'));
+
+      // Small delay to ensure the BlocListener catches the success state
+      await Future.delayed(const Duration(milliseconds: 100));
+
       add(const LoadReminders(forceRefresh: true));
     } catch (e) {
       emit(ReminderError(e.toString()));

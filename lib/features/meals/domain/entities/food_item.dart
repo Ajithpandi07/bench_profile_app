@@ -10,15 +10,16 @@ class FoodItem extends Equatable {
   final String servingSize;
   final int quantity; // e.g. 1 serving
 
-  // Micro-nutrients
-  final double sodium; // mg
-  final double potassium; // g
-  final double dietaryFibre; // g
-  final double sugars; // g
-  final double vitaminA; // %
-  final double vitaminC; // %
-  final double calcium; // %
-  final double iron; // %
+  final double sodium;
+  final double potassium;
+  final double dietaryFibre;
+  final double sugars;
+  final double vitaminA;
+  final double vitaminC;
+  final double calcium;
+  final double iron;
+
+  final DateTime? createdAt;
 
   const FoodItem({
     required this.id,
@@ -37,6 +38,7 @@ class FoodItem extends Equatable {
     this.vitaminC = 0,
     this.calcium = 0,
     this.iron = 0,
+    this.createdAt,
   });
 
   FoodItem copyWith({
@@ -56,6 +58,7 @@ class FoodItem extends Equatable {
     double? vitaminC,
     double? calcium,
     double? iron,
+    DateTime? createdAt,
   }) {
     return FoodItem(
       id: id ?? this.id,
@@ -74,6 +77,53 @@ class FoodItem extends Equatable {
       vitaminC: vitaminC ?? this.vitaminC,
       calcium: calcium ?? this.calcium,
       iron: iron ?? this.iron,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'calories': calories,
+      'carbs': carbs,
+      'protein': protein,
+      'fat': fat,
+      'servingSize': servingSize,
+      'quantity': quantity,
+      'sodium': sodium,
+      'potassium': potassium,
+      'dietaryFibre': dietaryFibre,
+      'sugars': sugars,
+      'vitaminA': vitaminA,
+      'vitaminC': vitaminC,
+      'calcium': calcium,
+      'iron': iron,
+      'createdAt': createdAt != null ? createdAt!.toIso8601String() : null,
+    };
+  }
+
+  factory FoodItem.fromMap(Map<String, dynamic> map) {
+    return FoodItem(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      calories: (map['calories'] as num?)?.toDouble() ?? 0.0,
+      carbs: (map['carbs'] as num?)?.toDouble() ?? 0.0,
+      protein: (map['protein'] as num?)?.toDouble() ?? 0.0,
+      fat: (map['fat'] as num?)?.toDouble() ?? 0.0,
+      servingSize: map['servingSize'] ?? '1 serving',
+      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
+      sodium: (map['sodium'] as num?)?.toDouble() ?? 0.0,
+      potassium: (map['potassium'] as num?)?.toDouble() ?? 0.0,
+      dietaryFibre: (map['dietaryFibre'] as num?)?.toDouble() ?? 0.0,
+      sugars: (map['sugars'] as num?)?.toDouble() ?? 0.0,
+      vitaminA: (map['vitaminA'] as num?)?.toDouble() ?? 0.0,
+      vitaminC: (map['vitaminC'] as num?)?.toDouble() ?? 0.0,
+      calcium: (map['calcium'] as num?)?.toDouble() ?? 0.0,
+      iron: (map['iron'] as num?)?.toDouble() ?? 0.0,
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt'])
+          : null,
     );
   }
 

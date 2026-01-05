@@ -1,14 +1,15 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'app/bench_app.dart';
 import 'core/core.dart';
-import 'features/auth/auth.dart';
 import 'core/services/notification_service.dart';
-import 'features/health_metrics/health_metrics.dart' hide SyncManager;
 // import 'core/services/background_sync_service.dart'; // Exported via core.dart
 import 'core/injection_container.dart' as di;
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'features/auth/auth.dart';
+import 'features/health_metrics/health_metrics.dart' hide SyncManager;
 
 import 'firebase_options.dart';
 
@@ -16,9 +17,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase for main isolate
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // init theme service before runApp
   await ThemeService().init();
@@ -70,34 +69,14 @@ void main() async {
   //   });
   // }
 
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Provide blocs once and keep MaterialApp reactive to ThemeService.mode
-    return MultiBlocProvider(
+  // Provide blocs at the app level
+  runApp(
+    MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()),
         BlocProvider(create: (_) => di.sl<AuthBloc>()),
       ],
-      // Listen to ThemeService.mode and rebuild MaterialApp when it changes
-      child: ValueListenableBuilder<ThemeMode>(
-        valueListenable: ThemeService().mode,
-        builder: (context, themeMode, _) {
-          return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Bench Profile',
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeMode,
-            home: const AuthWrapper(),
-          );
-        },
-      ),
-    );
-  }
+      child: const BenchApp(),
+    ),
+  );
 }

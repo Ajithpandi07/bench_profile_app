@@ -10,8 +10,8 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
   ReminderRemoteDataSourceImpl({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance;
 
   @override
   Future<String> addReminder(ReminderModel reminder) async {
@@ -51,13 +51,21 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
+
+      print('DEBUG: Attempting to delete reminder with ID: $id');
+      print('DEBUG: User ID: ${user.uid}');
+      print('DEBUG: Path: bench_profile/${user.uid}/userreminders/$id');
+
       await _firestore
           .collection('bench_profile')
           .doc(user.uid)
           .collection('userreminders')
           .doc(id)
           .delete();
+
+      print('DEBUG: Reminder deleted successfully');
     } catch (e) {
+      print('DEBUG: Delete failed with error: $e');
       throw Exception('Failed to delete reminder: $e');
     }
   }

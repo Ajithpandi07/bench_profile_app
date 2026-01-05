@@ -4,7 +4,7 @@ import '../../../../core/constants/app_dimensions.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double? borderRadius;
   final EdgeInsetsGeometry? padding;
   final double? width;
@@ -26,6 +26,7 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = width ?? AppDimensions.primaryButtonWidth;
     final h = height ?? AppDimensions.primaryButtonHeight;
+    final isDisabled = onPressed == null;
 
     return Container(
       width: w,
@@ -35,21 +36,25 @@ class PrimaryButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(
           borderRadius ?? AppDimensions.primaryButtonRadius,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
-            offset: const Offset(0, 4),
-            blurRadius: 9.2,
-            spreadRadius: 0,
-          ),
-        ],
+        boxShadow: isDisabled
+            ? []
+            : [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  offset: const Offset(0, 4),
+                  blurRadius: 9.2,
+                  spreadRadius: 0,
+                ),
+              ],
       ),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           fixedSize: Size(w, h),
           minimumSize: Size(w, h),
-          backgroundColor: AppTheme.primaryColor, // Red background
+          backgroundColor: isDisabled
+              ? Colors.grey.shade300
+              : AppTheme.primaryColor, // Red background
           foregroundColor: Colors.white, // Text color
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(

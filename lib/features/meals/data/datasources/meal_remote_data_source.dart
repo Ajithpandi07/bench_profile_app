@@ -168,6 +168,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
           'vitaminC': food.vitaminC,
           'calcium': food.calcium,
           'iron': food.iron,
+          'createdAt': food.createdAt != null
+              ? Timestamp.fromDate(food.createdAt!)
+              : FieldValue.serverTimestamp(),
         });
   }
 
@@ -201,6 +204,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         vitaminC: (i['vitaminC'] as num?)?.toDouble() ?? 0,
         calcium: (i['calcium'] as num?)?.toDouble() ?? 0,
         iron: (i['iron'] as num?)?.toDouble() ?? 0,
+        createdAt: i['createdAt'] != null
+            ? (i['createdAt'] as Timestamp).toDate()
+            : null,
       );
     }).toList();
   }

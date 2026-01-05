@@ -261,7 +261,7 @@ class _HomeTab extends StatelessWidget {
                   padding: EdgeInsets.only(
                     top:
                         MediaQuery.of(context).padding.top +
-                        10, // approximate header space
+                        2, // approximate header space
                   ),
                   child: Column(
                     children: [
@@ -342,12 +342,12 @@ class _HomeTab extends StatelessWidget {
                                               isScrollControlled: true,
                                               builder: (context) =>
                                                   const MealTypeSelector(),
-                                            ).then((result) {
+                                            ).then((result) async {
                                               if (result != null &&
                                                   result is Map) {
                                                 final type = result['type'];
                                                 if (type == 'ManualCalories') {
-                                                  Navigator.push(
+                                                  final result = await Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
                                                       builder: (_) => BlocProvider(
@@ -360,6 +360,34 @@ class _HomeTab extends StatelessWidget {
                                                       ),
                                                     ),
                                                   );
+
+                                                  if (result == true &&
+                                                      context.mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        behavior:
+                                                            SnackBarBehavior
+                                                                .floating,
+                                                        content: Text(
+                                                          'Meal logged successfully',
+                                                        ),
+                                                        backgroundColor: Color(
+                                                          0xFFE93448,
+                                                        ),
+                                                      ),
+                                                    );
+
+                                                    // Refresh dashboard
+                                                    context
+                                                        .read<
+                                                          HealthMetricsBloc
+                                                        >()
+                                                        .add(
+                                                          const RefreshMetrics(),
+                                                        );
+                                                  }
                                                 } else {
                                                   Navigator.push(
                                                     context,

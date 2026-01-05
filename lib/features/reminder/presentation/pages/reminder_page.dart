@@ -183,16 +183,24 @@ class _ReminderPageState extends State<ReminderPage> {
                                               ),
                                         );
                                       },
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: Colors.grey.shade400,
                                       foregroundColor: Colors.white,
                                       icon: Icons.edit_square,
                                       label: 'Edit',
                                     ),
                                     SlidableAction(
-                                      onPressed: (context) async {
+                                      onPressed: (slidableContext) async {
+                                        // Capture the correct context and bloc before showing dialog
+                                        final scaffoldContext = context;
+                                        final reminderBloc = scaffoldContext
+                                            .read<ReminderBloc>();
+
+                                        print(
+                                          'DEBUG UI: Delete action pressed for reminder: ${reminder.id}',
+                                        );
                                         final shouldDelete = await showDialog<bool>(
-                                          context: context,
-                                          builder: (BuildContext context) {
+                                          context: scaffoldContext,
+                                          builder: (BuildContext dialogContext) {
                                             return AlertDialog(
                                               shape: RoundedRectangleBorder(
                                                 borderRadius:
@@ -210,7 +218,7 @@ class _ReminderPageState extends State<ReminderPage> {
                                               actions: <Widget>[
                                                 TextButton(
                                                   onPressed: () => Navigator.of(
-                                                    context,
+                                                    dialogContext,
                                                   ).pop(false),
                                                   child: const Text(
                                                     "Cancel",
@@ -221,7 +229,7 @@ class _ReminderPageState extends State<ReminderPage> {
                                                 ),
                                                 TextButton(
                                                   onPressed: () => Navigator.of(
-                                                    context,
+                                                    dialogContext,
                                                   ).pop(true),
                                                   child: const Text(
                                                     "Delete",
@@ -236,10 +244,22 @@ class _ReminderPageState extends State<ReminderPage> {
                                           },
                                         );
 
-                                        if (shouldDelete == true &&
-                                            context.mounted) {
-                                          context.read<ReminderBloc>().add(
+                                        print(
+                                          'DEBUG UI: Dialog result - shouldDelete: $shouldDelete',
+                                        );
+                                        if (shouldDelete == true) {
+                                          print(
+                                            'DEBUG UI: Dispatching DeleteReminder event for ID: ${reminder.id}',
+                                          );
+                                          reminderBloc.add(
                                             DeleteReminder(reminder.id),
+                                          );
+                                          print(
+                                            'DEBUG UI: DeleteReminder event dispatched',
+                                          );
+                                        } else {
+                                          print(
+                                            'DEBUG UI: Delete cancelled by user',
                                           );
                                         }
                                       },
@@ -259,7 +279,12 @@ class _ReminderPageState extends State<ReminderPage> {
                                       ? reminder.name
                                       : 'Reminder',
                                   subtitle:
-                                      '${reminder.quantity} ${reminder.unit}',
+                                      (reminder.category.toLowerCase() ==
+                                              'workout' ||
+                                          reminder.category.toLowerCase() ==
+                                              'activity')
+                                      ? '' // No quantity/unit for workout categories
+                                      : '${reminder.quantity} ${reminder.unit}',
                                   scheduleType: reminder.scheduleType,
                                   time: reminder.time, // Passing time
                                   icon: _getIconForCategory(reminder.category),

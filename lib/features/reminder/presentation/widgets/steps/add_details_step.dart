@@ -107,7 +107,9 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 0), // Centered text
+                    horizontal: 16,
+                    vertical: 0,
+                  ), // Centered text
                 ),
               ),
             ),
@@ -144,8 +146,9 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                         margin: const EdgeInsets.only(right: 12),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                          color:
-                              isSelected ? AppTheme.primaryColor : Colors.white,
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(30),
                           border: Border.all(
                             color: isSelected
@@ -163,8 +166,9 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                                 shape: BoxShape.circle,
                                 color: Colors.transparent,
                                 border: Border.all(
-                                  color:
-                                      isSelected ? Colors.white : Colors.grey,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey,
                                   width: 2,
                                 ),
                               ),
@@ -185,8 +189,9 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                             Text(
                               category,
                               style: TextStyle(
-                                color:
-                                    isSelected ? Colors.white : Colors.black87,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.black87,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -208,121 +213,134 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            // Only show quantity and unit for non-workout categories
+            if (widget.selectedCategory != 'Workout' &&
+                widget.selectedCategory != 'Activity') ...[
+              const SizedBox(height: 24),
 
-            // Quantity
-            const Text(
-              'Quantity',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
+              // Quantity
+              const Text(
+                'Quantity',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 270,
-                        height: 40,
-                        child: TextField(
-                          controller: widget.quantityController,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 270,
+                          height: 40,
+                          child: TextField(
+                            controller: widget.quantityController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(
                               color: AppTheme.primaryColor,
                               fontWeight: FontWeight.bold,
-                              fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: '',
-                            // errorText moved outside
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFE5E7EB)),
+                              fontSize: 14,
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFE5E7EB)),
+                            decoration: InputDecoration(
+                              hintText: '',
+                              // errorText moved outside
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 0,
+                              ),
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                  color: AppTheme.primaryColor),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 0),
                           ),
                         ),
-                      ),
-                      if (_quantityError != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, left: 4),
-                          child: Text(
-                            _quantityError!,
-                            style: const TextStyle(
-                                color: Colors.red, fontSize: 12),
+                        if (_quantityError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 4),
+                            child: Text(
+                              _quantityError!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    width: 66,
-                    height: 40, // Changed to 40
-                    padding: const EdgeInsets.symmetric(horizontal: 0),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                      borderRadius: BorderRadius.circular(10),
+                      ],
                     ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: widget.unitController.text.isEmpty
-                            ? 'ml'
-                            : widget.unitController.text,
-                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
-                        isExpanded: false,
-                        items: ['ml', 'L', 'g', 'kg', 'min', 'hr']
-                            .map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value,
-                                style: const TextStyle(fontSize: 14)),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          if (newValue != null) {
-                            widget.unitController.text = newValue;
-                            setState(() {}); // refresh UI
-                          }
-                        },
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      width: 66,
+                      height: 40, // Changed to 40
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: widget.unitController.text.isEmpty
+                              ? 'ml'
+                              : widget.unitController.text,
+                          icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                          isExpanded: false,
+                          items: ['ml', 'L', 'g', 'kg', 'min', 'hr'].map((
+                            String value,
+                          ) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            if (newValue != null) {
+                              widget.unitController.text = newValue;
+                              setState(() {}); // refresh UI
+                            }
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ] else
+              const SizedBox(height: 24),
             Text(
               'Personalize this based on your routine.',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
 
             const SizedBox(height: 32),
@@ -337,9 +355,13 @@ class _AddDetailsStepState extends State<AddDetailsStep> {
                       _nameError = 'Name is required';
                       isValid = false;
                     }
-                    if (widget.quantityController.text.trim().isEmpty) {
-                      _quantityError = 'Quantity is required';
-                      isValid = false;
+                    // Only validate quantity for non-workout categories
+                    if (widget.selectedCategory != 'Workout' &&
+                        widget.selectedCategory != 'Activity') {
+                      if (widget.quantityController.text.trim().isEmpty) {
+                        _quantityError = 'Quantity is required';
+                        isValid = false;
+                      }
                     }
                   });
 

@@ -2,6 +2,8 @@ import 'package:bloc/bloc.dart';
 import '../../domain/repositories/meal_repository.dart';
 import 'meal_event.dart';
 import 'meal_state.dart';
+import '../../domain/entities/food_item.dart';
+import '../../domain/entities/user_meal.dart';
 
 class MealBloc extends Bloc<MealEvent, MealState> {
   final MealRepository repository;
@@ -71,10 +73,27 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     foodsResult.fold((failure) => emit(MealOperationFailure(failure.message)), (
       foods,
     ) {
-      mealsResult.fold(
-        (failure) => emit(MealOperationFailure(failure.message)),
-        (meals) => emit(UserLibraryLoaded(foods, meals)),
-      );
+      mealsResult.fold((failure) => emit(MealOperationFailure(failure.message)), (
+        meals,
+      ) {
+        // Sort descending by creation date (newest first)
+        // Since lists from repo might be immutable or shared, creating modifiable copies is safer.
+        final sortedFoods = List<FoodItem>.from(foods);
+        sortedFoods.sort(
+          (a, b) => (b.createdAt ?? DateTime(0)).compareTo(
+            a.createdAt ?? DateTime(0),
+          ),
+        );
+
+        final sortedMeals = List<UserMeal>.from(meals);
+        sortedMeals.sort(
+          (a, b) => (b.createdAt ?? DateTime(0)).compareTo(
+            a.createdAt ?? DateTime(0),
+          ),
+        );
+
+        emit(UserLibraryLoaded(sortedFoods, sortedMeals));
+      });
     });
   }
 

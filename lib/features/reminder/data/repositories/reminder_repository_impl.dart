@@ -6,18 +6,15 @@ import '../models/reminder_model.dart';
 class ReminderRepositoryImpl implements ReminderRepository {
   final ReminderRemoteDataSource remoteDataSource;
 
-  ReminderRepositoryImpl({
-    required this.remoteDataSource,
-  });
+  ReminderRepositoryImpl({required this.remoteDataSource});
 
   @override
   Future<String> addReminder(Reminder reminder) async {
     try {
       final now = DateTime.now();
-      final reminderModel = ReminderModel.fromEntity(reminder).copyWith(
-        createdAt: now,
-        updatedAt: now,
-      );
+      final reminderModel = ReminderModel.fromEntity(
+        reminder,
+      ).copyWith(createdAt: now, updatedAt: now);
       return await remoteDataSource.addReminder(reminderModel);
     } catch (e) {
       throw Exception('Failed to add reminder: $e');
@@ -27,9 +24,9 @@ class ReminderRepositoryImpl implements ReminderRepository {
   @override
   Future<void> updateReminder(Reminder reminder) async {
     try {
-      final reminderModel = ReminderModel.fromEntity(reminder).copyWith(
-        updatedAt: DateTime.now(),
-      );
+      final reminderModel = ReminderModel.fromEntity(
+        reminder,
+      ).copyWith(updatedAt: DateTime.now());
       await remoteDataSource.updateReminder(reminderModel);
     } catch (e) {
       throw Exception('Failed to update reminder: $e');
@@ -38,9 +35,15 @@ class ReminderRepositoryImpl implements ReminderRepository {
 
   @override
   Future<void> deleteReminder(String id) async {
+    print('DEBUG REPO: deleteReminder called with ID: $id');
     try {
+      print('DEBUG REPO: Calling remoteDataSource.deleteReminder');
       await remoteDataSource.deleteReminder(id);
+      print(
+        'DEBUG REPO: remoteDataSource.deleteReminder completed successfully',
+      );
     } catch (e) {
+      print('DEBUG REPO: deleteReminder failed with error: $e');
       throw Exception('Failed to delete reminder: $e');
     }
   }
@@ -49,6 +52,11 @@ class ReminderRepositoryImpl implements ReminderRepository {
   Future<List<Reminder>> getReminders() async {
     try {
       final reminderModels = await remoteDataSource.fetchReminders();
+      // Sort by createdAt descending (newest first)
+      reminderModels.sort(
+        (a, b) =>
+            (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)),
+      );
       return reminderModels.map((model) => model.toEntity()).toList();
     } catch (e) {
       print('Failed to fetch reminders: $e');

@@ -27,14 +27,11 @@ class ReviewMealPage extends StatefulWidget {
 class _ReviewMealPageState extends State<ReviewMealPage> {
   late List<FoodItem> _selectedFoods;
   late List<UserMeal> _selectedMeals;
-  late Map<String, FoodItem> _foodMap;
-
   @override
   void initState() {
     super.initState();
     _selectedFoods = List.from(widget.selectedFoods);
     _selectedMeals = List.from(widget.selectedMeals);
-    _foodMap = {for (var f in widget.allFoods) f.id: f};
   }
 
   void _removeFood(FoodItem food) {
@@ -58,14 +55,10 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     return BlocListener<MealBloc, MealState>(
       listener: (context, state) {
         if (state is MealSaveSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Meal added successfully')),
-          );
+          showModernSnackbar(context, '${widget.mealType} logged successfully');
           Navigator.popUntil(context, (route) => route.isFirst);
         } else if (state is MealOperationFailure) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.message)));
+          showModernSnackbar(context, state.message, isError: true);
         }
       },
       child: Scaffold(
@@ -196,30 +189,27 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
 
   Widget _buildMealTile(UserMeal meal, {required VoidCallback onRemove}) {
     List<Widget> foodItems = [];
-    for (var fid in meal.foodIds) {
-      final food = _foodMap[fid];
-      if (food != null) {
-        foodItems.add(
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.circle, size: 6, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  food.name,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-                const Spacer(),
-                Text(
-                  '${food.calories.toStringAsFixed(0)} Kcal',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              ],
-            ),
+    for (var food in meal.foods) {
+      foodItems.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.circle, size: 6, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                food.name,
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const Spacer(),
+              Text(
+                '${(food.calories * food.quantity).toStringAsFixed(0)} Kcal',
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
           ),
-        );
-      }
+        ),
+      );
     }
 
     return Container(

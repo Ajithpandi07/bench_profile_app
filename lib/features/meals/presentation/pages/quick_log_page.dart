@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+import '../../domain/entities/entities.dart';
+import '../bloc/bloc.dart';
+import '../bloc/meal_event.dart';
+import 'add_food_page.dart';
 
 class QuickLogPage extends StatefulWidget {
   final String mealType;
@@ -9,21 +16,180 @@ class QuickLogPage extends StatefulWidget {
 }
 
 class _QuickLogPageState extends State<QuickLogPage> {
-  double _calories = 272;
-  // TODO: Add items list logic here if needed, but design shows quick slider.
-  // The design "Log Meal" (Image 4) shows:
-  // "Total calories: 272 kcal"
-  // Slider (0 - 2000)
-  // List of items below: "Dh" (1.5 serving), "Rice Dal" (1.5 serving).
-  // "Add food" button.
-  // "Save as Custom Meal".
+  late String _selectedMealType;
+  late double _calories;
 
-  // This implies QuickLogPage is actually the "Create/Review Meal" page where you can adjust portions.
-  // But for "Add Calories" direct, maybe it's just the slider?
-  // Let's implement the UI from Image 4 as "LogMealPage".
+  // List of foods for this scratchpad log
+  final List<FoodItem> _addedFoods = [];
+
+  final List<String> _mealTypes = [
+    'Breakfast',
+    'Lunch',
+    'Dinner',
+    'Morning Snack',
+    'Afternoon Snack',
+    'Evening Snack',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMealType = widget.mealType;
+    _calories = 272; // Default starting value or 0?
+    // Design showed 272, let's keep it adjustable.
+
+    // Ensure library is loaded
+    context.read<MealBloc>().add(LoadUserLibrary());
+  }
+
+  void _addFood() async {
+    final mealBloc = context.read<MealBloc>();
+
+    final FoodItem? selectedFood = await showModalBottomSheet<FoodItem>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return BlocProvider.value(
+          value: mealBloc,
+          child: Builder(
+            builder: (context) {
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        'Select from My Food',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: BlocBuilder<MealBloc, MealState>(
+                        builder: (context, state) {
+                          List<FoodItem> foods = [];
+                          // Assuming library is loaded (MealListingPage called LoadUserLibrary)
+                          if (state is UserLibraryLoaded) {
+                            foods = state.foods;
+                          }
+                          // If empty/loading, show Add New
+                          if (foods.isEmpty) {
+                            return Center(
+                              child: TextButton.icon(
+                                onPressed: () async {
+                                  Navigator.pop(context);
+                                  // Navigate to AddFoodPage
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => BlocProvider.value(
+                                        value: mealBloc,
+                                        child: const AddFoodPage(),
+                                      ),
+                                    ),
+                                  ).then((res) {
+                                    if (res != null && res is FoodItem) {
+                                      if (mounted) {
+                                        setState(() {
+                                          _addedFoods.add(res);
+                                          _calories +=
+                                              res.calories * res.quantity;
+                                        });
+                                      }
+                                    }
+                                  });
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text('Create New Food'),
+                              ),
+                            );
+                          }
+                          return ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            itemCount: foods.length,
+                            separatorBuilder: (_, __) => const Divider(),
+                            itemBuilder: (context, index) {
+                              final food = foods[index];
+                              return ListTile(
+                                title: Text(food.name),
+                                subtitle: Text(
+                                  '${food.calories.toStringAsFixed(0)} kcal',
+                                ),
+                                trailing: const Icon(
+                                  Icons.add_circle_outline,
+                                  color: Color(0xFFE93448),
+                                ),
+                                onTap: () => Navigator.pop(context, food),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    if (selectedFood != null) {
+      setState(() {
+        _addedFoods.add(selectedFood);
+        // Let's add food calories to the slider value for convenience.
+        _calories += selectedFood.calories * selectedFood.quantity;
+      });
+    }
+  }
+
+  void _updateFoodQuantity(int index, int delta) {
+    setState(() {
+      final item = _addedFoods[index];
+      final newQuantity = item.quantity + delta;
+      if (newQuantity > 0) {
+        // Adjust slider diff
+        final diff = (newQuantity - item.quantity) * item.calories;
+        _calories += diff;
+
+        _addedFoods[index] = item.copyWith(quantity: newQuantity);
+      }
+    });
+  }
+
+  void _logMeal() {
+    // Logic: calculate total from foods.
+    // For now, let's treat it as: Items are specific, and total calories is the slider value (user can override).
+
+    final log = MealLog(
+      id: const Uuid().v4(),
+      userId: '',
+      timestamp: DateTime.now(),
+      mealType: _selectedMealType,
+      items: _addedFoods,
+      userMealIds:
+          [], // We aren't selecting meals here, unless 'Save as Custom Meal' was clicked separately.
+      totalCalories: _calories, // User adjusted total
+      createdAt: DateTime.now(),
+    );
+
+    context.read<MealBloc>().add(LogMealEvent(log));
+    Navigator.pop(context, true);
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Current Time formatted
+    final timeString = DateFormat('h:mm a').format(DateTime.now());
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -37,16 +203,14 @@ class _QuickLogPageState extends State<QuickLogPage> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        centerTitle:
-            false, // "Log Meal" on left? Design has Back < Log Meal(red)
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Meal Type Badge
+            // Meal Type Dropdown (Custom styled)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFFE93448),
                 borderRadius: BorderRadius.circular(20),
@@ -58,23 +222,36 @@ class _QuickLogPageState extends State<QuickLogPage> {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.mealType,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedMealType,
+                  dropdownColor: const Color(0xFFE93448),
+                  icon: const Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.white,
                     size: 18,
                   ),
-                ],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit', // Assuming global font
+                  ),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedMealType = newValue;
+                      });
+                    }
+                  },
+                  items: _mealTypes.map<DropdownMenuItem<String>>((
+                    String value,
+                  ) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
 
@@ -97,7 +274,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '3:56 pm',
+                    timeString, // Dynamic time
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                   ),
                 ],
@@ -142,33 +319,46 @@ class _QuickLogPageState extends State<QuickLogPage> {
                       ),
                     ],
                   ),
+                  // Showing macro summary of added foods
                   const SizedBox(height: 8),
-                  const Text(
-                    'Carb 0 g  •  Fat 0 g  •  Protein 0 g',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  Builder(
+                    builder: (context) {
+                      double carbs = 0, fat = 0, protein = 0;
+                      for (var f in _addedFoods) {
+                        carbs += f.carbs * f.quantity;
+                        fat += f.fat * f.quantity;
+                        protein += f.protein * f.quantity;
+                      }
+                      return Text(
+                        'Carb ${carbs.toStringAsFixed(0)} g  •  Fat ${fat.toStringAsFixed(0)} g  •  Protein ${protein.toStringAsFixed(0)} g',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
 
                   // Slider
                   Row(
                     children: [
-                      // Custom Slider needs to be implemented or use native
                       Expanded(
                         child: SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: const Color(0xFFE93448),
                             inactiveTrackColor: Colors.grey.shade200,
                             thumbColor: Colors.white,
+                            trackHeight: 6,
                             thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 12,
+                              enabledThumbRadius: 10,
                               elevation: 2,
-                            ), // Ring effect?
-                            // overlayColor: ...
+                            ),
                           ),
                           child: Slider(
-                            value: _calories,
+                            value: _calories.clamp(0.0, 3000.0), // Safe clamp
                             min: 0,
-                            max: 2000,
+                            max: 3000,
                             onChanged: (val) => setState(() => _calories = val),
                           ),
                         ),
@@ -183,11 +373,11 @@ class _QuickLogPageState extends State<QuickLogPage> {
                         style: TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                       Text(
-                        '1000',
+                        '1500',
                         style: TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                       Text(
-                        '2000',
+                        '3000',
                         style: TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                     ],
@@ -199,90 +389,85 @@ class _QuickLogPageState extends State<QuickLogPage> {
             const SizedBox(height: 24),
 
             // Food List Container
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Item 1
-                  _buildFoodItemRow('Dh', '22 kcal, 1.5 serving'),
-                  const Divider(),
-                  // Item 2
-                  _buildFoodItemRow(
-                    'Rice Dal with cauliflower',
-                    '22 kcal, 1.5 serving',
-                  ),
-                  const SizedBox(height: 16),
-                  // Add Food Button
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate to AddFood or Search
-                    },
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            color: Color(0xFFE93448),
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Add food',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+            if (_addedFoods.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    ..._addedFoods.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final food = entry.value;
+                      return Column(
+                        children: [
+                          _buildFoodItemRow(
+                            food.name,
+                            '${(food.calories * food.quantity).toStringAsFixed(0)} kcal, ${food.servingSize}',
+                            index,
+                            food.quantity,
+                          ),
+                          if (index < _addedFoods.length - 1) const Divider(),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
+            if (_addedFoods.isNotEmpty) const SizedBox(height: 24),
+
+            GestureDetector(
+              onTap: _addFood,
+              child: Container(
+                padding: const EdgeInsets.all(16), // Bigger touch area
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add,
+                        color: Color(0xFFE93448),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Add food',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
             const SizedBox(height: 24),
-
-            // Save as Custom Meal Button
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                // shadow? Design shows white button "Save as Custom Meal"
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Text(
-                  'Save as Custom Meal',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF131313),
-                  ),
-                ),
-              ),
-            ),
 
             const SizedBox(height: 24),
 
@@ -291,10 +476,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  // Save Log
-                  Navigator.pop(context, true);
-                },
+                onPressed: _logMeal,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE93448),
                   shape: RoundedRectangleBorder(
@@ -316,7 +498,12 @@ class _QuickLogPageState extends State<QuickLogPage> {
     );
   }
 
-  Widget _buildFoodItemRow(String name, String subtitle) {
+  Widget _buildFoodItemRow(
+    String name,
+    String subtitle,
+    int index,
+    int quantity,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -341,28 +528,56 @@ class _QuickLogPageState extends State<QuickLogPage> {
             ),
           ),
           // Stepper
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              shape: BoxShape.circle,
+          GestureDetector(
+            onTap: () => _updateFoodQuantity(index, -1),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(4),
+              child: const Icon(Icons.remove, size: 16, color: Colors.grey),
             ),
-            padding: const EdgeInsets.all(4),
-            child: const Icon(Icons.remove, size: 16, color: Colors.grey),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            child: Text('1', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              shape: BoxShape.circle,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '$quantity',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            padding: const EdgeInsets.all(4),
-            child: const Icon(Icons.add, size: 16, color: Colors.grey),
+          ),
+          GestureDetector(
+            onTap: () => _updateFoodQuantity(index, 1),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(4),
+              child: const Icon(Icons.add, size: 16, color: Colors.grey),
+            ),
+          ),
+          const SizedBox(width: 16),
+          IconButton(
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.delete_outline, color: Colors.grey),
+            onPressed: () => _removeFood(index),
           ),
         ],
       ),
     );
+  }
+
+  void _removeFood(int index) {
+    setState(() {
+      final item = _addedFoods[index];
+      // Subtract calories
+      final diff = item.calories * item.quantity;
+      if (_calories >= diff) {
+        _calories -= diff;
+      }
+      _addedFoods.removeAt(index);
+    });
   }
 }

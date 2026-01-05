@@ -119,6 +119,16 @@ class _CreateMealPageState extends State<CreateMealPage> {
     }
   }
 
+  void _updateFoodQuantity(int index, int delta) {
+    setState(() {
+      final item = _addedFoods[index];
+      final newQuantity = item.quantity + delta;
+      if (newQuantity > 0) {
+        _addedFoods[index] = item.copyWith(quantity: newQuantity);
+      }
+    });
+  }
+
   void _saveMeal() {
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(
@@ -134,12 +144,24 @@ class _CreateMealPageState extends State<CreateMealPage> {
       return;
     }
 
+    // Recalculate total calories based on quantities
+    // Note: FoodItem.calories is per unit/serving usually?
+    // If FoodItem.calories is 'per serving', then total = calories * quantity.
+    // If FoodItem.calories is 'per 100g', we need logic.
+    // Assuming FoodItem.calories is for the defined 'quantity' (usually 1 serving).
+    // Let's assume calories in FoodItem is unit calories.
+
+    double totalCals = 0;
+    for (var f in _addedFoods) {
+      totalCals += (f.calories * f.quantity);
+    }
+
     final meal = UserMeal(
       id: const Uuid().v4(),
       name: _nameController.text.trim(),
-      foodIds: _addedFoods.map((f) => f.id).toList(),
-      totalCalories: _totalCalories,
-      creatorId: '', // Set by backend/repo based on auth
+      foods: _addedFoods, // Store full food items
+      totalCalories: totalCals,
+      creatorId: '',
     );
 
     context.read<MealBloc>().add(AddUserMeal(meal));
@@ -248,34 +270,84 @@ class _CreateMealPageState extends State<CreateMealPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  food.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  '${(food.calories * food.quantity).toStringAsFixed(0)} kcal', // Show total for quantity
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Quantity Controls
+                          Row(
                             children: [
-                              Text(
-                                food.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
+                              GestureDetector(
+                                onTap: () => _updateFoodQuantity(index, -1),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.remove,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ),
-                              Text(
-                                '${food.calories.toStringAsFixed(0)} kcal',
-                                style: const TextStyle(
-                                  fontSize: 12,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Text('${food.quantity}'),
+                              ),
+                              GestureDetector(
+                                onTap: () => _updateFoodQuantity(index, 1),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.add,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              IconButton(
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(
+                                  Icons.delete_outline,
                                   color: Colors.grey,
                                 ),
+                                onPressed: () {
+                                  setState(() {
+                                    _addedFoods.removeAt(index);
+                                  });
+                                },
                               ),
                             ],
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.remove_circle_outline,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _addedFoods.removeAt(index);
-                              });
-                            },
                           ),
                         ],
                       ),

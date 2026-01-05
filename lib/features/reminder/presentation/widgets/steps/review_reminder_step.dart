@@ -123,7 +123,10 @@ class ReviewReminderStep extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '$category, $quantity $unit${time != null ? ' at $time' : ''}',
+          (category.toLowerCase() == 'workout' ||
+                  category.toLowerCase() == 'activity')
+              ? '$category${time != null ? ' at $time' : ''}'
+              : '$category, $quantity $unit${time != null ? ' at $time' : ''}',
           style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
         const SizedBox(height: 30),
