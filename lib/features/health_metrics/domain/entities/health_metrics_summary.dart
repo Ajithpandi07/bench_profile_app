@@ -40,6 +40,9 @@ class HealthMetricsSummary extends Equatable {
   final MetricValue? bloodPressureDiastolic;
   final MetricValue? bodyTemperature;
   final MetricValue? bloodGlucose;
+  final MetricValue? mealCount;
+  final MetricValue? mealGoal;
+  final MetricValue? waterGoal;
 
   const HealthMetricsSummary({
     required this.timestamp,
@@ -63,10 +66,68 @@ class HealthMetricsSummary extends Equatable {
     this.bloodPressureDiastolic,
     this.bodyTemperature,
     this.bloodGlucose,
+    this.mealCount,
+    this.mealGoal,
+    this.waterGoal,
   });
 
+  HealthMetricsSummary copyWith({
+    DateTime? timestamp,
+    String? source,
+    MetricValue? steps,
+    MetricValue? heartRate,
+    MetricValue? weight,
+    MetricValue? height,
+    MetricValue? activeEnergyBurned,
+    MetricValue? sleepAsleep,
+    MetricValue? sleepAwake,
+    MetricValue? water,
+    MetricValue? bloodOxygen,
+    MetricValue? basalEnergyBurned,
+    MetricValue? flightsClimbed,
+    MetricValue? sleepDeep,
+    MetricValue? sleepLight,
+    MetricValue? sleepRem,
+    MetricValue? bodyFatPercentage,
+    MetricValue? bloodPressureSystolic,
+    MetricValue? bloodPressureDiastolic,
+    MetricValue? bodyTemperature,
+    MetricValue? bloodGlucose,
+    MetricValue? mealCount,
+    MetricValue? mealGoal,
+    MetricValue? waterGoal,
+  }) {
+    return HealthMetricsSummary(
+      timestamp: timestamp ?? this.timestamp,
+      source: source ?? this.source,
+      steps: steps ?? this.steps,
+      heartRate: heartRate ?? this.heartRate,
+      weight: weight ?? this.weight,
+      height: height ?? this.height,
+      activeEnergyBurned: activeEnergyBurned ?? this.activeEnergyBurned,
+      sleepAsleep: sleepAsleep ?? this.sleepAsleep,
+      sleepAwake: sleepAwake ?? this.sleepAwake,
+      water: water ?? this.water,
+      bloodOxygen: bloodOxygen ?? this.bloodOxygen,
+      basalEnergyBurned: basalEnergyBurned ?? this.basalEnergyBurned,
+      flightsClimbed: flightsClimbed ?? this.flightsClimbed,
+      sleepDeep: sleepDeep ?? this.sleepDeep,
+      sleepLight: sleepLight ?? this.sleepLight,
+      sleepRem: sleepRem ?? this.sleepRem,
+      bodyFatPercentage: bodyFatPercentage ?? this.bodyFatPercentage,
+      bloodPressureSystolic:
+          bloodPressureSystolic ?? this.bloodPressureSystolic,
+      bloodPressureDiastolic:
+          bloodPressureDiastolic ?? this.bloodPressureDiastolic,
+      bodyTemperature: bodyTemperature ?? this.bodyTemperature,
+      bloodGlucose: bloodGlucose ?? this.bloodGlucose,
+    );
+  }
+
   factory HealthMetricsSummary.fromMap(
-      Map<String, dynamic> map, DateTime date) {
+    Map<String, dynamic> map,
+    DateTime date,
+  ) {
     // Helper to safely convert map value {value, unit} or just value to MetricValue?
     MetricValue? toMetric(dynamic data) {
       if (data == null) return null;
@@ -74,7 +135,9 @@ class HealthMetricsSummary extends Equatable {
       // If the aggregator put a Map here directly (unlikely but possible if JSON serialized)
       if (data is Map) {
         return MetricValue(
-            (data['value'] as num).toDouble(), data['unit'] as String? ?? '');
+          (data['value'] as num).toDouble(),
+          data['unit'] as String? ?? '',
+        );
       }
       // Fallback for raw numbers (legacy/testing support) - assume generic unit or empty
       if (data is num) {
@@ -90,8 +153,9 @@ class HealthMetricsSummary extends Equatable {
       heartRate: toMetric(map[HealthDataType.HEART_RATE.name]),
       weight: toMetric(map[HealthDataType.WEIGHT.name]),
       height: toMetric(map[HealthDataType.HEIGHT.name]),
-      activeEnergyBurned:
-          toMetric(map[HealthDataType.ACTIVE_ENERGY_BURNED.name]),
+      activeEnergyBurned: toMetric(
+        map[HealthDataType.ACTIVE_ENERGY_BURNED.name],
+      ),
       sleepAsleep: toMetric(map[HealthDataType.SLEEP_ASLEEP.name]),
       sleepAwake: toMetric(map[HealthDataType.SLEEP_AWAKE.name]),
       water: toMetric(map[HealthDataType.WATER.name]),
@@ -102,10 +166,12 @@ class HealthMetricsSummary extends Equatable {
       sleepLight: toMetric(map['sleepLight']),
       sleepRem: toMetric(map['sleepRem']),
       bodyFatPercentage: toMetric(map[HealthDataType.BODY_FAT_PERCENTAGE.name]),
-      bloodPressureSystolic:
-          toMetric(map[HealthDataType.BLOOD_PRESSURE_SYSTOLIC.name]),
-      bloodPressureDiastolic:
-          toMetric(map[HealthDataType.BLOOD_PRESSURE_DIASTOLIC.name]),
+      bloodPressureSystolic: toMetric(
+        map[HealthDataType.BLOOD_PRESSURE_SYSTOLIC.name],
+      ),
+      bloodPressureDiastolic: toMetric(
+        map[HealthDataType.BLOOD_PRESSURE_DIASTOLIC.name],
+      ),
       bodyTemperature: toMetric(map[HealthDataType.BODY_TEMPERATURE.name]),
       bloodGlucose: toMetric(map[HealthDataType.BLOOD_GLUCOSE.name]),
     );
@@ -113,26 +179,26 @@ class HealthMetricsSummary extends Equatable {
 
   @override
   List<Object?> get props => [
-        timestamp,
-        source,
-        steps,
-        heartRate,
-        weight,
-        height,
-        activeEnergyBurned,
-        sleepAsleep,
-        sleepAwake,
-        water,
-        bloodOxygen,
-        basalEnergyBurned,
-        flightsClimbed,
-        sleepDeep,
-        sleepLight,
-        sleepRem,
-        bodyFatPercentage,
-        bloodPressureSystolic,
-        bloodPressureDiastolic,
-        bodyTemperature,
-        bloodGlucose,
-      ];
+    timestamp,
+    source,
+    steps,
+    heartRate,
+    weight,
+    height,
+    activeEnergyBurned,
+    sleepAsleep,
+    sleepAwake,
+    water,
+    bloodOxygen,
+    basalEnergyBurned,
+    flightsClimbed,
+    sleepDeep,
+    sleepLight,
+    sleepRem,
+    bodyFatPercentage,
+    bloodPressureSystolic,
+    bloodPressureDiastolic,
+    bodyTemperature,
+    bloodGlucose,
+  ];
 }

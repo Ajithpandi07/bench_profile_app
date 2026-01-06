@@ -170,6 +170,15 @@ class MockHealthMetricsLocalDataSource extends _i1.Mock
         returnValue: _i3.Future<void>.value(),
         returnValueForMissingStub: _i3.Future<void>.value(),
       ) as _i3.Future<void>);
+
+  @override
+  _i3.Future<bool> hasAnyMetrics() => (super.noSuchMethod(
+        Invocation.method(
+          #hasAnyMetrics,
+          [],
+        ),
+        returnValue: _i3.Future<bool>.value(false),
+      ) as _i3.Future<bool>);
 }
 
 /// A class which mocks [HealthMetricsRemoteDataSource].

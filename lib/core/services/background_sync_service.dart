@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'dart:async';
+import '../../firebase_options.dart';
 
 const String healthDataSyncTask =
     "com.example.bench_profile_app.syncPastHealthData";
@@ -25,7 +26,9 @@ void callbackDispatcher() {
     try {
       await _bgLog('Initializing Firebase...');
       // Initialize Firebase inside the background isolate.
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       await _bgLog('Firebase initialized.');
 
       await _bgLog('Initializing dependencies for background...');

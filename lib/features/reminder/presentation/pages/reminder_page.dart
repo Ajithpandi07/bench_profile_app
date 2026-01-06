@@ -1,0 +1,373 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import '../widgets/reminder_list_shimmer.dart';
+
+import '../bloc/reminder_bloc.dart';
+import '../bloc/reminder_state.dart';
+import '../bloc/reminder_event.dart';
+import '../widgets/add_reminder_modal.dart';
+import '../../../../../core/presentation/widgets/app_date_selector.dart';
+
+import '../widgets/reminder_item_card.dart';
+import '../widgets/primary_button.dart';
+import '../../../../core/services/app_theme.dart';
+import '../../../../core/utils/snackbar_utils.dart';
+
+class ReminderPage extends StatefulWidget {
+  final String? initialCategory; // Added support for initialCategory
+
+  const ReminderPage({super.key, this.initialCategory});
+
+  @override
+  State<ReminderPage> createState() => _ReminderPageState();
+}
+
+class _ReminderPageState extends State<ReminderPage> {
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ReminderBloc>().add(
+      LoadReminders(selectedDate: _selectedDate),
+    );
+    // Ensure notifications are in sync with the DB (e.g. after reinstall or clear data)
+    context.read<ReminderBloc>().add(RescheduleAllNotifications());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        leading: Container(
+          margin: const EdgeInsets.only(left: 16),
+          child: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Colors.black,
+              size: 20,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        title: const Text(
+          'Reminder',
+          style: TextStyle(
+            color: AppTheme.primaryColor, // Red title as per design
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add, color: AppTheme.primaryColor, size: 28),
+            onPressed: () {
+              final reminderBloc = context.read<ReminderBloc>();
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => BlocProvider.value(
+                  value: reminderBloc,
+                  child: AddReminderModal(
+                    initialCategory: widget.initialCategory, // Pass it here
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.info_outline,
+              color: AppTheme.primaryColor,
+              size: 26,
+            ),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: BlocListener<ReminderBloc, ReminderState>(
+        listener: (context, state) {
+          if (state is ReminderOperationSuccess) {
+            showModernSnackbar(context, state.message);
+          } else if (state is ReminderError) {
+            showModernSnackbar(context, state.message, isError: true);
+          }
+        },
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 2),
+                // App Date Selector (Shared)
+                AppDateSelector(
+                  selectedDate: _selectedDate,
+                  onDateSelected: (date) {
+                    setState(() {
+                      _selectedDate = date;
+                    });
+                    context.read<ReminderBloc>().add(
+                      LoadReminders(selectedDate: date),
+                    );
+                  },
+                ),
+                const SizedBox(height: 5),
+                // Reminders List
+                Expanded(
+                  child: BlocBuilder<ReminderBloc, ReminderState>(
+                    builder: (context, state) {
+                      if (state is ReminderLoading) {
+                        return const ReminderListShimmer();
+                      } else if (state is ReminderLoaded) {
+                        if (state.reminders.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No reminders for today',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: state.reminders.length,
+                          itemBuilder: (context, index) {
+                            final reminder = state.reminders[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Slidable(
+                                key: Key(reminder.id),
+                                endActionPane: ActionPane(
+                                  motion: const ScrollMotion(),
+                                  extentRatio:
+                                      0.5, // Total width for actions (approx 25% each if 2 actions)
+                                  children: [
+                                    SlidableAction(
+                                      onPressed: (context) {
+                                        final reminderBloc = context
+                                            .read<ReminderBloc>();
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (context) =>
+                                              BlocProvider.value(
+                                                value: reminderBloc,
+                                                child: AddReminderModal(
+                                                  initialStep:
+                                                      2, // Start at Review step
+                                                  reminderId: reminder.id,
+                                                  initialName: reminder.name,
+                                                  initialCategory:
+                                                      reminder.category,
+                                                  initialQuantity:
+                                                      reminder.quantity,
+                                                  initialUnit: reminder.unit,
+                                                  initialScheduleType:
+                                                      reminder.scheduleType,
+                                                  initialStartDate:
+                                                      reminder.startDate,
+                                                  initialEndDate:
+                                                      reminder.endDate,
+                                                  initialTime: reminder
+                                                      .time, // Pass time here
+                                                  initialSmartReminder:
+                                                      reminder.smartReminder,
+                                                ),
+                                              ),
+                                        );
+                                      },
+                                      backgroundColor: Colors.grey.shade400,
+                                      foregroundColor: Colors.white,
+                                      icon: Icons.edit_square,
+                                      label: 'Edit',
+                                    ),
+                                    SlidableAction(
+                                      onPressed: (slidableContext) async {
+                                        // Capture the correct context and bloc before showing dialog
+                                        final scaffoldContext = context;
+                                        final reminderBloc = scaffoldContext
+                                            .read<ReminderBloc>();
+
+                                        print(
+                                          'DEBUG UI: Delete action pressed for reminder: ${reminder.id}',
+                                        );
+                                        final shouldDelete = await showDialog<bool>(
+                                          context: scaffoldContext,
+                                          builder: (BuildContext dialogContext) {
+                                            return AlertDialog(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(15),
+                                              ),
+                                              title: const Text(
+                                                "Delete Reminder",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              content: const Text(
+                                                "Are you sure you want to delete this reminder?",
+                                              ),
+                                              actions: <Widget>[
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    dialogContext,
+                                                  ).pop(false),
+                                                  child: const Text(
+                                                    "Cancel",
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    dialogContext,
+                                                  ).pop(true),
+                                                  child: const Text(
+                                                    "Delete",
+                                                    style: TextStyle(
+                                                      color:
+                                                          AppTheme.primaryColor,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+
+                                        print(
+                                          'DEBUG UI: Dialog result - shouldDelete: $shouldDelete',
+                                        );
+                                        if (shouldDelete == true) {
+                                          print(
+                                            'DEBUG UI: Dispatching DeleteReminder event for ID: ${reminder.id}',
+                                          );
+                                          reminderBloc.add(
+                                            DeleteReminder(reminder.id),
+                                          );
+                                          print(
+                                            'DEBUG UI: DeleteReminder event dispatched',
+                                          );
+                                        } else {
+                                          print(
+                                            'DEBUG UI: Delete cancelled by user',
+                                          );
+                                        }
+                                      },
+                                      backgroundColor: AppTheme.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      icon: Icons.delete,
+                                      label: 'Delete',
+                                      borderRadius: const BorderRadius.only(
+                                        topRight: Radius.circular(20),
+                                        bottomRight: Radius.circular(20),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                child: ReminderItemCard(
+                                  title: reminder.name.isNotEmpty
+                                      ? reminder.name
+                                      : 'Reminder',
+                                  subtitle:
+                                      (reminder.category.toLowerCase() ==
+                                              'workout' ||
+                                          reminder.category.toLowerCase() ==
+                                              'activity')
+                                      ? '' // No quantity/unit for workout categories
+                                      : '${reminder.quantity} ${reminder.unit}',
+                                  scheduleType: reminder.scheduleType,
+                                  time: reminder.time, // Passing time
+                                  icon: _getIconForCategory(reminder.category),
+                                  color: _getColorForCategory(
+                                    reminder.category,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      } else if (state is ReminderError) {
+                        return Center(child: Text(state.message));
+                      }
+                      return const SizedBox();
+                    },
+                  ),
+                ),
+                // Add Reminder Button (Bottom)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0, top: 16),
+                  child: Center(
+                    child: PrimaryButton(
+                      text: 'Add Reminder',
+                      fontSize: 14,
+                      onPressed: () {
+                        final reminderBloc = context.read<ReminderBloc>();
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => BlocProvider.value(
+                            value: reminderBloc,
+                            child: AddReminderModal(
+                              initialCategory:
+                                  widget.initialCategory, // Use passed category
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getIconForCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'water':
+        return Icons.water_drop;
+      case 'food':
+      case 'meal': // Added meal
+        return Icons.restaurant;
+      case 'workout':
+      case 'activity':
+        return Icons.directions_run;
+      case 'medication':
+      case 'medicine':
+        return Icons.medication;
+      default:
+        return Icons.notifications;
+    }
+  }
+
+  Color _getColorForCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'water':
+        return Colors.blue;
+      case 'food':
+      case 'meal': // Added meal
+        return Colors.green;
+      case 'workout':
+      case 'activity':
+        return Colors.orange;
+      case 'medication':
+        return Colors.red;
+      default:
+        return AppTheme.primaryColor;
+    }
+  }
+}

@@ -24,21 +24,39 @@ class HealthMetricsLoaded extends HealthMetricsState {
   final HealthMetricsSummary? summary;
   final bool isSyncing;
 
+  // Goal/Reminder Data
+  final int mealCount;
+  final int mealGoal;
+  final double waterGoal;
+
   const HealthMetricsLoaded({
     required this.metrics,
     this.summary,
     this.isSyncing = false,
+    this.mealCount = 0,
+    this.mealGoal = 0,
+    this.waterGoal = 0,
     required super.selectedDate,
   });
 
   @override
-  List<Object?> get props => [metrics, summary, selectedDate, isSyncing];
+  List<Object?> get props => [
+    metrics,
+    summary,
+    selectedDate,
+    isSyncing,
+    mealCount,
+    mealGoal,
+    waterGoal,
+  ];
 }
 
 class HealthMetricsError extends HealthMetricsState {
   final String message;
-  const HealthMetricsError(
-      {required this.message, required super.selectedDate});
+  const HealthMetricsError({
+    required this.message,
+    required super.selectedDate,
+  });
 
   @override
   List<Object?> get props => [message, selectedDate];

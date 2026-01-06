@@ -5,11 +5,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/core.dart';
+import '../../../../core/injection_container.dart';
 import '../../../auth/auth.dart';
 
 import '../bloc/bloc.dart';
 import '../widgets/widgets.dart';
 import '../../domain/entities/entities.dart';
+import '../../../reminder/reminder.dart';
+
+import '../../../hydration/presentation/pages/hydration_tracker_page.dart';
+import '../../../hydration/presentation/bloc/bloc.dart';
+import '../../../meals/presentation/widgets/meal_type_selector.dart';
+import '../../../meals/presentation/pages/meal_listing_page.dart';
+import '../../../meals/presentation/pages/quick_log_page.dart';
+import '../../../meals/presentation/bloc/bloc.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -28,7 +37,7 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
     WidgetsBinding.instance.addObserver(this);
     // Trigger initial fetch when dashboard mounts
     context.read<HealthMetricsBloc>().add(GetMetricsForDate(DateTime.now()));
-    // Automatically trigger restore/sync on load (delayed to allow initial load to settle)
+    // Automatically trigger restore/sync on load (safe check for empty local data)
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         context.read<HealthMetricsBloc>().add(const RestoreAllData());
@@ -49,9 +58,9 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
       // But only if this page is actually visible (top of stack)
       // If we are in Detail Page, that page will handle its own lifecycle if needed.
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
-        context
-            .read<HealthMetricsBloc>()
-            .add(GetMetricsForDate(DateTime.now()));
+        context.read<HealthMetricsBloc>().add(
+          GetMetricsForDate(DateTime.now()),
+        );
       }
     }
   }
@@ -82,7 +91,7 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
           }
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFFF8F8F8),
+          backgroundColor: Colors.white,
           appBar: _buildAppBar(),
           body: Stack(
             children: [
@@ -130,7 +139,8 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
           padding: const EdgeInsets.only(right: 24.0),
           child: BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
             builder: (context, state) {
-              final bool isSyncing = state is HealthMetricsSyncing ||
+              final bool isSyncing =
+                  state is HealthMetricsSyncing ||
                   (state is HealthMetricsLoaded && state.isSyncing);
 
               if (isSyncing) {
@@ -142,33 +152,22 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                          Color.fromARGB(255, 19, 19, 19)),
+                        Color.fromARGB(255, 19, 19, 19),
+                      ),
                     ),
                   ),
                 );
               }
-              return CircleAvatar(
-                radius: 20,
-                backgroundColor: AppTheme.primaryLight,
-                child: Builder(
-                  builder: (context) {
-                    String initial = 'U';
-                    try {
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user?.email?.isNotEmpty == true) {
-                        initial = user!.email![0].toUpperCase();
-                      }
-                    } catch (_) {}
-
-                    return Text(
-                      initial,
-                      style: const TextStyle(
-                        color: Color.fromARGB(255, 19, 19, 19),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    );
-                  },
+              return Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFD9D9D9),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.transparent,
+                  backgroundImage: AssetImage('assets/images/user_avatar.png'),
                 ),
               );
             },
@@ -222,8 +221,15 @@ class _HomeTab extends StatelessWidget {
     return BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
       builder: (context, state) {
         HealthMetricsSummary? metrics;
+        int mealCount = 0;
+        int mealGoal = 3;
+        double waterGoal = 3.2;
+
         if (state is HealthMetricsLoaded) {
           metrics = state.summary;
+          mealCount = state.mealCount;
+          mealGoal = state.mealGoal;
+          waterGoal = state.waterGoal;
         }
 
         // Persistent Permission State UI
@@ -239,140 +245,296 @@ class _HomeTab extends StatelessWidget {
           value: SystemUiOverlayStyle.dark,
           child: Stack(
             children: [
-              // Massive Background Single Circle - Concentric with Card
-              Positioned(
-                top: cardCenterY - size.width, // CenterY - Radius
-                left: -size.width * 0.5,
-                right: -size.width * 0.5,
-                height: size.width * 1.50, // Radius = width
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: primaryColor.withOpacity(0.08),
-                      width: 1.5,
-                    ),
-                    gradient: RadialGradient(
-                      colors: [
-                        Color.fromARGB(255, 207, 2, 153).withOpacity(
-                            0.08), // Increased opacity for visibility
-                        Color.fromARGB(255, 147, 21, 21).withOpacity(0.02),
-                      ],
-                      stops: const [0.7, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: cardCenterY - size.width * 1, // CenterY - Radius
-                left: -size.width * 0.5,
-                right: -size.width * 0.5,
-                height: size.width * 1.31, // Radius = width
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: primaryColor.withOpacity(0.08),
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
+              // Main Scrollable Content
 
               // Main Scrollable Content
-              SafeArea(
-                bottom: false,
-                child: RefreshIndicator(
-                  color: primaryColor,
-                  onRefresh: () async {
-                    // Trigger sync manually
-                    context
-                        .read<HealthMetricsBloc>()
-                        .add(const RefreshMetrics());
-                    // Wait briefly for UI feel or until state changes (handled by bloc)
-                    await Future.delayed(const Duration(milliseconds: 1500));
-                  },
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        // Hint text
-
-                        // Header removed (moved to AppBar)
-                        const SizedBox(height: 20),
-
-                        const SizedBox(height: 20),
-
-                        // Circular Progress (Now smaller and tighter)
-                        CircularScoreCard(
-                          metrics: metrics,
-                          goalSteps: 10000,
-                          size:
-                              240, // Reduced from 360 to wrap tightly around 160 button
-                          animateDuration: const Duration(milliseconds: 700),
-                        ),
-
-                        const SizedBox(height: 40), // Spacing to grid
-
-                        // Stats Grid
-                        // Stats Grid - Arced Layout
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 0), // Highest point (outer)
-                                child: _StatItem(
-                                  icon: Icons.restaurant,
-                                  sub: '+',
-                                  val: '0/3',
-                                  unit: '',
+              RefreshIndicator(
+                color: primaryColor,
+                onRefresh: () async {
+                  // Trigger sync manually
+                  context.read<HealthMetricsBloc>().add(const RefreshMetrics());
+                  // Wait briefly for UI feel or until state changes (handled by bloc)
+                  await Future.delayed(const Duration(milliseconds: 1500));
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    top:
+                        MediaQuery.of(context).padding.top +
+                        2, // approximate header space
+                  ),
+                  child: Column(
+                    children: [
+                      // Hint text
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned(
+                            top:
+                                -380, // Align 500 center to 120 (ScoreCard center)
+                            left: 0,
+                            right: 0,
+                            height: 1000,
+                            child: Center(
+                              child: SizedBox(
+                                width: 1000,
+                                height: 1000,
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: ClipPath(
+                                        clipper: _RippleBoxClipper(),
+                                        child: Container(
+                                          color: AppTheme.rippleBackground
+                                              .withOpacity(0.3),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned.fill(
+                                      child: ClipPath(
+                                        clipper: _RippleBoxClipper(),
+                                        child: CustomPaint(
+                                          painter: RippleBackgroundPainter(
+                                            color: primaryColor.withOpacity(
+                                              0.05,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 40), // Lower point (inner)
-                                child: _StatItem(
-                                  icon: Icons.water_drop,
-                                  sub: '+',
-                                  val:
-                                      '${metrics?.water?.value.toStringAsFixed(1) ?? 0}/3.2',
-                                  unit: 'l',
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 40), // Lower point (inner)
-                                child: _StatItem(
-                                  icon: Icons.directions_run,
-                                  sub: '+',
-                                  val:
-                                      '0/${(metrics?.activeEnergyBurned?.value ?? 60).toInt()}',
-                                  unit: 'min',
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 0), // Highest point (outer)
-                                child: _StatItem(
-                                  icon: Icons.calendar_today,
-                                  sub: '+',
-                                  val: 'In 3',
-                                  unit: 'h',
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              children: [
+                                CircularScoreCard(
+                                  metrics: metrics,
+                                  goalSteps: 10000,
+                                  size: 240,
+                                  animateDuration: const Duration(
+                                    milliseconds: 700,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 0,
+                                        ), // Highest point (outer)
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            showModalBottomSheet(
+                                              context: context,
+                                              backgroundColor:
+                                                  Colors.transparent,
+                                              isScrollControlled: true,
+                                              builder: (context) =>
+                                                  const MealTypeSelector(),
+                                            ).then((result) async {
+                                              if (result != null &&
+                                                  result is Map) {
+                                                final type = result['type'];
+                                                if (type == 'ManualCalories') {
+                                                  final result = await Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => BlocProvider(
+                                                        create: (context) =>
+                                                            sl<MealBloc>(),
+                                                        child:
+                                                            const QuickLogPage(
+                                                              mealType: 'Lunch',
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  );
 
-                        // Check-in Card
-                        // const CheckInCard(),
-                      ],
-                    ),
+                                                  if (result == true &&
+                                                      context.mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        behavior:
+                                                            SnackBarBehavior
+                                                                .floating,
+                                                        content: Text(
+                                                          'Meal logged successfully',
+                                                        ),
+                                                        backgroundColor: Color(
+                                                          0xFFE93448,
+                                                        ),
+                                                      ),
+                                                    );
+
+                                                    // Refresh dashboard
+                                                    context
+                                                        .read<
+                                                          HealthMetricsBloc
+                                                        >()
+                                                        .add(
+                                                          const RefreshMetrics(),
+                                                        );
+                                                  }
+                                                } else {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => BlocProvider(
+                                                        create: (context) =>
+                                                            sl<MealBloc>()..add(
+                                                              LoadMealsForDate(
+                                                                DateTime.now(),
+                                                              ),
+                                                            ),
+                                                        child: MealListingPage(
+                                                          mealType: type,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            });
+                                          },
+                                          child: _StatItem(
+                                            icon: Icons.restaurant,
+                                            sub: '+',
+                                            val: '$mealCount/$mealGoal',
+                                            unit: '',
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 40,
+                                        ), // Lower point (inner)
+                                        child: GestureDetector(
+                                          onTap: () async {
+                                            final result = await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    BlocProvider<HydrationBloc>(
+                                                      create: (context) =>
+                                                          sl<HydrationBloc>(),
+                                                      child:
+                                                          const HydrationTrackerPage(),
+                                                    ),
+                                              ),
+                                            );
+
+                                            if (result == true &&
+                                                context.mounted) {
+                                              // Hydration added remotely.
+                                              // We can manually refresh dashboard (might fail if remote not synced back instantly)
+                                              // Or we can assume we want to just fetch or show a message.
+                                              // Since user requested 'Remote Only' logging, the local dashboard might NOT update
+                                              // unless we fetch from Remote.
+                                              // Let's trigger a Sync/Refresh.
+                                              context
+                                                  .read<HealthMetricsBloc>()
+                                                  .add(
+                                                    const RefreshMetrics(),
+                                                  ); // This triggers Sync
+                                            }
+                                          },
+                                          child: _StatItem(
+                                            icon: Icons.water_drop,
+                                            sub: '+',
+                                            val:
+                                                '${metrics?.water?.value.toStringAsFixed(1) ?? '0'}/${waterGoal.toStringAsFixed(1)}',
+                                            unit: 'l', // Fixed unit letter
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 40,
+                                        ), // Lower point (inner)
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    BlocProvider<ReminderBloc>(
+                                                      create: (context) =>
+                                                          sl<ReminderBloc>()
+                                                            ..add(
+                                                              LoadReminders(),
+                                                            ),
+                                                      child: const ReminderPage(
+                                                        initialCategory:
+                                                            'Activity',
+                                                      ),
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: _StatItem(
+                                            icon: Icons.directions_run,
+                                            sub: '+',
+                                            val:
+                                                '0/${(metrics?.activeEnergyBurned?.value ?? 60).toInt()}',
+                                            unit: 'min',
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 0,
+                                        ), // Highest point (outer)
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    BlocProvider<ReminderBloc>(
+                                                      create: (context) =>
+                                                          sl<ReminderBloc>()
+                                                            ..add(
+                                                              LoadReminders(),
+                                                            ),
+                                                      child:
+                                                          const ReminderPage(),
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: _StatItem(
+                                            icon: Icons.calendar_today,
+                                            sub: '+',
+                                            val: 'In 3',
+                                            unit: 'h',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Check-in Card
+                      // const CheckInCard(),
+                    ],
                   ),
                 ),
               ),
@@ -481,5 +643,48 @@ class _StatItem extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _RippleBoxClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    // Defines a curved clipping area for the ripple painter box.
+    // The painter box is 1000x1000.
+    // Box Top (0) aligns with Stack Top -380.
+    // Side items (Meal/Calendar) Bottom ~ 310 -> Visual Y relative to box ~ 690.
+    // Middle items (Water/Activity) Bottom ~ 350 -> Visual Y relative to box ~ 730.
+    // Center logic: Ripple center is 500,500.
+    // We want a nice curve that encompasses the buttons.
+
+    final path = Path();
+    // Start at top-left of visual area? No, we need to fill the top.
+    // So we trace the BOTTOM edge of the shape basically.
+    // The ripple box is BIG (1000x1000). The useful part is the bottom curve.
+    // Top is 0.
+
+    // We draw the shape from Top-Left (0,0) -> Bottom-Left (0, 700) -> Curve -> Bottom-Right (1000, 700) -> Top-Right (1000, 0)
+
+    path.lineTo(0, 650); // Side height (Meal)
+
+    // Cubic allows for a flatter bottom or "squaricle" feel if needed.
+    // We use a cubic curve to create a wider bottom that encompasses the stats buttons better.
+    path.cubicTo(
+      350,
+      870, // Control Point 1
+      650,
+      650, // Control Point 2
+      1000,
+      -1800, // End Point
+    );
+
+    path.lineTo(1000, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
+    return false;
   }
 }

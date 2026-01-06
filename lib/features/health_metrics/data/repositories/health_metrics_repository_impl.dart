@@ -48,7 +48,8 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
 
   @override
   Future<Either<Failure, List<HealthMetrics>>> getCachedMetricsForDate(
-      DateTime date) async {
+    DateTime date,
+  ) async {
     try {
       // Local-First: Return stored data explicitly.
       final localList = await localDataSource.readFromCacheForDate(date);
@@ -74,8 +75,10 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
       try {
         final deviceMaybe = await dataSource.fetchFromDeviceForDate(date);
         deviceList = _normalizeToList(deviceMaybe)
-            .where((m) =>
-                m.dateFrom.isBefore(now) || m.dateFrom.isAtSameMomentAs(now))
+            .where(
+              (m) =>
+                  m.dateFrom.isBefore(now) || m.dateFrom.isAtSameMomentAs(now),
+            )
             .toList();
       } catch (e) {
         if (e is PermissionDeniedException) rethrow;
@@ -86,7 +89,8 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
         // Let's proceed with empty list or whatever we have.
       }
       debugPrint(
-          'Sync: Fetched ${deviceList.length} valid metrics from Device for $date');
+        'Sync: Fetched ${deviceList.length} valid metrics from Device for $date',
+      );
 
       // 2. Pre-processing: Merge with Local Sync Status to avoid duplicates/overwrite
       // Fetch existing local metrics to preserve 'synced' status
@@ -116,7 +120,8 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
             // Maxwell's Demon: Upload only what needs uploading
             if (metricsToUpload.isNotEmpty) {
               debugPrint(
-                  'Sync: Uploading ${metricsToUpload.length} metrics to Remote...');
+                'Sync: Uploading ${metricsToUpload.length} metrics to Remote...',
+              );
               await remoteDataSource.uploadHealthMetrics(metricsToUpload);
               debugPrint('Sync: Upload success. Marking as synced locally.');
               // Mark as synced locally
@@ -128,13 +133,15 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
             }
 
             // Download from Remote (Recovery / Multi-device)
-            final remoteMaybe =
-                await remoteDataSource.getHealthMetricsForDate(date);
+            final remoteMaybe = await remoteDataSource.getHealthMetricsForDate(
+              date,
+            );
             final remoteList = _normalizeToList(remoteMaybe);
 
             if (remoteList.isNotEmpty) {
-              final syncedList =
-                  remoteList.map((m) => m.copyWith(synced: true)).toList();
+              final syncedList = remoteList
+                  .map((m) => m.copyWith(synced: true))
+                  .toList();
               // This might overwrite "fresh" device data with "old" remote data if conflict?
               // Typically Remote is source of truth for history, but Device is source of truth for "now".
               // Since we just uploaded device data, Remote should be up to date.
@@ -151,10 +158,12 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
       return const Right(null);
     } on PermissionDeniedException {
       return const Left(
-          PermissionFailure('Health permissions were not granted.'));
+        PermissionFailure('Health permissions were not granted.'),
+      );
     } on HealthConnectNotInstalledException {
       return const Left(
-          HealthConnectFailure('Health Connect is not installed.'));
+        HealthConnectFailure('Health Connect is not installed.'),
+      );
     } on ServerException catch (e) {
       // If the main flow fails? Actually we caught remote errors above.
       // This catch might catch logic errors.
@@ -171,16 +180,21 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
     List<HealthDataType> types,
   ) async {
     try {
-      final maybeRange =
-          await dataSource.getHealthMetricsRange(start, end, types);
+      final maybeRange = await dataSource.getHealthMetricsRange(
+        start,
+        end,
+        types,
+      );
       final list = _normalizeToList(maybeRange);
       return Right(list);
     } on PermissionDeniedException {
       return const Left(
-          PermissionFailure('Health permissions were not granted.'));
+        PermissionFailure('Health permissions were not granted.'),
+      );
     } on HealthConnectNotInstalledException {
       return const Left(
-          HealthConnectFailure('Health Connect is not installed.'));
+        HealthConnectFailure('Health Connect is not installed.'),
+      );
     } on ServerException {
       return Left(ServerFailure('Failed to fetch data from the server.'));
     } catch (e) {
@@ -190,7 +204,9 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
 
   @override
   Future<Either<Failure, void>> saveHealthMetrics(
-      String uid, List<HealthMetrics> model) async {
+    String uid,
+    List<HealthMetrics> model,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         // Upload to remote
@@ -205,13 +221,19 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
         return const Right(null);
       } on ServerException catch (e) {
         return Left(
-            ServerFailure('Failed to save metrics to remote: ${e.toString()}'));
+          ServerFailure('Failed to save metrics to remote: ${e.toString()}'),
+        );
       } catch (e) {
         return Left(Failure('Unexpected error during save: ${e.toString()}'));
       }
     } else {
-      return const Left(
-          NetworkFailure('No internet connection. Could not save metrics.'));
+      // Offline Mode: Save locally only
+      try {
+        await localDataSource.cacheHealthMetricsBatch(model);
+        return const Right(null);
+      } catch (e) {
+        return Left(CacheFailure('Failed to save locally: ${e.toString()}'));
+      }
     }
   }
 
@@ -223,14 +245,16 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
 
     final today = DateTime.now();
     debugPrint(
-        'Background Sync: Enforcing Today-Only Sync for $today (Device -> Local -> Remote)');
+      'Background Sync: Enforcing Today-Only Sync for $today (Device -> Local -> Remote)',
+    );
 
     return syncMetricsForDate(today);
   }
 
   @override
   Future<Either<Failure, List<HealthMetrics>?>> getStoredHealthMetrics(
-      String uid) async {
+    String uid,
+  ) async {
     try {
       if (!await networkInfo.isConnected) {
         return const Left(NetworkFailure('No internet connection.'));
@@ -315,22 +339,12 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
         return const Left(NetworkFailure('No internet connection.'));
       }
 
-      // Check local emptiness via localDataSource
-      // We assume localDataSource has a method or we rely on 'readFromCache' returning empty for today?
-      // Actually, localDataSource.readFromCacheForDate only checks one date.
-      // We need a 'hasAnyData' or 'count' on localDataSource.
-      // If not present, we can't safely enforce "only if empty" efficiently here without updating LocalDataSource interface.
-      // But for Isar implementation (which is what user is likely using), we did it directly.
-      // For this generic impl, we'll try to implement it safely or just fetch.
-      // Given the user constraint "only if local empty", we should verify.
-      // Let's assume for now we trust the repository call or just implement the fetch-remote-and-save.
-      // Strict correctness: We should add `hasAnyMetrics()` to LocalDataSource.
-      // But to avoid expanded scope refactor now, and assuming `IsarHealthMetricsRepository` is the primary one used (DI injection):
-      // We will implement the fetch but with a Todo or best-effort check if possible.
-      // Or just implement it as "Restore (Overwrite)".
-      // But wait, the user's explicit request was check emptiness.
-      // Since this class `HealthMetricsRepositoryImpl` might not be the active one (user seems to use Isar repo),
-      // we just need to satisfy the compiler.
+      // Local-First Check: Only restore if local DB is empty.
+      final hasLocalData = await localDataSource.hasAnyMetrics();
+      if (hasLocalData) {
+        debugPrint('Restore skipped: Local data already exists.');
+        return const Right(null);
+      }
 
       final remoteMetrics = await remoteDataSource.getAllHealthMetricsForUser();
       if (remoteMetrics.isNotEmpty) {

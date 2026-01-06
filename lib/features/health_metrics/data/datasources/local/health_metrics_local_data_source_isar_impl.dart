@@ -197,4 +197,14 @@ class HealthMetricsLocalDataSourceIsarImpl
       throw CacheException();
     }
   }
+
+  @override
+  Future<bool> hasAnyMetrics() async {
+    try {
+      final count = await _isar.healthMetrics.count();
+      return count > 0;
+    } catch (e) {
+      throw CacheException('Failed to check for metrics: $e');
+    }
+  }
 }
