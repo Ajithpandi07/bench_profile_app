@@ -45,13 +45,8 @@ service cloud.firestore {
     // ---------------------------------------------------------
     // HYDRATION RULES: /bench_profile/{userId}/water_logs/...
     // ---------------------------------------------------------
-    match /bench_profile/{userId}/water_logs/{dateId}/logs/{logId} {
+    match /bench_profile/{userId}/water_logs/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow reading the date documents (for querying)
-    match /bench_profile/{userId}/water_logs/{dateId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
     }
 
     // ---------------------------------------------------------

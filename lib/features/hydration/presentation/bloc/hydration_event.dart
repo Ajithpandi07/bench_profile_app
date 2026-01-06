@@ -16,3 +16,11 @@ class LogHydration extends HydrationEvent {
   @override
   List<Object> get props => [log];
 }
+
+class LoadHydrationLogs extends HydrationEvent {
+  final DateTime date;
+  const LoadHydrationLogs(this.date);
+
+  @override
+  List<Object> get props => [date];
+}

@@ -36,6 +36,21 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .collection('logs')
         .doc(log.id);
 
+    // 1b. Update daily total calories
+    final dateDocRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs')
+        .doc(dateId);
+
+    await dateDocRef.set({
+      'totalCalories': FieldValue.increment(log.totalCalories),
+      'date': Timestamp.fromDate(
+        DateTime(log.timestamp.year, log.timestamp.month, log.timestamp.day),
+      ),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
     // Normalize: Store only necessary fields
     await logRef.set({
       'id': log.id,

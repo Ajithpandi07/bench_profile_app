@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/core.dart';
 import '../features/auth/auth.dart';
+import '../core/navigation/navigator_key.dart';
 
 class BenchApp extends StatelessWidget {
   const BenchApp({super.key});
@@ -17,6 +18,7 @@ class BenchApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeMode,
+          navigatorKey: navigatorKey,
           home: const AuthWrapper(),
         );
       },

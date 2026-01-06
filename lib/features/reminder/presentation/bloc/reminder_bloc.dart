@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:convert';
 import 'reminder_event.dart';
 import 'reminder_state.dart';
 import '../../domain/repositories/reminder_repository.dart';
@@ -271,12 +272,33 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       minute,
     );
 
+    // Determine payload type
+    String type = 'meal';
+
+    // Simple heuristic: check category or name
+    final lowerCat = reminder.category.toLowerCase();
+    final lowerName = reminder.name.toLowerCase();
+    if (lowerCat.contains('water') ||
+        lowerCat.contains('hydration') ||
+        lowerName.contains('water')) {
+      type = 'water';
+    } else {
+      type = 'meal';
+    }
+
+    final payloadMap = {
+      'type': type,
+      'date': scheduledDate.toIso8601String(),
+      'subtype': reminder.name, // Pass name as subtype for Meal defaults
+    };
+
     await _notificationService.scheduleReminder(
       id: reminder.id.hashCode,
       title: 'Time to take ${reminder.name}',
       body: '${reminder.quantity} ${reminder.unit}',
       scheduledDate: scheduledDate,
       scheduleType: reminder.scheduleType,
+      payload: jsonEncode(payloadMap),
     );
   }
 }

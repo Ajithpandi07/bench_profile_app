@@ -12,7 +12,9 @@ import 'review_meal_page.dart';
 
 class MealListingPage extends StatefulWidget {
   final String mealType;
-  const MealListingPage({super.key, required this.mealType});
+  final DateTime? initialDate;
+
+  const MealListingPage({super.key, required this.mealType, this.initialDate});
 
   @override
   State<MealListingPage> createState() => _MealListingPageState();
@@ -73,6 +75,7 @@ class _MealListingPageState extends State<MealListingPage>
             allFoods: context.read<MealBloc>().state is UserLibraryLoaded
                 ? (context.read<MealBloc>().state as UserLibraryLoaded).foods
                 : [],
+            logDate: widget.initialDate,
           ),
         ),
       ),
