@@ -92,10 +92,12 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
         return HydrationLog(
-          id: data['id'],
-          userId: data['userId'],
-          amountLiters: (data['amountLiters'] as num).toDouble(),
-          timestamp: (data['timestamp'] as Timestamp).toDate(),
+          id: data['id'] ?? doc.id,
+          userId: data['userId'] ?? '',
+          amountLiters: (data['amountLiters'] as num?)?.toDouble() ?? 0.0,
+          timestamp: data['timestamp'] != null
+              ? (data['timestamp'] as Timestamp).toDate()
+              : DateTime.now(),
           beverageType: data['beverageType'] ?? 'Regular',
           createdAt: data['createdAt'] != null
               ? (data['createdAt'] as Timestamp).toDate()

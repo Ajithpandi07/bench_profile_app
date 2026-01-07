@@ -244,14 +244,49 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
+    // 1. Fetch User Meals
     final query = await firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('user_meals')
         .get();
 
+    if (query.docs.isEmpty) return [];
+
+    // 2. Fetch User Foods for hydration (legacy support)
+    // We only strictly need this if we encounter docs with 'foodIds' but no 'foods'.
+    // To be safe and ensure robustness, we fetch them.
+    final userFoods = await getUserFoods();
+    final foodMap = {for (var f in userFoods) f.id: f};
+
     return query.docs.map((doc) {
-      return UserMeal.fromMap(doc.data());
+      final data = doc.data();
+
+      // Check if we have the modern 'foods' list structure
+      if (data['foods'] != null && (data['foods'] as List).isNotEmpty) {
+        return UserMeal.fromMap(data);
+      }
+
+      // Legacy Fallback: Hydrate from 'foodIds' if available
+      List<FoodItem> hydratedFoods = [];
+      if (data['foodIds'] != null) {
+        final ids = List<String>.from(data['foodIds'] as List);
+        hydratedFoods = ids
+            .map((id) => foodMap[id])
+            .whereType<FoodItem>()
+            .toList(); // Filter out nulls
+      }
+
+      return UserMeal(
+        id: data['id'] ?? doc.id,
+        name: data['name'] ?? '',
+        foods: hydratedFoods,
+        totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
+        creatorId: data['creatorId'] ?? '',
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : null,
+      );
     }).toList();
   }
 }

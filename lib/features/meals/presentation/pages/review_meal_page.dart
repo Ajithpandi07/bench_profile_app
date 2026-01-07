@@ -582,6 +582,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
@@ -599,6 +600,22 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                   '${meal.totalCalories.toStringAsFixed(0)} kcal (Meal)',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
+                if (meal.foods.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  ...meal.foods.map((food) {
+                    final foodCals = food.calories * food.quantity;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 8.0, bottom: 2.0),
+                      child: Text(
+                        '• ${food.name} (${foodCals.toStringAsFixed(0)} kcal)',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),

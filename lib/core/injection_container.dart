@@ -142,6 +142,7 @@ Future<void> init() async {
         repository: sl<HealthRepository>(),
         mealRepository: sl<MealRepository>(),
         reminderRepository: sl<ReminderRepository>(),
+        hydrationRepository: sl<HydrationRepository>(),
       ),
     );
   }

@@ -8,6 +8,7 @@ import '../../../../core/utils/snackbar_utils.dart';
 import '../../../reminder/presentation/widgets/primary_button.dart';
 import '../../../reminder/presentation/widgets/reminder_item_card.dart'; // Reusing for consistent look
 import '../bloc/bloc.dart';
+import '../widgets/water_list_shimmer.dart';
 import 'hydration_tracker_page.dart';
 
 class WaterReportPage extends StatefulWidget {
@@ -76,11 +77,7 @@ class _WaterReportPageState extends State<WaterReportPage> {
                 child: BlocBuilder<HydrationBloc, HydrationState>(
                   builder: (context, state) {
                     if (state is HydrationLoading) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primaryColor,
-                        ),
-                      );
+                      return const WaterListShimmer();
                     } else if (state is HydrationLogsLoaded) {
                       if (state.logs.isEmpty) {
                         return const Center(

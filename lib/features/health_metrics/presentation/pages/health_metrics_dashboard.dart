@@ -222,12 +222,14 @@ class _HomeTab extends StatelessWidget {
         HealthMetricsSummary? metrics;
         int mealCount = 0;
         int mealGoal = 3;
+        double waterConsumed = 0;
         double waterGoal = 3.2;
 
         if (state is HealthMetricsLoaded) {
           metrics = state.summary;
           mealCount = state.mealCount;
           mealGoal = state.mealGoal;
+          waterConsumed = state.waterConsumed;
           waterGoal = state.waterGoal;
         }
 
@@ -387,7 +389,7 @@ class _HomeTab extends StatelessWidget {
                                             icon: Icons.water_drop,
                                             sub: '+',
                                             val:
-                                                '${metrics?.water?.value.toStringAsFixed(1) ?? '0'}/${waterGoal.toStringAsFixed(1)}',
+                                                '${waterConsumed.toStringAsFixed(1)}/${waterGoal.toStringAsFixed(1)}',
                                             unit: 'l', // Fixed unit letter
                                           ),
                                         ),

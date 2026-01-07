@@ -10,6 +10,7 @@ import '../../../reminder/presentation/widgets/primary_button.dart';
 import '../../../reminder/presentation/widgets/reminder_item_card.dart';
 import '../bloc/bloc.dart';
 import '../widgets/meal_type_selector.dart';
+import '../widgets/meal_report_shimmer.dart';
 import 'meal_listing_page.dart';
 import 'quick_log_page.dart';
 
@@ -79,11 +80,7 @@ class _MealReportPageState extends State<MealReportPage> {
                 child: BlocBuilder<MealBloc, MealState>(
                   builder: (context, state) {
                     if (state is MealLoading) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primaryColor,
-                        ),
-                      );
+                      return const MealReportShimmer();
                     } else if (state is MealsLoaded) {
                       if (state.meals.isEmpty) {
                         return const Center(
