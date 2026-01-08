@@ -2,10 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bench_profile_app/core/core.dart';
 import 'package:bench_profile_app/features/hydration/domain/entities/hydration_log.dart';
+import 'package:bench_profile_app/features/hydration/domain/entities/hydration_daily_summary.dart';
 
 abstract class HydrationRemoteDataSource {
   Future<void> logWaterIntake(HydrationLog log);
   Future<List<HydrationLog>> getHydrationLogsForDate(DateTime date);
+  Future<List<HydrationDailySummary>> getHydrationStats(
+    DateTime startDate,
+    DateTime endDate,
+  );
 }
 
 class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
@@ -105,6 +110,41 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
           updatedAt: data['updatedAt'] != null
               ? (data['updatedAt'] as Timestamp).toDate()
               : null,
+        );
+      }).toList();
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<HydrationDailySummary>> getHydrationStats(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw ServerException('User not authenticated');
+    }
+
+    try {
+      // Query water_logs collection where date is within range
+      // Path: bench_profile/{userId}/water_logs
+      // Note: We need to filter by 'date' field which we added in logWaterIntake
+
+      final querySnapshot = await firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('water_logs')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return HydrationDailySummary(
+          date: (data['date'] as Timestamp).toDate(),
+          totalLiters: (data['totalLiters'] as num?)?.toDouble() ?? 0.0,
         );
       }).toList();
     } catch (e) {

@@ -10,6 +10,7 @@ import '../../../reminder/presentation/widgets/reminder_item_card.dart'; // Reus
 import '../bloc/bloc.dart';
 import '../widgets/water_list_shimmer.dart';
 import 'hydration_tracker_page.dart';
+import 'hydration_dashboard_page.dart';
 
 class WaterReportPage extends StatefulWidget {
   const WaterReportPage({super.key});
@@ -47,6 +48,22 @@ class _WaterReportPageState extends State<WaterReportPage> {
         leading: const BackButton(color: Colors.black),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart, color: AppTheme.primaryColor),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<HydrationBloc>(),
+                    child: const HydrationDashboardPage(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: BlocListener<HydrationBloc, HydrationState>(
         listener: (context, state) {

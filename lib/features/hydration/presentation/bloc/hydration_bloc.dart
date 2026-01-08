@@ -9,6 +9,7 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
   HydrationBloc({required this.repository}) : super(HydrationInitial()) {
     on<LogHydration>(_onLogHydration);
     on<LoadHydrationLogs>(_onLoadHydrationLogs);
+    on<LoadHydrationStats>(_onLoadHydrationStats);
   }
 
   Future<void> _onLogHydration(
@@ -32,6 +33,22 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     result.fold(
       (failure) => emit(HydrationFailure(failure.message)),
       (logs) => emit(HydrationLogsLoaded(logs, event.date)),
+    );
+  }
+
+  Future<void> _onLoadHydrationStats(
+    LoadHydrationStats event,
+    Emitter<HydrationState> emit,
+  ) async {
+    emit(HydrationLoading());
+    final result = await repository.getHydrationStats(
+      startDate: event.startDate,
+      endDate: event.endDate,
+    );
+    result.fold(
+      (failure) => emit(HydrationFailure(failure.message)),
+      (stats) =>
+          emit(HydrationStatsLoaded(stats, event.startDate, event.endDate)),
     );
   }
 }

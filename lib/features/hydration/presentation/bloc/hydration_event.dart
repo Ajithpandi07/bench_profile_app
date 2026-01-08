@@ -24,3 +24,13 @@ class LoadHydrationLogs extends HydrationEvent {
   @override
   List<Object> get props => [date];
 }
+
+class LoadHydrationStats extends HydrationEvent {
+  final DateTime startDate;
+  final DateTime endDate;
+
+  const LoadHydrationStats({required this.startDate, required this.endDate});
+
+  @override
+  List<Object> get props => [startDate, endDate];
+}
