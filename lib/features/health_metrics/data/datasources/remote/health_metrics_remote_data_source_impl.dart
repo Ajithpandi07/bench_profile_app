@@ -57,7 +57,7 @@ class HealthMetricsRemoteDataSourceImpl
             .collection(platformCollection)
             .doc(docId);
 
-        final pointsCollectionRef = summaryDocRef.collection('health_metrics');
+        // final pointsCollectionRef = summaryDocRef.collection('health_metrics');
 
         // Create summary for THIS day
         // Note: Ideally we should fetch existing summary and merge, but 'aggregator.aggregate' usually just sums the list passed.
@@ -76,7 +76,19 @@ class HealthMetricsRemoteDataSourceImpl
 
         summaryData['timestamp'] = Timestamp.fromDate(date);
         summaryData['source'] = 'health_package';
+        summaryData['updatedAt'] = FieldValue.serverTimestamp();
 
+        // Write summary only - Disabled individual metric write
+        // Check if doc exists to set createdAt only once
+        final docSnap = await summaryDocRef.get();
+        if (!docSnap.exists) {
+          summaryData['createdAt'] = FieldValue.serverTimestamp();
+        }
+
+        await summaryDocRef.set(summaryData, SetOptions(merge: true));
+
+        // OLD LOGIC: Writing individual metrics
+        /*
         const int batchSize = 450;
         for (var i = 0; i < dailyMetrics.length; i += batchSize) {
           final batch = firestore.batch();
@@ -95,6 +107,7 @@ class HealthMetricsRemoteDataSourceImpl
           }
           await batch.commit();
         }
+        */
       }
     } catch (e) {
       print('Error uploading metrics: $e');

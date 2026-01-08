@@ -335,24 +335,65 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
   @override
   Future<Either<Failure, void>> restoreAllHealthData() async {
     try {
-      if (!await networkInfo.isConnected) {
-        return const Left(NetworkFailure('No internet connection.'));
-      }
+      // 1. Initial Checks
+      // Note: We don't check networkInfo here anymore because we are restoring from DEVICE, not remote.
+      // However, we still might want to ensure permissions? The dataSource call should handle exceptions.
 
-      // Local-First Check: Only restore if local DB is empty.
+      // Local-First Check: Only restore if local DB is empty?
+      // User requirement: "for reintsall the app app should fetch the health data from the past 30 days"
+      // Even if local DB has *some* data, a reinstall might imply we want to ensure we have the past 30 days.
+      // But typically "restore" is run once.
+      // Let's stick to the "if empty" check to avoid re-running heavily, OR assume the caller controls when to run this.
+      // Ideally, if it's a fresh install, local DB is empty.
       final hasLocalData = await localDataSource.hasAnyMetrics();
       if (hasLocalData) {
         debugPrint('Restore skipped: Local data already exists.');
         return const Right(null);
       }
 
-      final remoteMetrics = await remoteDataSource.getAllHealthMetricsForUser();
-      if (remoteMetrics.isNotEmpty) {
-        await localDataSource.cacheHealthMetricsBatch(remoteMetrics);
+      debugPrint('Restore: Starting 30-day device sync...');
+      final now = DateTime.now();
+
+      // 2. Iterate Past 30 Days
+      for (int i = 0; i < 30; i++) {
+        final date = now.subtract(Duration(days: i));
+        try {
+          // A. Fetch from Device
+          // catch individual day failures so one bad day doesn't stop the whole restore
+          final deviceMaybe = await dataSource.fetchFromDeviceForDate(date);
+          final deviceList = _normalizeToList(deviceMaybe)
+              .where(
+                (m) =>
+                    m.dateFrom.isBefore(now) ||
+                    m.dateFrom.isAtSameMomentAs(now),
+              )
+              .toList();
+
+          if (deviceList.isNotEmpty) {
+            // B. Save to Local
+            // We do NOT upload to remote during restore, just hydrate local cache.
+            await localDataSource.cacheHealthMetricsBatch(deviceList);
+            debugPrint(
+              'Restore: Synced ${deviceList.length} metrics for ${date.toString().split(' ')[0]}',
+            );
+          }
+        } catch (e) {
+          debugPrint('Restore: Failed to sync for date $date: $e');
+          // Start next iteration
+        }
       }
+
+      debugPrint('Restore: 30-day device sync completed.');
       return const Right(null);
     } catch (e) {
-      return Left(RepositoryFailure('Failed to restore all health data: $e'));
+      if (e is PermissionDeniedException) {
+        return const Left(
+          PermissionFailure(
+            'Health permissions were not granted during restore.',
+          ),
+        );
+      }
+      return Left(RepositoryFailure('Failed to restore health data: $e'));
     }
   }
 }
