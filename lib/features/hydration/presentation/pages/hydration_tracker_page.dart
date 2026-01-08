@@ -10,17 +10,24 @@ import '../../domain/domain.dart';
 import '../bloc/bloc.dart';
 
 class HydrationTrackerPage extends StatefulWidget {
-  const HydrationTrackerPage({super.key});
+  final DateTime? initialDate;
+  const HydrationTrackerPage({super.key, this.initialDate});
 
   @override
   State<HydrationTrackerPage> createState() => _HydrationTrackerPageState();
 }
 
 class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   int _selectedSizeIndex = 1; // Default to 250ml
   String _selectedType = 'Regular';
   int _servingCount = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = widget.initialDate ?? DateTime.now();
+  }
 
   final List<int> _sizes = [100, 250, 350, 500];
   final List<String> _types = [

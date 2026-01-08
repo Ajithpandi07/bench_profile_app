@@ -25,4 +25,22 @@ class HydrationRepositoryImpl implements HydrationRepository {
       return const Left(NetworkFailure('No internet connection.'));
     }
   }
+
+  @override
+  Future<Either<Failure, List<HydrationLog>>> getHydrationLogsForDate(
+    DateTime date,
+  ) async {
+    if (await networkInfo.isConnected) {
+      try {
+        final logs = await remoteDataSource.getHydrationLogsForDate(date);
+        return Right(logs);
+      } catch (e) {
+        return Left(ServerFailure('Failed to fetch hydration logs: $e'));
+      }
+    } else {
+      // Since requirements said "Remote Only" for now, we just fail if no net.
+      // If caching was needed we'd fetch local here.
+      return const Left(NetworkFailure('No internet connection.'));
+    }
+  }
 }

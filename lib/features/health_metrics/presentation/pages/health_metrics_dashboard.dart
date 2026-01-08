@@ -13,12 +13,11 @@ import '../widgets/widgets.dart';
 import '../../domain/entities/entities.dart';
 import '../../../reminder/reminder.dart';
 
-import '../../../hydration/presentation/pages/hydration_tracker_page.dart';
 import '../../../hydration/presentation/bloc/bloc.dart';
-import '../../../meals/presentation/widgets/meal_type_selector.dart';
-import '../../../meals/presentation/pages/meal_listing_page.dart';
-import '../../../meals/presentation/pages/quick_log_page.dart';
+
 import '../../../meals/presentation/bloc/bloc.dart';
+import '../../../meals/presentation/pages/meal_report_page.dart';
+import '../../../hydration/presentation/pages/water_report_page.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -223,12 +222,14 @@ class _HomeTab extends StatelessWidget {
         HealthMetricsSummary? metrics;
         int mealCount = 0;
         int mealGoal = 3;
+        double waterConsumed = 0;
         double waterGoal = 3.2;
 
         if (state is HealthMetricsLoaded) {
           metrics = state.summary;
           mealCount = state.mealCount;
           mealGoal = state.mealGoal;
+          waterConsumed = state.waterConsumed;
           waterGoal = state.waterGoal;
         }
 
@@ -334,80 +335,23 @@ class _HomeTab extends StatelessWidget {
                                           top: 0,
                                         ), // Highest point (outer)
                                         child: GestureDetector(
-                                          onTap: () {
-                                            showModalBottomSheet(
-                                              context: context,
-                                              backgroundColor:
-                                                  Colors.transparent,
-                                              isScrollControlled: true,
-                                              builder: (context) =>
-                                                  const MealTypeSelector(),
-                                            ).then((result) async {
-                                              if (result != null &&
-                                                  result is Map) {
-                                                final type = result['type'];
-                                                if (type == 'ManualCalories') {
-                                                  final result = await Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) => BlocProvider(
-                                                        create: (context) =>
-                                                            sl<MealBloc>(),
-                                                        child:
-                                                            const QuickLogPage(
-                                                              mealType: 'Lunch',
-                                                            ),
-                                                      ),
+                                          onTap: () async {
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    BlocProvider.value(
+                                                      value: sl<MealBloc>(),
+                                                      child:
+                                                          const MealReportPage(),
                                                     ),
-                                                  );
-
-                                                  if (result == true &&
-                                                      context.mounted) {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        behavior:
-                                                            SnackBarBehavior
-                                                                .floating,
-                                                        content: Text(
-                                                          'Meal logged successfully',
-                                                        ),
-                                                        backgroundColor: Color(
-                                                          0xFFE93448,
-                                                        ),
-                                                      ),
-                                                    );
-
-                                                    // Refresh dashboard
-                                                    context
-                                                        .read<
-                                                          HealthMetricsBloc
-                                                        >()
-                                                        .add(
-                                                          const RefreshMetrics(),
-                                                        );
-                                                  }
-                                                } else {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) => BlocProvider(
-                                                        create: (context) =>
-                                                            sl<MealBloc>()..add(
-                                                              LoadMealsForDate(
-                                                                DateTime.now(),
-                                                              ),
-                                                            ),
-                                                        child: MealListingPage(
-                                                          mealType: type,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  );
-                                                }
-                                              }
-                                            });
+                                              ),
+                                            );
+                                            if (context.mounted) {
+                                              context
+                                                  .read<HealthMetricsBloc>()
+                                                  .add(const RefreshMetrics());
+                                            }
                                           },
                                           child: _StatItem(
                                             icon: Icons.restaurant,
@@ -423,39 +367,29 @@ class _HomeTab extends StatelessWidget {
                                         ), // Lower point (inner)
                                         child: GestureDetector(
                                           onTap: () async {
-                                            final result = await Navigator.push(
+                                            await Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) =>
-                                                    BlocProvider<HydrationBloc>(
-                                                      create: (context) =>
+                                                    BlocProvider.value(
+                                                      value:
                                                           sl<HydrationBloc>(),
                                                       child:
-                                                          const HydrationTrackerPage(),
+                                                          const WaterReportPage(),
                                                     ),
                                               ),
                                             );
-
-                                            if (result == true &&
-                                                context.mounted) {
-                                              // Hydration added remotely.
-                                              // We can manually refresh dashboard (might fail if remote not synced back instantly)
-                                              // Or we can assume we want to just fetch or show a message.
-                                              // Since user requested 'Remote Only' logging, the local dashboard might NOT update
-                                              // unless we fetch from Remote.
-                                              // Let's trigger a Sync/Refresh.
+                                            if (context.mounted) {
                                               context
                                                   .read<HealthMetricsBloc>()
-                                                  .add(
-                                                    const RefreshMetrics(),
-                                                  ); // This triggers Sync
+                                                  .add(const RefreshMetrics());
                                             }
                                           },
                                           child: _StatItem(
                                             icon: Icons.water_drop,
                                             sub: '+',
                                             val:
-                                                '${metrics?.water?.value.toStringAsFixed(1) ?? '0'}/${waterGoal.toStringAsFixed(1)}',
+                                                '${waterConsumed.toStringAsFixed(1)}/${waterGoal.toStringAsFixed(1)}',
                                             unit: 'l', // Fixed unit letter
                                           ),
                                         ),

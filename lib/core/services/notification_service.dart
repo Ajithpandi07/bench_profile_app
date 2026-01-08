@@ -4,6 +4,14 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'dart:convert';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../navigation/navigator_key.dart';
+import '../../features/meals/presentation/pages/meal_listing_page.dart';
+import '../../features/hydration/presentation/pages/hydration_tracker_page.dart';
+import '../../features/meals/presentation/bloc/bloc.dart';
+import '../../features/hydration/presentation/bloc/bloc.dart';
+import '../../core/injection_container.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -28,46 +36,79 @@ class NotificationService {
 
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestSoundPermission: false,
-      requestBadgePermission: false,
-      requestAlertPermission: false,
-    );
+          requestSoundPermission: false,
+          requestBadgePermission: false,
+          requestAlertPermission: false,
+        );
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsDarwin,
-    );
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsDarwin,
+        );
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse:
           (NotificationResponse notificationResponse) {
-        // Handle notification tap
-      },
+            if (notificationResponse.payload != null) {
+              _handleNotificationTap(notificationResponse.payload!);
+            }
+          },
     );
+  }
+
+  void _handleNotificationTap(String payload) {
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final type = data['type'];
+      final dateStr = data['date'];
+      final date = dateStr != null ? DateTime.parse(dateStr) : DateTime.now();
+
+      if (type == 'water') {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (_) => sl<HydrationBloc>(),
+              child: HydrationTrackerPage(initialDate: date),
+            ),
+          ),
+        );
+      } else if (type == 'meal') {
+        final mealType = data['subtype'] ?? 'Snack';
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (_) => sl<MealBloc>()..add(LoadMealsForDate(date)),
+              child: MealListingPage(mealType: mealType, initialDate: date),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error handling notification tap: $e');
+    }
   }
 
   Future<void> requestPermissions() async {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
+            IOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
     } else if (defaultTargetPlatform == TargetPlatform.android) {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+          flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
 
       await androidImplementation?.requestNotificationsPermission();
       await androidImplementation?.requestExactAlarmsPermission();
 
-      final bool? canScheduleExact =
-          await androidImplementation?.canScheduleExactNotifications();
+      final bool? canScheduleExact = await androidImplementation
+          ?.canScheduleExactNotifications();
       print('DEBUG: Can Schedule Exact Notifications: $canScheduleExact');
     }
   }
@@ -78,7 +119,14 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     required String scheduleType, // 'Daily', 'Weekly', 'Monthly', 'As needed'
+    String? payload,
   }) async {
+    // ...
+    // Note: I am NOT replacing the logic inside, just looking for the signature line and the end...
+    // Wait, replace_file_content requires me to match the target content exactly.
+    // The target content spans many lines. I should separate signature update and call update.
+    // I will try to update signature first.
+
     // If "As needed", we typically don't schedule a specific time unless the user picked one.
     // For this implementation, we assume if a date/time is passed, we schedule it.
     // If it's "As needed", maybe stick to a one-time notification or just the start date?
@@ -126,23 +174,25 @@ class NotificationService {
       } else if (scheduleType == 'Monthly') {
         while (scheduledTZDate.isBefore(now)) {
           scheduledTZDate = tz.TZDateTime(
-              tz.local,
-              scheduledTZDate.year,
-              scheduledTZDate.month + 1,
-              scheduledTZDate.day,
-              scheduledTZDate.hour,
-              scheduledTZDate.minute);
+            tz.local,
+            scheduledTZDate.year,
+            scheduledTZDate.month + 1,
+            scheduledTZDate.day,
+            scheduledTZDate.hour,
+            scheduledTZDate.minute,
+          );
         }
       }
     }
 
     // DEBUG: Check permission right before scheduling
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final androidImplementation =
-          flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      final canExact =
-          await androidImplementation?.canScheduleExactNotifications();
+      final androidImplementation = flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final canExact = await androidImplementation
+          ?.canScheduleExactNotifications();
       print('DEBUG: [scheduleReminder] Can Schedule Exact: $canExact');
     }
 
@@ -157,15 +207,16 @@ class NotificationService {
 
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
-      'reminder_channel_v1',
-      'Reminders',
-      channelDescription: 'Channel for user reminders',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
+          'reminder_channel_v1',
+          'Reminders',
+          channelDescription: 'Channel for user reminders',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
 
-    const NotificationDetails notificationDetails =
-        NotificationDetails(android: androidNotificationDetails);
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidNotificationDetails,
+    );
 
     try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
@@ -176,8 +227,11 @@ class NotificationService {
         notificationDetails,
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         matchDateTimeComponents: matchComponent,
+        payload: payload,
       );
-      print('DEBUG: Successfully called zonedSchedule for ID: $id');
+      print(
+        'DEBUG: Successfully called zonedSchedule for ID: $id with payload: $payload',
+      );
     } catch (e, st) {
       print('ERROR: Failed to schedule notification: $e');
       print(st);
@@ -199,15 +253,16 @@ class NotificationService {
   }) async {
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
-      'reminder_channel_v1',
-      'Reminders',
-      channelDescription: 'Channel for user reminders',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
+          'reminder_channel_v1',
+          'Reminders',
+          channelDescription: 'Channel for user reminders',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
 
-    const NotificationDetails notificationDetails =
-        NotificationDetails(android: androidNotificationDetails);
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidNotificationDetails,
+    );
 
     await flutterLocalNotificationsPlugin.show(
       id,

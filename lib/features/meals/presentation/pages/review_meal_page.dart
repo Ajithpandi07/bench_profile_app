@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/entities.dart';
 import '../bloc/bloc.dart';
 import '../../../../core/utils/snackbar_utils.dart';
-import '../widgets/primary_button.dart'; // Ensure this exists or use standard button
 
 class ReviewMealPage extends StatefulWidget {
   final String mealType;
   final List<FoodItem> selectedFoods;
   final List<UserMeal> selectedMeals;
   final List<FoodItem> allFoods;
+  final DateTime? logDate;
 
   const ReviewMealPage({
     super.key,
@@ -18,6 +19,7 @@ class ReviewMealPage extends StatefulWidget {
     required this.selectedFoods,
     required this.selectedMeals,
     required this.allFoods,
+    this.logDate,
   });
 
   @override
@@ -25,32 +27,96 @@ class ReviewMealPage extends StatefulWidget {
 }
 
 class _ReviewMealPageState extends State<ReviewMealPage> {
-  late List<FoodItem> _selectedFoods;
-  late List<UserMeal> _selectedMeals;
+  late String _selectedMealType;
+  late double _calories;
+  late List<FoodItem> _currentFoods;
+  late List<UserMeal> _currentMeals;
+
+  final List<String> _mealTypes = [
+    'Breakfast',
+    'Lunch',
+    'Dinner',
+    'Morning Snack',
+    'Afternoon Snack',
+    'Evening Snack',
+  ];
+
   @override
   void initState() {
     super.initState();
-    _selectedFoods = List.from(widget.selectedFoods);
-    _selectedMeals = List.from(widget.selectedMeals);
+    _selectedMealType = widget.mealType;
+    _currentFoods = List.from(widget.selectedFoods);
+    _currentMeals = List.from(widget.selectedMeals);
+    _calculateTotalCalories();
+  }
+
+  void _calculateTotalCalories() {
+    double total = 0;
+    for (var f in _currentFoods) {
+      total += f.calories * f.quantity;
+    }
+    for (var m in _currentMeals) {
+      total += m.totalCalories;
+    }
+    setState(() {
+      _calories = total;
+    });
   }
 
   void _removeFood(FoodItem food) {
     setState(() {
-      _selectedFoods.remove(food);
+      _currentFoods.remove(food);
+      _calculateTotalCalories();
+    });
+  }
+
+  void _updateFoodQuantity(int index, int delta) {
+    setState(() {
+      final item = _currentFoods[index];
+      final newQuantity = item.quantity + delta;
+      if (newQuantity > 0) {
+        _currentFoods[index] = item.copyWith(quantity: newQuantity);
+        _calculateTotalCalories();
+      }
     });
   }
 
   void _removeMeal(UserMeal meal) {
     setState(() {
-      _selectedMeals.remove(meal);
+      _currentMeals.remove(meal);
+      _calculateTotalCalories();
     });
+  }
+
+  void _logMeal() {
+    if (_currentFoods.isEmpty && _currentMeals.isEmpty) {
+      showModernSnackbar(
+        context,
+        'No items to save. Please select a meal or food.',
+        isError: true,
+      );
+      return;
+    }
+
+    // Capture the final list of foods with updated quantities
+    final log = MealLog(
+      id: const Uuid().v4(),
+      userId: '', // Bloc/Repo handles current user
+      timestamp: widget.logDate ?? DateTime.now(),
+      mealType: _selectedMealType,
+      items: _currentFoods,
+      userMealIds: _currentMeals.map((m) => m.id).toList(),
+      totalCalories: _calories, // User can override with slider
+      createdAt: DateTime.now(),
+    );
+    context.read<MealBloc>().add(LogMealEvent(log));
   }
 
   @override
   Widget build(BuildContext context) {
-    double totalCalories = 0;
-    for (var f in _selectedFoods) totalCalories += f.calories;
-    for (var m in _selectedMeals) totalCalories += m.totalCalories;
+    final timeString = DateFormat(
+      'h:mm a',
+    ).format(widget.logDate ?? DateTime.now());
 
     return BlocListener<MealBloc, MealState>(
       listener: (context, state) {
@@ -75,111 +141,365 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
           backgroundColor: Colors.white,
           elevation: 0,
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(24.0),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              Expanded(
-                child: ListView(
+              // Meal Type Dropdown
+              Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE93448),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE93448).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _mealTypes.contains(_selectedMealType)
+                        ? _selectedMealType
+                        : null,
+                    hint: Text(
+                      _selectedMealType,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Outfit',
+                      ),
+                    ),
+                    dropdownColor: const Color(0xFFE93448),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Outfit',
+                    ),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedMealType = newValue;
+                        });
+                      }
+                    },
+                    items: _mealTypes.map<DropdownMenuItem<String>>((
+                      String value,
+                    ) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Time Badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (_selectedMeals.isNotEmpty) ...[
-                      const Text(
-                        'Selected Meals',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      timeString,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
                       ),
-                      const SizedBox(height: 8),
-                      ..._selectedMeals.map(
-                        (m) =>
-                            _buildMealTile(m, onRemove: () => _removeMeal(m)),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    if (_selectedFoods.isNotEmpty) ...[
-                      const Text(
-                        'Selected Foods',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ..._selectedFoods.map(
-                        (f) => _buildItemTile(
-                          f.name,
-                          f.calories,
-                          onRemove: () => _removeFood(f),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                    ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 32),
+
+              // Calorie Card
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Colors.grey, width: 0.5),
-                  ),
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Total Calories',
+                          'Total calories: ',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          '${totalCalories.toStringAsFixed(0)} Kcal',
+                          '${_calories.toInt()} kcal',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFE93448),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    PrimaryButton(
-                      text: 'Save Log',
-                      onPressed: () {
-                        if (_selectedFoods.isEmpty && _selectedMeals.isEmpty) {
-                          showModernSnackbar(
-                            context,
-                            'No items to save. Please select a meal or food.',
-                            isError: true,
-                          );
-                          return;
+                    const SizedBox(height: 8),
+                    // Macro Summary
+                    Builder(
+                      builder: (context) {
+                        double carbs = 0, fat = 0, protein = 0;
+                        for (var f in _currentFoods) {
+                          carbs += f.carbs * f.quantity;
+                          fat += f.fat * f.quantity;
+                          protein += f.protein * f.quantity;
                         }
-                        // Construct Log
-                        final log = MealLog(
-                          id: const Uuid().v4(),
-                          userId: '', // Bloc/Repo handles current user
-                          timestamp: DateTime.now(),
-                          mealType: widget.mealType,
-                          items: _selectedFoods,
-                          userMealIds: _selectedMeals.map((m) => m.id).toList(),
-                          totalCalories: totalCalories,
-                          createdAt: DateTime.now(),
+
+                        return Text(
+                          'Carb ${carbs.toStringAsFixed(0)} g  •  Fat ${fat.toStringAsFixed(0)} g  •  Protein ${protein.toStringAsFixed(0)} g',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         );
-                        context.read<MealBloc>().add(LogMealEvent(log));
                       },
-                      width: double.infinity,
-                      height: 50,
-                      borderRadius: 12,
-                      fontSize: 16,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Slider
+                    Builder(
+                      builder: (context) {
+                        double minCalories = 0;
+                        for (var f in _currentFoods) {
+                          minCalories += f.calories * f.quantity;
+                        }
+                        for (var m in _currentMeals) {
+                          minCalories += m.totalCalories;
+                        }
+
+                        // Ensure UI obeys minimum visually
+                        double displayValue = _calories;
+                        if (displayValue < minCalories) {
+                          displayValue = minCalories;
+                        }
+
+                        double maxCalories =
+                            (minCalories > 2000 || displayValue > 2000)
+                            ? (displayValue > minCalories
+                                  ? displayValue + 500
+                                  : minCalories + 1000)
+                            : 2000;
+
+                        return Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      activeTrackColor: const Color(0xFFE93448),
+                                      inactiveTrackColor: Colors.grey.shade200,
+                                      thumbColor: Colors.white,
+                                      trackHeight: 6,
+                                      thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 10,
+                                        elevation: 2,
+                                      ),
+                                    ),
+                                    child: Slider(
+                                      value: displayValue.clamp(
+                                        minCalories,
+                                        maxCalories,
+                                      ),
+                                      min: minCalories,
+                                      max: maxCalories,
+                                      onChanged: (val) {
+                                        setState(() => _calories = val);
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  minCalories.toStringAsFixed(0),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                Text(
+                                  ((maxCalories + minCalories) / 2)
+                                      .toStringAsFixed(0),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                Text(
+                                  maxCalories.toStringAsFixed(0),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Items List Container
+              if (_currentFoods.isNotEmpty || _currentMeals.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Foods Section
+                      if (_currentFoods.isNotEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            'Foods',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFE93448),
+                            ),
+                          ),
+                        ),
+                        ..._currentFoods.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final food = entry.value;
+                          return Column(
+                            children: [
+                              _buildFoodItemRow(
+                                food.name,
+                                '${(food.calories * food.quantity).toStringAsFixed(0)} kcal',
+                                index,
+                                food.quantity,
+                              ),
+                              if (index < _currentFoods.length - 1)
+                                const Divider(height: 1),
+                            ],
+                          );
+                        }),
+                      ],
+
+                      // Divider between sections if both exist
+                      if (_currentFoods.isNotEmpty && _currentMeals.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Divider(height: 1, thickness: 1),
+                        ),
+
+                      // Meals Section
+                      if (_currentMeals.isNotEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            'Meals',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFE93448),
+                            ),
+                          ),
+                        ),
+                        ..._currentMeals.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final meal = entry.value;
+                          return Column(
+                            children: [
+                              _buildMealItemRow(meal),
+                              if (index < _currentMeals.length - 1)
+                                const Divider(height: 1),
+                            ],
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+
+              // Done Button
+              Center(
+                child: SizedBox(
+                  width: 306,
+                  height: 32,
+                  child: ElevatedButton(
+                    onPressed: _logMeal,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE93448),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -187,121 +507,124 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     );
   }
 
-  Widget _buildMealTile(UserMeal meal, {required VoidCallback onRemove}) {
-    List<Widget> foodItems = [];
-    for (var food in meal.foods) {
-      foodItems.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Row(
-            children: [
-              const Icon(Icons.circle, size: 6, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text(
-                food.name,
-                style: const TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-              const Spacer(),
-              Text(
-                '${(food.calories * food.quantity).toStringAsFixed(0)} Kcal',
-                style: const TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
+  Widget _buildFoodItemRow(
+    String name,
+    String subtitle,
+    int index,
+    int quantity,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  meal.name,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    '${meal.totalCalories.toStringAsFixed(0)} Kcal',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFE93448),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: onRemove,
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          if (foodItems.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
             ),
-            ...foodItems,
-          ],
+          ),
+          // Stepper for Food
+          GestureDetector(
+            onTap: () => _updateFoodQuantity(index, -1),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(4),
+              child: const Icon(Icons.remove, size: 16, color: Colors.grey),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '$quantity',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => _updateFoodQuantity(index, 1),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(4),
+              child: const Icon(Icons.add, size: 16, color: Colors.grey),
+            ),
+          ),
+          const SizedBox(width: 16),
+          IconButton(
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.delete_outline, color: Colors.grey),
+            onPressed: () => _removeFood(_currentFoods[index]),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildItemTile(
-    String name,
-    double cal, {
-    required VoidCallback onRemove,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+  Widget _buildMealItemRow(UserMeal meal) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(
-              name,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  meal.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${meal.totalCalories.toStringAsFixed(0)} kcal (Meal)',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                if (meal.foods.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  ...meal.foods.map((food) {
+                    final foodCals = food.calories * food.quantity;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 8.0, bottom: 2.0),
+                      child: Text(
+                        '• ${food.name} (${foodCals.toStringAsFixed(0)} kcal)',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ],
             ),
           ),
-          Row(
-            children: [
-              Text(
-                '${cal.toStringAsFixed(0)} Kcal',
-                style: const TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onRemove,
-                child: const Icon(Icons.close, color: Colors.grey, size: 20),
-              ),
-            ],
+          // No stepper for meals (complex object), just delete
+          IconButton(
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.delete_outline, color: Colors.grey),
+            onPressed: () => _removeMeal(meal),
           ),
         ],
       ),

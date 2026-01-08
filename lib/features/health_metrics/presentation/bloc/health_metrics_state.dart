@@ -27,6 +27,7 @@ class HealthMetricsLoaded extends HealthMetricsState {
   // Goal/Reminder Data
   final int mealCount;
   final int mealGoal;
+  final double waterConsumed;
   final double waterGoal;
 
   const HealthMetricsLoaded({
@@ -35,6 +36,7 @@ class HealthMetricsLoaded extends HealthMetricsState {
     this.isSyncing = false,
     this.mealCount = 0,
     this.mealGoal = 0,
+    this.waterConsumed = 0,
     this.waterGoal = 0,
     required super.selectedDate,
   });
@@ -47,6 +49,7 @@ class HealthMetricsLoaded extends HealthMetricsState {
     isSyncing,
     mealCount,
     mealGoal,
+    waterConsumed,
     waterGoal,
   ];
 }

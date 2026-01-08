@@ -5,6 +5,7 @@ import 'package:bench_profile_app/features/hydration/domain/entities/hydration_l
 
 abstract class HydrationRemoteDataSource {
   Future<void> logWaterIntake(HydrationLog log);
+  Future<List<HydrationLog>> getHydrationLogsForDate(DateTime date);
 }
 
 class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
@@ -46,7 +47,66 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
             : FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
+
+      // 1b. Update daily total liters
+      final dateDocRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('water_logs')
+          .doc(dateId);
+
+      await dateDocRef.set({
+        'totalLiters': FieldValue.increment(log.amountLiters),
+        'date': Timestamp.fromDate(
+          DateTime(log.timestamp.year, log.timestamp.month, log.timestamp.day),
+        ),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
       await docRef.set(data);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<List<HydrationLog>> getHydrationLogsForDate(DateTime date) async {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw ServerException('User not authenticated');
+    }
+
+    try {
+      final dateId =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      final querySnapshot = await firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('water_logs')
+          .doc(dateId)
+          .collection('logs')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return HydrationLog(
+          id: data['id'] ?? doc.id,
+          userId: data['userId'] ?? '',
+          amountLiters: (data['amountLiters'] as num?)?.toDouble() ?? 0.0,
+          timestamp: data['timestamp'] != null
+              ? (data['timestamp'] as Timestamp).toDate()
+              : DateTime.now(),
+          beverageType: data['beverageType'] ?? 'Regular',
+          createdAt: data['createdAt'] != null
+              ? (data['createdAt'] as Timestamp).toDate()
+              : null,
+          updatedAt: data['updatedAt'] != null
+              ? (data['updatedAt'] as Timestamp).toDate()
+              : null,
+        );
+      }).toList();
     } catch (e) {
       throw ServerException(e.toString());
     }
