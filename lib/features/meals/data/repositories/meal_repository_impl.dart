@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:bench_profile_app/core/error/failures.dart';
 import 'package:bench_profile_app/core/network/network_info.dart';
 import '../../domain/entities/entities.dart';
+import '../../domain/entities/daily_meal_summary.dart';
 import '../../domain/repositories/meal_repository.dart';
 import '../datasources/meal_remote_data_source.dart';
 
@@ -134,6 +135,23 @@ class MealRepositoryImpl implements MealRepository {
       try {
         final meals = await remoteDataSource.getUserMeals();
         return Right(meals);
+      } catch (e) {
+        return Left(ServerFailure(e.toString()));
+      }
+    } else {
+      return const Left(NetworkFailure('No internet connection'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<DailyMealSummary>>> getDailySummaries(
+    DateTime start,
+    DateTime end,
+  ) async {
+    if (await networkInfo.isConnected) {
+      try {
+        final summaries = await remoteDataSource.getDailySummaries(start, end);
+        return Right(summaries);
       } catch (e) {
         return Left(ServerFailure(e.toString()));
       }

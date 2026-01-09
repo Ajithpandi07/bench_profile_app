@@ -11,4 +11,8 @@ abstract class MealRepository {
   Future<Either<Failure, List<FoodItem>>> getUserFoods();
   Future<Either<Failure, void>> saveUserMeal(UserMeal meal);
   Future<Either<Failure, List<UserMeal>>> getUserMeals();
+  Future<Either<Failure, List<DailyMealSummary>>> getDailySummaries(
+    DateTime start,
+    DateTime end,
+  );
 }

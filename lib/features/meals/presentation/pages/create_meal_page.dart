@@ -23,12 +23,13 @@ class _CreateMealPageState extends State<CreateMealPage> {
   }
 
   double get _totalCalories =>
-      _addedFoods.fold(0, (sum, item) => sum + item.calories);
+      _addedFoods.fold(0, (sum, item) => sum + (item.calories * item.quantity));
   double get _totalCarbs =>
-      _addedFoods.fold(0, (sum, item) => sum + item.carbs);
-  double get _totalFat => _addedFoods.fold(0, (sum, item) => sum + item.fat);
+      _addedFoods.fold(0, (sum, item) => sum + (item.carbs * item.quantity));
+  double get _totalFat =>
+      _addedFoods.fold(0, (sum, item) => sum + (item.fat * item.quantity));
   double get _totalProtein =>
-      _addedFoods.fold(0, (sum, item) => sum + item.protein);
+      _addedFoods.fold(0, (sum, item) => sum + (item.protein * item.quantity));
 
   void _addFood() async {
     final mealBloc = context.read<MealBloc>();
@@ -262,10 +263,17 @@ class _CreateMealPageState extends State<CreateMealPage> {
                   itemBuilder: (context, index) {
                     final food = _addedFoods[index];
                     return Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -278,13 +286,16 @@ class _CreateMealPageState extends State<CreateMealPage> {
                                   food.name,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: Color(0xFF131313),
                                   ),
                                 ),
+                                const SizedBox(height: 4),
                                 Text(
-                                  '${(food.calories * food.quantity).toStringAsFixed(0)} kcal', // Show total for quantity
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
+                                  '${(food.calories).toStringAsFixed(0)} kcal. ${food.quantity} serving',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade500,
                                   ),
                                 ),
                               ],
@@ -296,56 +307,35 @@ class _CreateMealPageState extends State<CreateMealPage> {
                               GestureDetector(
                                 onTap: () => _updateFoodQuantity(index, -1),
                                 child: Container(
-                                  padding: const EdgeInsets.all(4),
+                                  width: 32,
+                                  height: 32,
                                   decoration: BoxDecoration(
+                                    color: const Color(0xFFF5F5F5),
                                     shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.grey.shade300,
-                                    ),
                                   ),
                                   child: const Icon(
                                     Icons.remove,
                                     size: 16,
-                                    color: Colors.grey,
+                                    color: Color(0xFF131313),
                                   ),
                                 ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Text('${food.quantity}'),
-                              ),
+                              const SizedBox(width: 12),
                               GestureDetector(
                                 onTap: () => _updateFoodQuantity(index, 1),
                                 child: Container(
-                                  padding: const EdgeInsets.all(4),
+                                  width: 32,
+                                  height: 32,
                                   decoration: BoxDecoration(
+                                    color: const Color(0xFFF5F5F5),
                                     shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.grey.shade300,
-                                    ),
                                   ),
                                   child: const Icon(
                                     Icons.add,
                                     size: 16,
-                                    color: Colors.grey,
+                                    color: Color(0xFF131313),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              IconButton(
-                                constraints: const BoxConstraints(),
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _addedFoods.removeAt(index);
-                                  });
-                                },
                               ),
                             ],
                           ),

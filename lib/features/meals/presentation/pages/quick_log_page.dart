@@ -175,8 +175,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
       timestamp: DateTime.now(),
       mealType: _selectedMealType,
       items: _addedFoods,
-      userMealIds:
-          [], // We aren't selecting meals here, unless 'Save as Custom Meal' was clicked separately.
+      userMeals: const [],
       totalCalories: _calories, // User adjusted total
       createdAt: DateTime.now(),
     );

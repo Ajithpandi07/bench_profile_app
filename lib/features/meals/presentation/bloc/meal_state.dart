@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/entities.dart';
+import '../../domain/entities/daily_meal_summary.dart';
 
 abstract class MealState extends Equatable {
   const MealState();
@@ -56,4 +57,12 @@ class UserLibraryLoaded extends MealState {
 
   @override
   List<Object> get props => [foods, meals];
+}
+
+class DashboardStatsLoaded extends MealState {
+  final List<DailyMealSummary> summaries;
+  const DashboardStatsLoaded(this.summaries);
+
+  @override
+  List<Object> get props => [summaries];
 }

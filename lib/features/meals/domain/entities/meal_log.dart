@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'food_item.dart';
+import 'user_meal.dart';
 
 class MealLog extends Equatable {
   final String id;
@@ -8,7 +9,7 @@ class MealLog extends Equatable {
   final String mealType; // Breakfast, Lunch, Dinner, Snack
   final List<FoodItem> items;
   final double totalCalories;
-  final List<String> userMealIds;
+  final List<UserMeal> userMeals;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -18,7 +19,7 @@ class MealLog extends Equatable {
     required this.timestamp,
     required this.mealType,
     required this.items,
-    this.userMealIds = const [],
+    this.userMeals = const [],
     required this.totalCalories,
     this.createdAt,
     this.updatedAt,
@@ -31,7 +32,7 @@ class MealLog extends Equatable {
     timestamp,
     mealType,
     items,
-    userMealIds,
+    userMeals,
     totalCalories,
     createdAt,
     updatedAt,

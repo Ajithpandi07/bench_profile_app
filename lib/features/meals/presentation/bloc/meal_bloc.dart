@@ -11,10 +11,33 @@ class MealBloc extends Bloc<MealEvent, MealState> {
   MealBloc({required this.repository}) : super(MealInitial()) {
     on<LoadMealsForDate>(_onLoadMeals);
     on<LogMealEvent>(_onLogMeal);
-    on<SearchFoodEvent>(_onSearchFood);
-    on<LoadUserLibrary>(_onLoadUserLibrary);
-    on<AddUserFood>(_onAddUserFood);
     on<AddUserMeal>(_onAddUserMeal);
+    on<LoadDashboardStats>(_onLoadDashboardStats);
+  }
+
+  Future<void> _onLoadDashboardStats(
+    LoadDashboardStats event,
+    Emitter<MealState> emit,
+  ) async {
+    // Default range: Last 12 months from today to cover all views
+    final now = DateTime.now();
+    final start = event.start ?? DateTime(now.year - 1, now.month, now.day);
+    final end = event.end ?? now;
+
+    // We don't emit Loading to avoid full screen spinner if possible,
+    // or we can emit a specific loading state if the UI handles it separately.
+    // For now, let's just fetch side-effect or emit if we want.
+    // Actually, UI needs data.
+    // Let's not emit MealLoading() because it might clear the whole screen.
+    // But since we navigate to a new page, it's fine.
+    // However, if we refresh tabs...
+    // Let's just fetch and emit Loaded.
+
+    final result = await repository.getDailySummaries(start, end);
+    result.fold(
+      (failure) => emit(MealOperationFailure(failure.message)),
+      (summaries) => emit(DashboardStatsLoaded(summaries)),
+    );
   }
 
   Future<void> _onLoadMeals(
