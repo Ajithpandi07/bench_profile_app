@@ -12,6 +12,11 @@ import 'core.dart';
 import '../features/health_metrics/health_metrics.dart' hide SyncManager;
 import 'services/notification_service.dart';
 
+import '../features/sleep/data/datasources/sleep_remote_data_source.dart';
+import '../features/sleep/data/repositories/sleep_repository_impl.dart';
+import '../features/sleep/domain/repositories/sleep_repository.dart';
+import '../features/sleep/presentation/bloc/sleep_bloc.dart';
+
 // Auth imports
 import '../features/auth/auth.dart';
 
@@ -211,6 +216,20 @@ Future<void> init() async {
       ),
     );
   }
+
+  //================
+  // Feature - Sleep
+  sl.registerFactory(() => SleepBloc(repository: sl()));
+
+  // Repository
+  sl.registerLazySingleton<SleepRepository>(
+    () => SleepRepositoryImpl(remoteDataSource: sl(), networkInfo: sl()),
+  );
+
+  // Data sources
+  sl.registerLazySingleton<SleepRemoteDataSource>(
+    () => SleepRemoteDataSourceImpl(firestore: sl(), auth: sl()),
+  );
 
   //================
   // Features - Hydration

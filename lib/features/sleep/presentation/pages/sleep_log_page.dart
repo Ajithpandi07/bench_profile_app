@@ -1,0 +1,338 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/services/app_theme.dart';
+import '../../../reminder/presentation/widgets/primary_button.dart';
+import '../../domain/entities/sleep_log.dart';
+import '../bloc/bloc.dart';
+import '../widgets/circular_sleep_timer.dart';
+
+class SleepLogPage extends StatefulWidget {
+  final DateTime initialDate;
+  final SleepLog? existingLog;
+
+  const SleepLogPage({super.key, required this.initialDate, this.existingLog});
+
+  @override
+  State<SleepLogPage> createState() => _SleepLogPageState();
+}
+
+class _SleepLogPageState extends State<SleepLogPage> {
+  late DateTime _startDateTime;
+  late DateTime _endDateTime;
+  late int _quality;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingLog != null) {
+      _startDateTime = widget.existingLog!.startTime;
+      _endDateTime = widget.existingLog!.endTime;
+      _quality = widget.existingLog!.quality;
+    } else {
+      // Default: Bedtime 11:00 PM yesterday, Wakeup 7:00 AM today (relative to initialDate)
+      final referenceDate = widget.initialDate;
+      // If initialDate is Today, Bedtime is Yesterday 11pm.
+      // If initialDate is Yesterday, Bedtime is DayBefore 11pm.
+      // Wait, if I'm logging for "Oct 18" (Fri), I probably mean the sleep that happened on the night of Oct 18 leading into Oct 19?
+      // OR the sleep that woke me up on Oct 18?
+      // Usually "Sleep on Friday" means Friday night -> Saturday morning.
+      // Let's assume start time is on initialDate 22:00, end time next day 07:00.
+
+      _startDateTime = DateTime(
+        referenceDate.year,
+        referenceDate.month,
+        referenceDate.day,
+        22,
+        0,
+      ); // 10 PM
+      _endDateTime = _startDateTime.add(const Duration(hours: 9));
+      _quality = 75;
+    }
+  }
+
+  // Helper to maintain reasonable duration logic when times change
+  void _updateDuration() {
+    // If end is before start, it means next day. logic handles in slider.
+    // Just ensure day wrapping consistency if needed.
+    if (_endDateTime.isBefore(_startDateTime)) {
+      if (_endDateTime.day == _startDateTime.day) {
+        _endDateTime = _endDateTime.add(const Duration(days: 1));
+      }
+    }
+  }
+
+  Future<void> _pickTime(bool isStart) async {
+    final initial = isStart ? _startDateTime : _endDateTime;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+
+    if (picked != null) {
+      setState(() {
+        final newDateTime = DateTime(
+          initial.year,
+          initial.month,
+          initial.day,
+          picked.hour,
+          picked.minute,
+        );
+
+        if (isStart) {
+          _startDateTime = newDateTime;
+        } else {
+          _endDateTime = newDateTime;
+        }
+
+        // Auto-fix day crossing if needed?
+        if (_endDateTime.isBefore(_startDateTime)) {
+          // If we picked a wake time earlier than bed time, assume next day
+          if (!_isSameDay(_startDateTime, _endDateTime)) {
+            // already handled?
+          }
+          // If the user explicitly picked a time, we respect the hour/minute.
+          // We just need to ensure the Day part is correct.
+          // Simple logic: Wake time is usually next day if hour < bed hour.
+          if (_endDateTime.hour < _startDateTime.hour) {
+            _endDateTime = _endDateTime.add(const Duration(days: 1));
+          }
+        }
+        _updateDuration();
+      });
+    }
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Sleep'),
+        leading: const BackButton(color: Colors.black),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        titleTextStyle: const TextStyle(
+          color: AppTheme.primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+      ),
+      body: BlocListener<SleepBloc, SleepState>(
+        listener: (context, state) {
+          if (state is SleepOperationSuccess) {
+            Navigator.pop(context, true);
+          } else if (state is SleepError) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
+          }
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Header Date
+              Text(
+                DateFormat('E, MMM d').format(
+                  widget.initialDate,
+                ), // "Yesterday" logic could be added
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Circular Timer
+              Container(
+                height: 320,
+                width: 320,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  // Soft neumorphic-like shadow for depth
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: CircularSleepTimer(
+                  startTime: _startDateTime,
+                  endTime: _endDateTime,
+                  onStartTimeChanged: (val) {
+                    setState(() {
+                      _startDateTime = val;
+                      _updateDuration();
+                    });
+                  },
+                  onEndTimeChanged: (val) {
+                    setState(() {
+                      _endDateTime = val;
+                      _updateDuration();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Manual Time Entry Cards
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _buildTimeCard(
+                      'BEDTIME',
+                      _startDateTime,
+                      () => _pickTime(true),
+                      Icons.bedtime,
+                      isBedtime: true,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildTimeCard(
+                      'WAKE UP',
+                      _endDateTime,
+                      () => _pickTime(false),
+                      Icons.wb_sunny,
+                      isBedtime: false,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Save Button
+              PrimaryButton(text: 'Save', onPressed: _saveLog),
+
+              if (widget.existingLog != null) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: _deleteLog,
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFEBEE), // Light red
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Delete Sleep Record',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _saveLog() {
+    final log = SleepLog(
+      id: widget.existingLog?.id ?? '',
+      startTime: _startDateTime,
+      endTime: _endDateTime,
+      quality: _quality, // Hardcoded for now, could add slider
+    );
+    context.read<SleepBloc>().add(LogSleep(log));
+  }
+
+  void _deleteLog() {
+    if (widget.existingLog != null) {
+      context.read<SleepBloc>().add(DeleteSleepLog(widget.existingLog!));
+    }
+  }
+
+  Widget _buildTimeCard(
+    String label,
+    DateTime time,
+    VoidCallback onTap,
+    IconData icon, {
+    required bool isBedtime,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xffF7F8F8),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isBedtime ? AppTheme.primaryColor : Colors.orange,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: DateFormat('h:mm').format(time),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      fontFamily:
+                          'Poppins', // Ensuring font consistency if needed
+                    ),
+                  ),
+                  TextSpan(
+                    text: DateFormat(' a').format(time).toLowerCase(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              widget.initialDate.day == time.day
+                  ? 'Today'
+                  : 'Tomorrow', // Simple logic
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
