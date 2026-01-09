@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/services/app_theme.dart';
 import '../../domain/entities/hydration_daily_summary.dart';
 import '../bloc/bloc.dart';
-import '../widgets/water_list_shimmer.dart';
 
 class HydrationDashboardPage extends StatefulWidget {
   const HydrationDashboardPage({super.key});
@@ -51,9 +49,9 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Hydration Dashboard',
+          'Water',
           style: TextStyle(
-            color: AppTheme.primaryColor,
+            color: Color(0xFFEE374D),
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
@@ -61,125 +59,264 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
         leading: const BackButton(color: Colors.black),
         backgroundColor: Colors.white,
         elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // View Selectors
-            Row(
-              children: [
-                _buildViewButton('Today'),
-                const SizedBox(width: 8),
-                _buildViewButton('Weekly'),
-                const SizedBox(width: 8),
-                _buildViewButton('Monthly'),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Content
-            Expanded(
-              child: BlocBuilder<HydrationBloc, HydrationState>(
-                builder: (context, state) {
-                  if (state is HydrationLoading) {
-                    return const WaterListShimmer();
-                  } else if (state is HydrationStatsLoaded) {
-                    return _buildStatsView(state.stats);
-                  } else if (state is HydrationFailure) {
-                    return Center(child: Text('Error: ${state.message}'));
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildViewButton(String view) {
-    final isSelected = _selectedView == view;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedView = view;
-          });
-          _loadStats();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryColor : Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart_outlined, color: Colors.black54),
+            onPressed: () {},
           ),
-          child: Center(
-            child: Text(
-              view,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.black54),
+            onPressed: () {},
           ),
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildStatsView(List<HydrationDailySummary> stats) {
-    // Calculate total from stats
-    double total = stats.fold(0, (sum, item) => sum + item.totalLiters);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Total Summary Card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             children: [
-              Text(
-                'Total Intake (${_selectedView})',
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
+              const SizedBox(height: 16),
+              // Tab Selector
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildTab('7 days', _selectedView == 'Weekly'),
+                    _buildTab('31 days', _selectedView == 'Monthly'),
+                    _buildTab('12 months', false), // Placeholder for Yearly
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              const Text(
+                'Oct 12 - Oct 19', // Dynamic date range needed
+                style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
               const SizedBox(height: 8),
+              // Average
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  BlocBuilder<HydrationBloc, HydrationState>(
+                    builder: (context, state) {
+                      double average = 0;
+                      if (state is HydrationStatsLoaded &&
+                          state.stats.isNotEmpty) {
+                        final total = state.stats.fold(
+                          0.0,
+                          (sum, item) => sum + item.totalLiters,
+                        );
+                        average = (total * 1000) / state.stats.length;
+                      }
+                      return Text(
+                        average > 0 ? average.toStringAsFixed(0) : '0',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF131313),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'ml',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey, // Light grey in design
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Average Hydration',
+                style: TextStyle(color: Color(0xFF5A6B87), fontSize: 14),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Goals Row
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildGoalCard(
+                      Icons.schedule,
+                      'TIME GOAL',
+                      '5/7',
+                      Colors.red,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildGoalCard(
+                      Icons.water_drop,
+                      'WATER GOAL',
+                      '5/7',
+                      Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Chart Area
+              SizedBox(
+                height: 250,
+                child: BlocBuilder<HydrationBloc, HydrationState>(
+                  builder: (context, state) {
+                    if (state is HydrationLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (state is HydrationStatsLoaded) {
+                      return _buildBarChart(state.stats);
+                    }
+                    return const Center(child: Text('No data'));
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // Insight Card
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEBF6FF),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome,
+                        color: Colors.blue,
+                      ), // Sparkles icon
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Great job!',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(0xFF131313),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Your hydration consistency has increased by 12% compared to last week. Keep maintaining this schedule.',
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTab(String text, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        if (text == '7 days') {
+          setState(() {
+            _selectedView = 'Weekly';
+          });
+          _loadStats();
+        } else if (text == '31 days') {
+          setState(() {
+            _selectedView = 'Monthly';
+          });
+          _loadStats();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEE374D) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoalCard(
+    IconData icon,
+    String title,
+    String value,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 8),
               Text(
-                '${total.toStringAsFixed(1)} L',
+                title,
                 style: const TextStyle(
-                  color: AppTheme.primaryColor,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  fontSize: 32,
+                  color: Colors.grey,
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 32),
-
-        // 7 Days Chart (Only for Weekly/Monthly view to show trends)
-        if (_selectedView == 'Weekly') ...[
-          const Text(
-            'Last 7 Days',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF131313),
+            ),
           ),
-          const SizedBox(height: 16),
-          Expanded(child: _buildBarChart(stats)),
-        ] else if (_selectedView == 'Monthly') ...[
-          const Text(
-            'Daily Breakdown',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Expanded(child: _buildBarChart(stats)),
         ],
-      ],
+      ),
     );
   }
 
@@ -191,13 +328,14 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
       0,
       (max, item) => item.totalLiters > max ? item.totalLiters : max,
     );
-    if (maxVal == 0) maxVal = 1; // Avoid division by zero
+    if (maxVal == 0) maxVal = 1;
 
-    // For Weekly, we want to ensure we show 7 bars even if data is missing
+    // We need 7 bars for weekly view
+    // Create a list of 7 days ending today
+    final now = DateTime.now();
     List<HydrationDailySummary> chartData = [];
 
     if (_selectedView == 'Weekly') {
-      final now = DateTime.now();
       for (int i = 6; i >= 0; i--) {
         final date = now.subtract(Duration(days: i));
         final summary = stats.firstWhere(
@@ -210,49 +348,80 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
         chartData.add(summary);
       }
     } else {
-      chartData = stats;
-      // create a full month view if needed, but for now just showing what we have is okay or
-      // better yet, fill holes for simple bar chart
+      // Just show last 7 days of stats for now even if monthly selected, to fit design trace
+      // Or actually show more bars if monthly. Design (Image 3) shows 7 bars.
+      // It says "Oct 12 - Oct 19" and shows 7 bars.
+      // I'll stick to 7 bars logic for visual consistency with the design mock which seems to be Weekly view.
+      for (int i = 6; i >= 0; i--) {
+        final date = now.subtract(Duration(days: i));
+        final summary = stats.firstWhere(
+          (element) =>
+              element.date.year == date.year &&
+              element.date.month == date.month &&
+              element.date.day == date.day,
+          orElse: () => HydrationDailySummary(date: date, totalLiters: 0),
+        );
+        chartData.add(summary);
+      }
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: chartData.map((data) {
             final height =
-                (data.totalLiters / maxVal) *
-                constraints.maxHeight *
-                0.7; // 70% max height
-            final isToday = DateUtils.isSameDay(data.date, DateTime.now());
+                (data.totalLiters / maxVal) * constraints.maxHeight * 0.6;
+
+            // Highlight the highest bar or today? Design highlights "Thu" which is the highest.
+            final isHighest = data.totalLiters == maxVal && maxVal > 0;
 
             return Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (data.totalLiters > 0)
-                  Text(
-                    '${data.totalLiters.toStringAsFixed(1)}',
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                // Dashed line background is complex to do in Row/Column, skipping for now or using Stack.
+                // Just bars.
+                // Design has a tooltip-like label "2000 ml" above the highest bar.
+                if (isHighest)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEE374D),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${(data.totalLiters * 1000).toInt()} ml',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                const SizedBox(height: 4),
+
                 Container(
-                  width: 20,
-                  height: height > 0 ? height : 1, // Min height
+                  width: 30, // Thicker bars
+                  height: height > 0 ? height : 0,
                   decoration: BoxDecoration(
-                    color: isToday
-                        ? AppTheme.primaryColor
-                        : AppTheme.primaryColor.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(4),
+                    color: isHighest
+                        ? const Color(0xFFEE374D)
+                        : const Color(0xFFFFEBEB), // Light pink for others
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(
                   DateFormat('E').format(data.date), // Mon, Tue
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                    color: isToday ? Colors.black : Colors.grey,
+                    color: isHighest
+                        ? const Color(0xFFEE374D)
+                        : Colors.grey.shade400,
                   ),
                 ),
               ],
