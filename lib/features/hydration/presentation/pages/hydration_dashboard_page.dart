@@ -1,3 +1,4 @@
+import '../widgets/dashboard_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -12,7 +13,8 @@ class HydrationDashboardPage extends StatefulWidget {
 }
 
 class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
-  String _selectedView = 'Weekly'; // Default to Weekly as per request focus
+  String _selectedView = 'Weekly'; // 'Weekly', 'Monthly', 'Yearly'
+  DateTime? _selectedTooltipDate; // Selected date for tooltip
 
   @override
   void initState() {
@@ -23,24 +25,102 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
   void _loadStats() {
     final now = DateTime.now();
     DateTime startDate;
-    DateTime endDate = now;
+    DateTime endDate;
 
-    if (_selectedView == 'Today') {
-      startDate = now;
-      endDate = now;
-    } else if (_selectedView == 'Weekly') {
-      // Last 7 days including today
-      startDate = now.subtract(const Duration(days: 6));
-    } else {
-      // Monthly (Start of current month)
+    if (_selectedView == 'Weekly') {
+      // Calendar Week (Mon - Sun)
+      // Find Monday of current week
+      // weekday: Mon=1 ... Sun=7
+      final daysToSubtract = now.weekday - 1;
+      startDate = now.subtract(Duration(days: daysToSubtract));
+      endDate = startDate.add(const Duration(days: 6));
+      // Ensure we strip time or handle it. Repo uses start/end.
+      // If today is Wed, we want Mon-Sun. End date is future? That's fine, data will be 0.
+    } else if (_selectedView == 'Monthly') {
+      // Calendar Month (1st to End)
       startDate = DateTime(now.year, now.month, 1);
+      // Last day of month: 1st of next month minus 1 day
+      endDate = DateTime(now.year, now.month + 1, 0);
+    } else {
+      // Yearly: Jan - Dec
+      startDate = DateTime(now.year, 1, 1);
+      endDate = DateTime(now.year, 12, 31);
     }
 
-    // Ensure we strip time for accurate date comparisons in logic if needed,
-    // though the repo handles it.
+    // Reset tooltip selection when view changes
+    setState(() {
+      _selectedTooltipDate = null;
+    });
+
     context.read<HydrationBloc>().add(
       LoadHydrationStats(startDate: startDate, endDate: endDate),
     );
+  }
+
+  List<HydrationDailySummary> _processChartData(
+    List<HydrationDailySummary> rawStats,
+  ) {
+    // We must generate ALL slots even if empty, to maintain static axis
+    final now = DateTime.now();
+    List<HydrationDailySummary> processed = [];
+
+    if (_selectedView == 'Yearly') {
+      // Jan - Dec
+      for (int i = 1; i <= 12; i++) {
+        final monthStats = rawStats.where(
+          (e) => e.date.month == i && e.date.year == now.year,
+        );
+        double total = monthStats.fold(0.0, (sum, e) => sum + e.totalLiters);
+        processed.add(
+          HydrationDailySummary(
+            date: DateTime(now.year, i, 1),
+            totalLiters: total,
+          ),
+        );
+      }
+    } else if (_selectedView == 'Monthly') {
+      // 1 - End of Month
+      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+      for (int i = 1; i <= daysInMonth; i++) {
+        final date = DateTime(now.year, now.month, i);
+        final summary = rawStats.firstWhere(
+          (e) =>
+              e.date.year == date.year &&
+              e.date.month == date.month &&
+              e.date.day == date.day,
+          orElse: () => HydrationDailySummary(date: date, totalLiters: 0),
+        );
+        processed.add(summary);
+      }
+    } else {
+      // Weekly: Mon - Sun
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      for (int i = 0; i < 7; i++) {
+        final date = monday.add(Duration(days: i));
+        final summary = rawStats.firstWhere(
+          (e) =>
+              e.date.year == date.year &&
+              e.date.month == date.month &&
+              e.date.day == date.day,
+          orElse: () => HydrationDailySummary(date: date, totalLiters: 0),
+        );
+        processed.add(summary);
+      }
+    }
+    return processed;
+  }
+
+  String _getDateRangeText() {
+    final now = DateTime.now();
+    if (_selectedView == 'Weekly') {
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final sunday = monday.add(const Duration(days: 6));
+      return '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
+    } else if (_selectedView == 'Monthly') {
+      return DateFormat('MMMM yyyy').format(now);
+    } else {
+      return DateFormat('yyyy').format(now);
+    }
   }
 
   @override
@@ -59,18 +139,9 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
         leading: const BackButton(color: Colors.black),
         backgroundColor: Colors.white,
         elevation: 0,
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart_outlined, color: Colors.black54),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black54),
-            onPressed: () {},
-          ),
-        ],
+        centerTitle: false,
       ),
+
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -86,99 +157,131 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildTab('7 days', _selectedView == 'Weekly'),
-                    _buildTab('31 days', _selectedView == 'Monthly'),
-                    _buildTab('12 months', false), // Placeholder for Yearly
+                    _buildTab('7 days', 'Weekly'),
+                    _buildTab('31 days', 'Monthly'),
+                    _buildTab('12 months', 'Yearly'),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
 
-              const Text(
-                'Oct 12 - Oct 19', // Dynamic date range needed
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+              Text(
+                _getDateRangeText(),
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
               ),
               const SizedBox(height: 8),
-              // Average
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  BlocBuilder<HydrationBloc, HydrationState>(
-                    builder: (context, state) {
-                      double average = 0;
-                      if (state is HydrationStatsLoaded &&
-                          state.stats.isNotEmpty) {
-                        final total = state.stats.fold(
-                          0.0,
-                          (sum, item) => sum + item.totalLiters,
-                        );
-                        average = (total * 1000) / state.stats.length;
-                      }
-                      return Text(
-                        average > 0 ? average.toStringAsFixed(0) : '0',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF131313),
+
+              // Average Display
+              BlocBuilder<HydrationBloc, HydrationState>(
+                builder: (context, state) {
+                  double average = 0;
+
+                  if (state is HydrationStatsLoaded && state.stats.isNotEmpty) {
+                    final processed = _processChartData(state.stats);
+                    // Filter out future dates if any, though our process limits it.
+                    // For average, we might want average of non-zero days or all days in range?
+                    // Typically average daily intake over the period.
+                    double total = processed.fold(
+                      0.0,
+                      (sum, item) => sum + item.totalLiters,
+                    );
+                    average = (total * 1000) / processed.length;
+                  }
+
+                  return Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            average > 0 ? average.toStringAsFixed(0) : '0',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF131313),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'ml',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Average Hydration',
+                        style: TextStyle(
+                          color: Color(0xFF5A6B87),
+                          fontSize: 14,
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'ml',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey, // Light grey in design
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Average Hydration',
-                style: TextStyle(color: Color(0xFF5A6B87), fontSize: 14),
+                      ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 32),
 
               // Goals Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildGoalCard(
-                      Icons.schedule,
-                      'TIME GOAL',
-                      '5/7',
-                      Colors.red,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildGoalCard(
-                      Icons.water_drop,
-                      'WATER GOAL',
-                      '5/7',
-                      Colors.blue,
-                    ),
-                  ),
-                ],
+              BlocBuilder<HydrationBloc, HydrationState>(
+                builder: (context, state) {
+                  String waterGoal = '0/7';
+                  String timeGoal = '0/7'; // Assuming similar logic or mockup
+
+                  if (state is HydrationStatsLoaded) {
+                    final processed = _processChartData(state.stats);
+                    int achieved = processed
+                        .where((e) => e.totalLiters >= 3.0)
+                        .length;
+                    int totalDays = processed.length;
+                    waterGoal = '$achieved/$totalDays';
+                    timeGoal =
+                        '$achieved/$totalDays'; // Placeholder logic for time
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _buildGoalCard(
+                          Icons.schedule,
+                          'TIME GOAL',
+                          timeGoal,
+                          Colors.red,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildGoalCard(
+                          Icons.water_drop,
+                          'WATER GOAL',
+                          waterGoal,
+                          Colors.blue,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 32),
 
               // Chart Area
               SizedBox(
-                height: 250,
+                height: 300, // Increased height for grid labels
                 child: BlocBuilder<HydrationBloc, HydrationState>(
                   builder: (context, state) {
                     if (state is HydrationLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const DashboardShimmer();
                     } else if (state is HydrationStatsLoaded) {
-                      return _buildBarChart(state.stats);
+                      final data = _processChartData(state.stats);
+                      return _buildCustomBarChart(data);
                     }
                     return const Center(child: Text('No data'));
                   },
@@ -187,7 +290,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
 
               const SizedBox(height: 32),
 
-              // Insight Card
+              // Insight Card (Static for now as per previous)
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -203,10 +306,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.auto_awesome,
-                        color: Colors.blue,
-                      ), // Sparkles icon
+                      child: const Icon(Icons.auto_awesome, color: Colors.blue),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -223,7 +323,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Your hydration consistency has increased by 12% compared to last week. Keep maintaining this schedule.',
+                            'Your hydration consistency has increased. Keep maintaining this schedule.',
                             style: TextStyle(
                               color: Colors.grey.shade700,
                               fontSize: 14,
@@ -244,23 +344,17 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
     );
   }
 
-  Widget _buildTab(String text, bool isSelected) {
+  Widget _buildTab(String text, String viewKey) {
+    final isSelected = _selectedView == viewKey;
     return GestureDetector(
       onTap: () {
-        if (text == '7 days') {
-          setState(() {
-            _selectedView = 'Weekly';
-          });
-          _loadStats();
-        } else if (text == '31 days') {
-          setState(() {
-            _selectedView = 'Monthly';
-          });
-          _loadStats();
-        }
+        setState(() {
+          _selectedView = viewKey;
+        });
+        _loadStats();
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFEE374D) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -320,115 +414,227 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
     );
   }
 
-  Widget _buildBarChart(List<HydrationDailySummary> stats) {
-    if (stats.isEmpty) return const Center(child: Text("No data available"));
+  Widget _buildCustomBarChart(List<HydrationDailySummary> data) {
+    if (data.isEmpty) return const SizedBox();
 
-    // Find max value for normalization
-    double maxVal = stats.fold(
-      0,
-      (max, item) => item.totalLiters > max ? item.totalLiters : max,
+    double maxVal = data.fold(
+      0.0,
+      (prev, e) => e.totalLiters > prev ? e.totalLiters : prev,
     );
-    if (maxVal == 0) maxVal = 1;
-
-    // We need 7 bars for weekly view
-    // Create a list of 7 days ending today
-    final now = DateTime.now();
-    List<HydrationDailySummary> chartData = [];
-
-    if (_selectedView == 'Weekly') {
-      for (int i = 6; i >= 0; i--) {
-        final date = now.subtract(Duration(days: i));
-        final summary = stats.firstWhere(
-          (element) =>
-              element.date.year == date.year &&
-              element.date.month == date.month &&
-              element.date.day == date.day,
-          orElse: () => HydrationDailySummary(date: date, totalLiters: 0),
-        );
-        chartData.add(summary);
-      }
-    } else {
-      // Just show last 7 days of stats for now even if monthly selected, to fit design trace
-      // Or actually show more bars if monthly. Design (Image 3) shows 7 bars.
-      // It says "Oct 12 - Oct 19" and shows 7 bars.
-      // I'll stick to 7 bars logic for visual consistency with the design mock which seems to be Weekly view.
-      for (int i = 6; i >= 0; i--) {
-        final date = now.subtract(Duration(days: i));
-        final summary = stats.firstWhere(
-          (element) =>
-              element.date.year == date.year &&
-              element.date.month == date.month &&
-              element.date.day == date.day,
-          orElse: () => HydrationDailySummary(date: date, totalLiters: 0),
-        );
-        chartData.add(summary);
-      }
-    }
+    if (maxVal < 1.0) maxVal = 1.0;
+    maxVal = maxVal * 1.2;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: chartData.map((data) {
-            final height =
-                (data.totalLiters / maxVal) * constraints.maxHeight * 0.6;
+        final double height = constraints.maxHeight;
 
-            // Highlight the highest bar or today? Design highlights "Thu" which is the highest.
-            final isHighest = data.totalLiters == maxVal && maxVal > 0;
+        const double yAxisWidth = 30.0;
 
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Dashed line background is complex to do in Row/Column, skipping for now or using Stack.
-                // Just bars.
-                // Design has a tooltip-like label "2000 ml" above the highest bar.
-                if (isHighest)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEE374D),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${(data.totalLiters * 1000).toInt()} ml',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+        const double xAxisHeight = 30.0;
+        final double chartHeight = height - xAxisHeight - 20;
+
+        return Stack(
+          children: [
+            // Y-Axis Labels and Grid Lines
+            Positioned(
+              top: 20,
+              left: 0,
+              right: 0,
+              height: chartHeight,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(5, (index) {
+                  final value = maxVal * (1 - (index / 4));
+                  String labelText = '';
+                  if (value % 1 == 0) {
+                    labelText = '${value.toInt()}L';
+                  } else {
+                    labelText = '${value.toStringAsFixed(1)}L';
+                  }
+
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: yAxisWidth,
+                        child: Text(
+                          labelText,
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          height: 1,
+                          color: Colors.transparent,
+                          child: CustomPaint(
+                            painter: DashedLinePainter(
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+
+            // Bars (Static Row + Flexible)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: yAxisWidth,
+                bottom: xAxisHeight,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: data.map((item) {
+                  final double barHeight =
+                      (item.totalLiters / maxVal) * chartHeight;
+
+                  final isSelected =
+                      _selectedTooltipDate != null &&
+                      _selectedTooltipDate!.year == item.date.year &&
+                      _selectedTooltipDate!.month == item.date.month &&
+                      _selectedTooltipDate!.day == item.date.day;
+
+                  // Highlight today
+                  final isToday =
+                      item.date.year == DateTime.now().year &&
+                      item.date.month == DateTime.now().month &&
+                      item.date.day == DateTime.now().day;
+
+                  String label;
+                  if (_selectedView == 'Weekly') {
+                    label = DateFormat('E').format(item.date); // Mon
+                  } else if (_selectedView == 'Yearly') {
+                    label = DateFormat('MMM').format(item.date);
+                  } else {
+                    // Monthly: 1, 2, ...
+                    // Logic to hide some labels if too dense
+                    // Show 1, 5, 10, 15, 20, 25, 30
+                    if (item.date.day == 1 || item.date.day % 5 == 0) {
+                      label = item.date.day.toString();
+                    } else {
+                      label = '';
+                    }
+                  }
+
+                  Color barColor = isToday
+                      ? const Color(0xFFEE374D)
+                      : const Color(0xFFFFEBEB);
+                  if (isSelected) barColor = const Color(0xFFEE374D);
+
+                  return Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        setState(() {
+                          _selectedTooltipDate = item.date;
+                        });
+                      },
+                      child: Container(
+                        color: Colors.transparent, // Touch target
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            // Tooltip (Only if Selected)
+                            if (isSelected)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, // Slightly more padding
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEE374D),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${(item.totalLiters * 1000).toInt()}',
+                                  maxLines: 1,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12, // Increased from 8
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else
+                              SizedBox(
+                                height: isSelected
+                                    ? 0
+                                    : 26, // Adjusted placeholder height
+                              ),
+
+                            Expanded(child: Container()), // Push down
+                            // Bar
+                            Container(
+                              width: _selectedView == 'Weekly'
+                                  ? 24 // Increased for 7 days
+                                  : _selectedView == 'Monthly'
+                                  ? 6
+                                  : 16, // Slightly wider for Yearly too
+                              height: barHeight > 0 ? barHeight : 0,
+                              decoration: BoxDecoration(
+                                color: barColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Label
+                            SizedBox(
+                              height: 12,
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: (isToday || isSelected)
+                                      ? const Color(0xFFEE374D)
+                                      : Colors.grey.shade400,
+                                ),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.visible,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-
-                Container(
-                  width: 30, // Thicker bars
-                  height: height > 0 ? height : 0,
-                  decoration: BoxDecoration(
-                    color: isHighest
-                        ? const Color(0xFFEE374D)
-                        : const Color(0xFFFFEBEB), // Light pink for others
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  DateFormat('E').format(data.date), // Mon, Tue
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isHighest
-                        ? const Color(0xFFEE374D)
-                        : Colors.grey.shade400,
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         );
       },
     );
   }
+}
+
+class DashedLinePainter extends CustomPainter {
+  final Color color;
+  DashedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 4;
+    const dashSpace = 4;
+    double startX = 0;
+
+    while (startX < size.width) {
+      canvas.drawLine(Offset(startX, 0), Offset(startX + dashWidth, 0), paint);
+      startX += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

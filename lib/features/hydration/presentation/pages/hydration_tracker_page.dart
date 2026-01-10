@@ -9,7 +9,9 @@ import '../bloc/bloc.dart';
 
 class HydrationTrackerPage extends StatefulWidget {
   final DateTime? initialDate;
-  const HydrationTrackerPage({super.key, this.initialDate});
+  final HydrationLog? logToEdit; // New parameter
+
+  const HydrationTrackerPage({super.key, this.initialDate, this.logToEdit});
 
   @override
   State<HydrationTrackerPage> createState() => _HydrationTrackerPageState();
@@ -19,15 +21,23 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
   // State variables for new UI
   late DateTime _selectedDate;
   int _amountMl = 200; // Default amount
-  int _selectedPresetIndex =
-      -1; // No preset selected initially or maybe one? Design shows 200ml default.
+  int _selectedPresetIndex = -1;
 
   final List<int> _presets = [100, 250, 350, 500];
 
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.initialDate ?? DateTime.now();
+    if (widget.logToEdit != null) {
+      _selectedDate = widget.logToEdit!.timestamp;
+      _amountMl = (widget.logToEdit!.amountLiters * 1000).round();
+      // Check if matches preset
+      if (_presets.contains(_amountMl)) {
+        _selectedPresetIndex = _presets.indexOf(_amountMl);
+      }
+    } else {
+      _selectedDate = widget.initialDate ?? DateTime.now();
+    }
   }
 
   void _updateAmount(int value) {
@@ -54,9 +64,9 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Water',
-          style: TextStyle(
+        title: Text(
+          widget.logToEdit != null ? 'Edit Water' : 'Water',
+          style: const TextStyle(
             color: Color(0xFFEE374D),
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -64,15 +74,7 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
         ),
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Container(
-            // No background in design trace 2, just arrow? Actually looks like standard behavior.
-            // But preserving the consistent "Red Arrow" if desired, or standard.
-            // Image 2 shows standard back arrow, maybe?
-            // Let's stick to standard BackButton for consistency with HydrationReportPage unless spec says otherwise.
-            // Wait, the previous code had a fancy red circle back button. Image 2 shows just an arrow.
-            // I'll use standard BackButton.
-            child: const BackButton(color: Colors.black),
-          ),
+          child: const BackButton(color: Colors.black),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -302,7 +304,7 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
                     return Center(
                       child: Container(
                         width: double.infinity,
-                        height: 56,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: const Color(0xFFEE374D),
                           borderRadius: BorderRadius.circular(16),
@@ -405,12 +407,15 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
     }
 
     final log = HydrationLog(
-      id: const Uuid().v4(),
+      id:
+          widget.logToEdit?.id ??
+          const Uuid().v4(), // Use existing ID if editing
       amountLiters: volumeLiters,
       timestamp: _selectedDate,
-      beverageType:
-          'Water', // Default for now, as Type selector removed in this design
-      userId: '',
+      beverageType: 'Water',
+      userId:
+          widget.logToEdit?.userId ??
+          '', // Preserve original user ID or let empty be handled (auth usually overrides)
     );
 
     context.read<HydrationBloc>().add(LogHydration(log));
