@@ -47,3 +47,13 @@ class AddUserMeal extends MealEvent {
   @override
   List<Object> get props => [meal];
 }
+
+class LoadDashboardStats extends MealEvent {
+  final DateTime? start; // Optional: Override default range
+  final DateTime? end;
+
+  const LoadDashboardStats({this.start, this.end});
+
+  @override
+  List<Object> get props => [start ?? DateTime(0), end ?? DateTime(0)];
+}

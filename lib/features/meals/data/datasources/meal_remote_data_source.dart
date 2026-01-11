@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bench_profile_app/core/error/exceptions.dart';
 import '../../domain/entities/entities.dart';
+import '../../domain/entities/daily_meal_summary.dart';
 
 abstract class MealRemoteDataSource {
   Future<void> logMeal(MealLog log);
@@ -10,6 +11,11 @@ abstract class MealRemoteDataSource {
   Future<List<FoodItem>> getUserFoods();
   Future<void> saveUserMeal(UserMeal meal);
   Future<List<UserMeal>> getUserMeals();
+  Future<List<UserMeal>> getUserMeals();
+  Future<List<DailyMealSummary>> getDailySummaries(
+    DateTime start,
+    DateTime end,
+  );
   // Future<List<FoodItem>> searchFood(String query); // Optional: if using external API or local DB
 }
 
@@ -58,7 +64,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       'timestamp': Timestamp.fromDate(log.timestamp),
       'mealType': log.mealType,
       'totalCalories': log.totalCalories,
-      'userMealIds': log.userMealIds,
+      'userMeals': log.userMeals.map((m) => m.toMap(isSnapshot: true)).toList(),
       'createdAt': log.createdAt != null
           ? Timestamp.fromDate(log.createdAt!)
           : FieldValue.serverTimestamp(),
@@ -145,7 +151,11 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         mealType: data['mealType'],
         totalCalories: (data['totalCalories'] as num).toDouble(),
         items: hydratedItems,
-        userMealIds: List<String>.from(data['userMealIds'] ?? []),
+        userMeals:
+            (data['userMeals'] as List<dynamic>?)
+                ?.map((e) => UserMeal.fromMap(e as Map<String, dynamic>))
+                .toList() ??
+            [],
         createdAt: data['createdAt'] != null
             ? (data['createdAt'] as Timestamp).toDate()
             : null,
@@ -259,7 +269,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final userFoods = await getUserFoods();
     final foodMap = {for (var f in userFoods) f.id: f};
 
-    return query.docs.map((doc) {
+    return query.docs.map<UserMeal>((doc) {
       final data = doc.data();
 
       // Check if we have the modern 'foods' list structure
@@ -276,16 +286,30 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
             .whereType<FoodItem>()
             .toList(); // Filter out nulls
       }
+    }).toList();
+  }
 
-      return UserMeal(
-        id: data['id'] ?? doc.id,
-        name: data['name'] ?? '',
-        foods: hydratedFoods,
+  @override
+  Future<List<DailyMealSummary>> getDailySummaries(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
+
+    final query = await firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .get();
+
+    return query.docs.map((doc) {
+      final data = doc.data();
+      return DailyMealSummary(
+        date: (data['date'] as Timestamp).toDate(),
         totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
-        creatorId: data['creatorId'] ?? '',
-        createdAt: data['createdAt'] != null
-            ? (data['createdAt'] as Timestamp).toDate()
-            : null,
       );
     }).toList();
   }

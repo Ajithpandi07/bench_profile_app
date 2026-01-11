@@ -13,8 +13,16 @@ import 'review_meal_page.dart';
 class MealListingPage extends StatefulWidget {
   final String mealType;
   final DateTime? initialDate;
+  final List<FoodItem>? initialFoods;
+  final List<UserMeal>? initialMeals;
 
-  const MealListingPage({super.key, required this.mealType, this.initialDate});
+  const MealListingPage({
+    super.key,
+    required this.mealType,
+    this.initialDate,
+    this.initialFoods,
+    this.initialMeals,
+  });
 
   @override
   State<MealListingPage> createState() => _MealListingPageState();
@@ -36,6 +44,15 @@ class _MealListingPageState extends State<MealListingPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     context.read<MealBloc>().add(LoadUserLibrary());
+
+    if (widget.initialFoods != null) {
+      _selectedFoods.addAll(widget.initialFoods!);
+      _selectedFoodIds.addAll(widget.initialFoods!.map((e) => e.id));
+    }
+    if (widget.initialMeals != null) {
+      _selectedMealsList.addAll(widget.initialMeals!);
+      _selectedMealIds.addAll(widget.initialMeals!.map((e) => e.id));
+    }
   }
 
   void _toggleFoodSelection(FoodItem food) {

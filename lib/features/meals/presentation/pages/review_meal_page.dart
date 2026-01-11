@@ -56,7 +56,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       total += f.calories * f.quantity;
     }
     for (var m in _currentMeals) {
-      total += m.totalCalories;
+      total += m.totalCalories * m.quantity;
     }
     setState(() {
       _calories = total;
@@ -88,6 +88,46 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     });
   }
 
+  void _updateFoodInMeal(int mealIndex, int foodIndex, int delta) {
+    setState(() {
+      final meal = _currentMeals[mealIndex];
+      // Create a modifiable copy of the foods list
+      final updatedFoods = List<FoodItem>.from(meal.foods);
+      final food = updatedFoods[foodIndex];
+      final newQuantity = food.quantity + delta;
+
+      if (newQuantity > 0) {
+        updatedFoods[foodIndex] = food.copyWith(quantity: newQuantity);
+      } else {
+        // Allow removing food from the meal set
+        updatedFoods.removeAt(foodIndex);
+      }
+
+      // Recalculate meal total
+      double newTotal = 0;
+      for (var f in updatedFoods) {
+        newTotal += f.calories * f.quantity;
+      }
+
+      _currentMeals[mealIndex] = meal.copyWith(
+        foods: updatedFoods,
+        totalCalories: newTotal,
+      );
+      _calculateTotalCalories();
+    });
+  }
+
+  Widget _buildStepperIcon(IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        shape: BoxShape.circle,
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Icon(icon, size: 16, color: Colors.grey),
+    );
+  }
+
   void _logMeal() {
     if (_currentFoods.isEmpty && _currentMeals.isEmpty) {
       showModernSnackbar(
@@ -105,7 +145,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       timestamp: widget.logDate ?? DateTime.now(),
       mealType: _selectedMealType,
       items: _currentFoods,
-      userMealIds: _currentMeals.map((m) => m.id).toList(),
+      userMeals: _currentMeals,
       totalCalories: _calories, // User can override with slider
       createdAt: DateTime.now(),
     );
@@ -425,7 +465,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                             children: [
                               _buildFoodItemRow(
                                 food.name,
-                                '${(food.calories * food.quantity).toStringAsFixed(0)} kcal',
+                                '${food.quantity} x ${food.servingSize} • ${(food.calories * food.quantity).toStringAsFixed(0)} kcal',
                                 index,
                                 food.quantity,
                               ),
@@ -461,7 +501,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                           final meal = entry.value;
                           return Column(
                             children: [
-                              _buildMealItemRow(meal),
+                              _buildMealItemRow(meal, index),
                               if (index < _currentMeals.length - 1)
                                 const Divider(height: 1),
                             ],
@@ -578,7 +618,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     );
   }
 
-  Widget _buildMealItemRow(UserMeal meal) {
+  Widget _buildMealItemRow(UserMeal meal, int index) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -597,21 +637,64 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${meal.totalCalories.toStringAsFixed(0)} kcal (Meal)',
+                  '${meal.quantity} x Set • ${meal.totalCalories.toStringAsFixed(0)} kcal (Meal)',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 if (meal.foods.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  ...meal.foods.map((food) {
+                  const SizedBox(height: 12),
+                  ...meal.foods.asMap().entries.map((entry) {
+                    final foodIndex = entry.key;
+                    final food = entry.value;
                     final foodCals = food.calories * food.quantity;
+
                     return Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 2.0),
-                      child: Text(
-                        '• ${food.name} (${foodCals.toStringAsFixed(0)} kcal)',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 11,
-                        ),
+                      padding: const EdgeInsets.only(
+                        left: 8.0,
+                        bottom: 8.0,
+                        right: 8.0,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  food.name,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade800,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  '${foodCals.toStringAsFixed(0)} kcal',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Inline Food Stepper
+                          GestureDetector(
+                            onTap: () =>
+                                _updateFoodInMeal(index, foodIndex, -1),
+                            child: _buildStepperIcon(Icons.remove),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              '${food.quantity}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => _updateFoodInMeal(index, foodIndex, 1),
+                            child: _buildStepperIcon(Icons.add),
+                          ),
+                        ],
                       ),
                     );
                   }),
@@ -619,7 +702,9 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
               ],
             ),
           ),
-          // No stepper for meals (complex object), just delete
+
+          const SizedBox(width: 16),
+
           IconButton(
             constraints: const BoxConstraints(),
             padding: EdgeInsets.zero,
