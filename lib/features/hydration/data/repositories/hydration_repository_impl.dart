@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:bench_profile_app/core/core.dart';
 import 'package:bench_profile_app/features/hydration/domain/domain.dart';
+import 'package:bench_profile_app/features/hydration/domain/entities/hydration_daily_summary.dart';
 import 'package:bench_profile_app/features/hydration/data/datasources/hydration_remote_data_source.dart';
 
 class HydrationRepositoryImpl implements HydrationRepository {
@@ -40,6 +41,26 @@ class HydrationRepositoryImpl implements HydrationRepository {
     } else {
       // Since requirements said "Remote Only" for now, we just fail if no net.
       // If caching was needed we'd fetch local here.
+      return const Left(NetworkFailure('No internet connection.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<HydrationDailySummary>>> getHydrationStats({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    if (await networkInfo.isConnected) {
+      try {
+        final stats = await remoteDataSource.getHydrationStats(
+          startDate,
+          endDate,
+        );
+        return Right(stats);
+      } catch (e) {
+        return Left(ServerFailure('Failed to fetch hydration stats: $e'));
+      }
+    } else {
       return const Left(NetworkFailure('No internet connection.'));
     }
   }

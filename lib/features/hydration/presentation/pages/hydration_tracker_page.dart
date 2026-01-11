@@ -3,110 +3,103 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
-import 'dart:ui' as ui;
-
 import '../../../../core/utils/snackbar_utils.dart';
 import '../../domain/domain.dart';
 import '../bloc/bloc.dart';
 
 class HydrationTrackerPage extends StatefulWidget {
   final DateTime? initialDate;
-  const HydrationTrackerPage({super.key, this.initialDate});
+  final HydrationLog? logToEdit; // New parameter
+
+  const HydrationTrackerPage({super.key, this.initialDate, this.logToEdit});
 
   @override
   State<HydrationTrackerPage> createState() => _HydrationTrackerPageState();
 }
 
 class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
+  // State variables for new UI
   late DateTime _selectedDate;
-  int _selectedSizeIndex = 1; // Default to 250ml
-  String _selectedType = 'Regular';
-  int _servingCount = 1;
+  int _amountMl = 200; // Default amount
+  int _selectedPresetIndex = -1;
+
+  final List<int> _presets = [100, 250, 350, 500];
 
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.initialDate ?? DateTime.now();
+    if (widget.logToEdit != null) {
+      _selectedDate = widget.logToEdit!.timestamp;
+      _amountMl = (widget.logToEdit!.amountLiters * 1000).round();
+      // Check if matches preset
+      if (_presets.contains(_amountMl)) {
+        _selectedPresetIndex = _presets.indexOf(_amountMl);
+      }
+    } else {
+      _selectedDate = widget.initialDate ?? DateTime.now();
+    }
   }
 
-  final List<int> _sizes = [100, 250, 350, 500];
-  final List<String> _types = [
-    'Regular',
-    'Carbonated',
-    'Zero-calorie flavored',
-  ];
+  void _updateAmount(int value) {
+    setState(() {
+      _amountMl = value.clamp(0, 5000); // Reasonable limits
+      // If matches a preset, select it, else deselect
+      if (_presets.contains(_amountMl)) {
+        _selectedPresetIndex = _presets.indexOf(_amountMl);
+      } else {
+        _selectedPresetIndex = -1;
+      }
+    });
+  }
+
+  void _onPresetSelected(int index) {
+    setState(() {
+      _selectedPresetIndex = index;
+      _amountMl = _presets[index];
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<HydrationBloc, HydrationState>(
-      listener: (context, state) {
-        if (state is HydrationSuccess) {
-          showModernSnackbar(context, 'Hydration logged remotely!');
-
-          // We also need to tell the Dashboard to update its UI "Optimistically" if possible
-          // or just trust that the user refreshing will get it?
-          // User asked for "dashboard updates". Since it's remote only,
-          // the dashboard won't see it unless we manually inject it into HealthMetricsBloc
-          // OR we refetch from remote (if dashboard fetches remote).
-          //
-          // Dashboard currently fetches LOCAL cache.
-          // So if we save REMOTE only, Dashboard will NEVER show it unless we merge state.
-          //
-          // Solution: Trigger manual state update in HealthMetricsBloc via a new event or existing mechanism?
-          // I'll emit a "ManualMetricAdded" event to HealthMetricsBloc if I can access it.
-          // Since we are navigating back, we can pass result "true" to pop.
-          Navigator.pop(context, true);
-        } else if (state is HydrationFailure) {
-          showModernSnackbar(context, state.message, isError: true);
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          leading: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.red),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          widget.logToEdit != null ? 'Edit Water' : 'Water',
+          style: const TextStyle(
+            color: Color(0xFFEE374D),
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
-          title: const Text(
-            'Hydration Tracker',
-            style: TextStyle(
-              color: Color(0xFF131313),
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: false,
-          // actions: [
-          //   Padding(
-          //     padding: const EdgeInsets.only(right: 16.0),
-          //     child: Row(
-          //       children: [
-          //         const Icon(
-          //           Icons.signal_cellular_alt,
-          //           color: Colors.grey,
-          //           size: 20,
-          //         ),
-          //         const SizedBox(width: 4),
-          //         const Icon(Icons.wifi, color: Colors.grey, size: 20),
-          //         const SizedBox(width: 4),
-          //         const Icon(Icons.battery_full, color: Colors.grey, size: 20),
-          //       ],
-          //     ),
-          //   ),
-          // ],
         ),
-        body: SingleChildScrollView(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: const BackButton(color: Colors.black),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart_outlined, color: Colors.black54),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.black54),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      body: BlocListener<HydrationBloc, HydrationState>(
+        listener: (context, state) {
+          if (state is HydrationSuccess) {
+            showModernSnackbar(context, 'Hydration logged remotely!');
+            Navigator.pop(context, true);
+          } else if (state is HydrationFailure) {
+            showModernSnackbar(context, state.message, isError: true);
+          }
+        },
+        child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -121,107 +114,134 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
                     color: Color(0xFF131313),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 Center(
                   child: GestureDetector(
                     onTap: _pickTime,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          'Today',
+                          _isToday(_selectedDate)
+                              ? 'Today'
+                              : DateFormat('MMM d').format(_selectedDate),
                           style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          DateFormat('hh:mm').format(_selectedDate),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
+                            fontSize: 16,
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          DateFormat('a').format(_selectedDate),
+                          DateFormat('hh:mm').format(_selectedDate),
                           style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFEE374D),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('a').format(_selectedDate),
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Color(0xFF131313),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade500,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 40),
 
-                // Goal Card
-                Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                      child: Container(
-                        width: 342,
-                        height: 100,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color.fromRGBO(205, 234, 248, 0.3),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color.fromRGBO(255, 255, 255, 0.3),
-                            width: 1,
+                // Manual Entry Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 32,
+                    horizontal: 20,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(
+                      0xFFEBF6FF,
+                    ).withOpacity(0.5), // Light blue tint
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Water',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF131313),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Daily Hydration Goal',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Amount Control
+                          Row(
+                            children: [
+                              _buildCircleBtn(
+                                Icons.remove,
+                                () => _updateAmount(_amountMl - 50),
+                              ),
+                              Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                height: 60,
+                                width: 40,
+                                // Placeholder for Cup Icon
+                                child: const Icon(
+                                  Icons.local_drink,
+                                  color: Colors.blue,
+                                  size: 40,
+                                ),
+                              ),
+                              _buildCircleBtn(
+                                Icons.add,
+                                () => _updateAmount(_amountMl + 50),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '$_amountMl ml',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF131313),
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              child: const Icon(
-                                Icons.local_drink,
-                                color: Colors.blue,
-                                size: 40,
-                              ),
-                            ),
-                            const SizedBox(width: 8), // Gap 8px
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text(
-                                  'Water',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF131313),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Daily Hydration Goal',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 32),
 
-                // Size Section
+                // Size Presets
                 const Text(
                   'Size',
                   style: TextStyle(
@@ -233,168 +253,49 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(_sizes.length, (index) {
-                    final size = _sizes[index];
-                    final isSelected = index == _selectedSizeIndex;
+                  children: List.generate(_presets.length, (index) {
+                    final size = _presets[index];
+                    final isSelected = index == _selectedPresetIndex;
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedSizeIndex = index),
+                      onTap: () => _onPresetSelected(index),
                       child: Container(
-                        width: 70,
-                        height: 70,
+                        width: 75,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isSelected
                                 ? Colors.grey.shade300
-                                : Colors.transparent,
+                                : Colors.grey.shade200,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ]
                               : [],
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons
-                                  .local_cafe_outlined, // Placeholder for cup types
+                        child: Center(
+                          child: Text(
+                            '$size ml',
+                            style: TextStyle(
+                              fontSize: 14,
                               color: Colors.grey.shade600,
-                              size: 20,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '$size ml',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     );
                   }),
                 ),
-                const SizedBox(height: 15),
-
-                // Type Section
-                const Text(
-                  'Type',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF131313),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  children: _types.map((type) {
-                    final isSelected = type == _selectedType;
-                    return ChoiceChip(
-                      label: Text(type),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) setState(() => _selectedType = type);
-                      },
-                      backgroundColor: Colors.white,
-                      selectedColor: Colors.white,
-                      side: BorderSide(
-                        color: isSelected
-                            ? Colors.grey.shade300
-                            : Colors.grey.shade200,
-                      ),
-                      labelStyle: TextStyle(
-                        color: isSelected
-                            ? const Color(0xFF131313)
-                            : Colors.grey.shade600,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      showCheckmark: false,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 15),
-
-                // Serving Section
-                const Text(
-                  'Serving',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF131313),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [1, 2, 3].map((count) {
-                    final isSelected = count == _servingCount;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 16.0),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _servingCount = count),
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? Colors.white
-                                : Colors.grey.shade50,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected
-                                  ? Colors.grey.shade300
-                                  : Colors.transparent,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : [],
-                          ),
-                          child: Center(
-                            child: Text(
-                              count.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 60),
 
                 // Done Button
                 BlocBuilder<HydrationBloc, HydrationState>(
@@ -402,23 +303,17 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
                     final isLoading = state is HydrationSaving;
                     return Center(
                       child: Container(
-                        width: 303,
-                        height: 45,
+                        width: double.infinity,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: const Color(0xFFEE374D),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
                             BoxShadow(
-                              color: Color.fromRGBO(0, 0, 0, 0.1),
-                              offset: Offset(0, 10),
-                              blurRadius: 15,
-                              spreadRadius: -3,
-                            ),
-                            BoxShadow(
-                              color: Color.fromRGBO(0, 0, 0, 0.1),
-                              offset: Offset(0, 4),
-                              blurRadius: 6,
-                              spreadRadius: -4,
+                              color: const Color(0xFFEE374D).withOpacity(0.3),
+                              offset: const Offset(0, 10),
+                              blurRadius: 20,
+                              spreadRadius: -5,
                             ),
                           ],
                         ),
@@ -428,19 +323,13 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ), // padding: 14px 20px 10px; - vertical avg 12? user said "14px 20px 10px" which is top-right-bottom for standard CSS? or top-horizontal-bottom? actually single line padding 14px 20px usually means vert 14 horiz 20. But user detailed "14px 20px 10px", likely top 14, horiz 20, bottom 10.
-                            // I will use vertical 12 to center text roughly or exact.
-                            // But SizedBox limits height to 45 anyway.
                           ),
                           child: isLoading
                               ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
+                                  height: 24,
+                                  width: 24,
                                   child: CircularProgressIndicator(
                                     color: Colors.white,
                                     strokeWidth: 2,
@@ -467,6 +356,29 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
     );
   }
 
+  Widget _buildCircleBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Icon(icon, size: 20, color: Colors.grey.shade600),
+      ),
+    );
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
   Future<void> _pickTime() async {
     final time = await showTimePicker(
       context: context,
@@ -475,11 +387,11 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
 
     if (time != null) {
       setState(() {
-        final now = DateTime.now();
+        final current = _selectedDate;
         _selectedDate = DateTime(
-          now.year,
-          now.month,
-          now.day,
+          current.year,
+          current.month,
+          current.day,
           time.hour,
           time.minute,
         );
@@ -488,18 +400,24 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
   }
 
   void _saveData() {
-    final volumeMl = _sizes[_selectedSizeIndex] * _servingCount;
-    final volumeLiters = volumeMl / 1000.0;
+    final volumeLiters = _amountMl / 1000.0;
+    if (volumeLiters <= 0) {
+      showModernSnackbar(context, 'Please enter a valid amount', isError: true);
+      return;
+    }
 
     final log = HydrationLog(
-      id: const Uuid().v4(),
+      id:
+          widget.logToEdit?.id ??
+          const Uuid().v4(), // Use existing ID if editing
       amountLiters: volumeLiters,
       timestamp: _selectedDate,
-      beverageType: _selectedType,
-      userId: '', // Will be filled by Repo/DataSource
+      beverageType: 'Water',
+      userId:
+          widget.logToEdit?.userId ??
+          '', // Preserve original user ID or let empty be handled (auth usually overrides)
     );
 
-    // Use Hydration Bloc to save
     context.read<HydrationBloc>().add(LogHydration(log));
   }
 }

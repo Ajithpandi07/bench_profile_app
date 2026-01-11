@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:bench_profile_app/features/hydration/domain/entities/hydration_daily_summary.dart';
 import '../../domain/domain.dart';
 
 abstract class HydrationState extends Equatable {
@@ -33,4 +34,15 @@ class HydrationFailure extends HydrationState {
 
   @override
   List<Object> get props => [message];
+}
+
+class HydrationStatsLoaded extends HydrationState {
+  final List<HydrationDailySummary> stats;
+  final DateTime startDate;
+  final DateTime endDate;
+
+  const HydrationStatsLoaded(this.stats, this.startDate, this.endDate);
+
+  @override
+  List<Object> get props => [stats, startDate, endDate];
 }

@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/core.dart';
 import '../../../../core/injection_container.dart';
 import '../../../auth/auth.dart';
@@ -17,7 +16,7 @@ import '../../../hydration/presentation/bloc/bloc.dart';
 
 import '../../../meals/presentation/bloc/bloc.dart';
 import '../../../meals/presentation/pages/meal_report_page.dart';
-import '../../../hydration/presentation/pages/water_report_page.dart';
+import '../../../hydration/presentation/pages/hydration_report_page.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -375,7 +374,7 @@ class _HomeTab extends StatelessWidget {
                                                       value:
                                                           sl<HydrationBloc>(),
                                                       child:
-                                                          const WaterReportPage(),
+                                                          const HydrationReportPage(),
                                                     ),
                                               ),
                                             );
