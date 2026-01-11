@@ -14,11 +14,15 @@ class SleepLoading extends SleepState {}
 
 class SleepLoaded extends SleepState {
   final List<SleepLog> logs;
+  final SleepLog? healthConnectDraft;
 
-  const SleepLoaded(this.logs);
+  const SleepLoaded(this.logs, {this.healthConnectDraft});
 
   @override
-  List<Object> get props => [logs];
+  List<Object> get props => [
+    logs,
+    if (healthConnectDraft != null) healthConnectDraft!,
+  ];
 }
 
 class SleepStatsLoaded extends SleepState {

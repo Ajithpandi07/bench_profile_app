@@ -11,14 +11,9 @@ import '../bloc/bloc.dart';
 import '../widgets/widgets.dart';
 import '../../domain/entities/entities.dart';
 import '../../../reminder/reminder.dart';
-import '../../../sleep/presentation/pages/sleep_page.dart';
-import '../../../sleep/presentation/bloc/bloc.dart';
-
-import '../../../hydration/presentation/bloc/bloc.dart';
-
-import '../../../meals/presentation/bloc/bloc.dart';
-import '../../../meals/presentation/pages/meal_report_page.dart';
-import '../../../hydration/presentation/pages/hydration_report_page.dart';
+import '../../../sleep/presentation.dart';
+import '../../../hydration/presentation.dart';
+import '../../../meals/presentation.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});

@@ -29,8 +29,8 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   HealthMetricsDataSourceImpl({
     required Health health,
     MetricAggregator? aggregator,
-  })  : _health = health,
-        _aggregator = aggregator;
+  }) : _health = health,
+       _aggregator = aggregator;
 
   // ---------------------------------------------------------------------------
   // TIER DEFINITIONS (CRITICAL FOR RATE-LIMIT SAFETY)
@@ -38,44 +38,43 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
 
   // Tier 1: Core Daily Activity, Vitals & Sleep (High Frequency Fetch)
   List<HealthDataType> _tier1CoreTypes() => [
-        // Activity
-        HealthDataType.STEPS,
-        HealthDataType.HEART_RATE,
-        HealthDataType.ACTIVE_ENERGY_BURNED,
-        HealthDataType.FLIGHTS_CLIMBED,
-        HealthDataType.WORKOUT, // New - Represents sessions like Running, etc.
-
-        // Sleep
-        // HealthDataType.SLEEP_IN_BED, // New - Total sleep session duration
-        HealthDataType.SLEEP_ASLEEP,
-        HealthDataType.SLEEP_AWAKE,
-      ];
+    // Activity
+    HealthDataType.STEPS,
+    HealthDataType.HEART_RATE,
+    HealthDataType.ACTIVE_ENERGY_BURNED,
+    HealthDataType.FLIGHTS_CLIMBED,
+    HealthDataType.WORKOUT, // New - Represents sessions like Running, etc.
+    // Sleep
+    // HealthDataType.SLEEP_IN_BED, // Removed: Not found in HC on some devices
+    HealthDataType.SLEEP_ASLEEP,
+    HealthDataType.SLEEP_AWAKE,
+    HealthDataType.SLEEP_SESSION, // Modern Health Connect sleep session
+  ];
 
   // Tier 2: Body Measurements & Vitals (Medium Frequency / Lower Volatility)
   List<HealthDataType> _tier2BodyAndVitals() => [
-        // Body Measurement
-        HealthDataType.HEIGHT,
-        HealthDataType.WEIGHT,
-        HealthDataType.BODY_FAT_PERCENTAGE,
-        HealthDataType.BODY_MASS_INDEX, // New
+    // Body Measurement
+    HealthDataType.HEIGHT,
+    HealthDataType.WEIGHT,
+    HealthDataType.BODY_FAT_PERCENTAGE,
+    HealthDataType.BODY_MASS_INDEX, // New
+    // Vitals
+    HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
+    HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
+    HealthDataType.RESPIRATORY_RATE,
+    HealthDataType.BODY_TEMPERATURE,
 
-        // Vitals
-        HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
-        HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
-        HealthDataType.RESPIRATORY_RATE,
-        HealthDataType.BODY_TEMPERATURE,
-
-        // Nutrition
-        HealthDataType.WATER,
-        HealthDataType.BASAL_ENERGY_BURNED,
-      ];
+    // Nutrition
+    HealthDataType.WATER,
+    HealthDataType.BASAL_ENERGY_BURNED,
+  ];
 
   // Tier 3: Sensitive Medical & Detailed Nutrition (Low Frequency Fetch)
   List<HealthDataType> _tier3MedicalAndNutrition() => [
-        HealthDataType.BLOOD_GLUCOSE,
-        HealthDataType.NUTRITION, // New - For detailed macro/micronutrients
-        // Add other sensitive types like MENSTRUATION_FLOW if needed...
-      ];
+    HealthDataType.BLOOD_GLUCOSE,
+    HealthDataType.NUTRITION, // New - For detailed macro/micronutrients
+    // Add other sensitive types like MENSTRUATION_FLOW if needed...
+  ];
 
   // ---------------------------------------------------------------------------
   // HELPER: PERMISSION CHECK
@@ -99,25 +98,33 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
     try {
       if (Platform.isAndroid) {
         final status = await _health.getHealthConnectSdkStatus();
-        dev.log('DEBUG: Health Connect SDK Status: $status',
-            name: 'HealthDataSource');
+        dev.log(
+          'DEBUG: Health Connect SDK Status: $status',
+          name: 'HealthDataSource',
+        );
         if (status != HealthConnectSdkStatus.sdkAvailable) {
           throw HealthConnectNotInstalledException();
         }
       }
 
-      dev.log('DEBUG: Checking permissions for ${types.length} types...',
-          name: 'HealthDataSource');
+      dev.log(
+        'DEBUG: Checking permissions for ${types.length} types...',
+        name: 'HealthDataSource',
+      );
       final hasPerms = await _health.hasPermissions(types) ?? false;
-      dev.log('DEBUG: hasPermissions returned: $hasPerms',
-          name: 'HealthDataSource');
+      dev.log(
+        'DEBUG: hasPermissions returned: $hasPerms',
+        name: 'HealthDataSource',
+      );
 
       _lastPermissionCheck = DateTime.now();
 
       if (hasPerms) {
         _hasCachedPermissions = true;
-        dev.log('DEBUG: Permissions already granted.',
-            name: 'HealthDataSource');
+        dev.log(
+          'DEBUG: Permissions already granted.',
+          name: 'HealthDataSource',
+        );
         return;
       }
 
@@ -126,11 +133,15 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       _hasCachedPermissions = false;
 
       // Request
-      dev.log('DEBUG: Requesting authorization for types...',
-          name: 'HealthDataSource');
+      dev.log(
+        'DEBUG: Requesting authorization for types...',
+        name: 'HealthDataSource',
+      );
       final granted = await _health.requestAuthorization(types);
-      dev.log('DEBUG: requestAuthorization returned: $granted',
-          name: 'HealthDataSource');
+      dev.log(
+        'DEBUG: requestAuthorization returned: $granted',
+        name: 'HealthDataSource',
+      );
 
       if (!granted) {
         throw PermissionDeniedException();
@@ -139,8 +150,10 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       // If granted after request
       _hasCachedPermissions = true;
       _lastPermissionCheck = DateTime.now();
-      dev.log('DEBUG: Permissions granted after request.',
-          name: 'HealthDataSource');
+      dev.log(
+        'DEBUG: Permissions granted after request.',
+        name: 'HealthDataSource',
+      );
     } catch (e) {
       if (e is HealthConnectNotInstalledException) rethrow;
 
@@ -243,34 +256,66 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       // Since all tiers use the same start/end date logic now (no custom lookbacks), we can combine them.
 
       // We reuse allTypes which contains the union of all tiers.
-      allPoints.addAll(
-        await _fetchBatch(start, end, allTypes),
-      );
+      allPoints.addAll(await _fetchBatch(start, end, allTypes));
 
       dev.log(
-          'Fetched ${allPoints.length} raw points from Health Connect for date $date (Start: $start, End: $end). Types found: ${allPoints.map((e) => e.typeString).toSet().toList()}',
-          name: 'HealthDataSource');
+        'Fetched ${allPoints.length} raw points from Health Connect for date $date (Start: $start, End: $end). Types found: ${allPoints.map((e) => e.typeString).toSet().toList()}',
+        name: 'HealthDataSource',
+      );
 
       if (allPoints.isEmpty) {
         dev.log(
-            'WARNING: Health Connect returned 0 points. Checking permissions...',
-            name: 'HealthDataSource');
+          'WARNING: Health Connect returned 0 points. Checking permissions...',
+          name: 'HealthDataSource',
+        );
         final perms = await _health.hasPermissions(allTypes);
-        dev.log('HasPermissions for all types: $perms',
-            name: 'HealthDataSource');
+        dev.log(
+          'HasPermissions for all types: $perms',
+          name: 'HealthDataSource',
+        );
 
         // DEBUG FALLBACK: Try fetching JUST STEPS to see if it's a batch issue
-        dev.log('DEBUG: Attempting isolated STEPS fetch...',
-            name: 'HealthDataSource');
+        dev.log(
+          'DEBUG: Attempting isolated STEPS fetch...',
+          name: 'HealthDataSource',
+        );
         final steps = await _fetchBatch(start, end, [HealthDataType.STEPS]);
-        dev.log('DEBUG: Isolated STEPS fetch result count: ${steps.length}',
-            name: 'HealthDataSource');
+        dev.log(
+          'DEBUG: Isolated STEPS fetch result count: ${steps.length}',
+          name: 'HealthDataSource',
+        );
         if (steps.isNotEmpty) {
-          dev.log('DEBUG: Steps found: ${steps.length} - ${steps.first}',
-              name: 'HealthDataSource');
+          dev.log(
+            'DEBUG: Steps found: ${steps.length} - ${steps.first}',
+            name: 'HealthDataSource',
+          );
           allPoints.addAll(steps);
         } else {
           dev.log('DEBUG: Steps list is empty', name: 'HealthDataSource');
+        }
+
+        // DEBUG FALLBACK: Try fetching JUST SLEEP to see if it's a batch issue
+        dev.log(
+          'DEBUG: Attempting isolated SLEEP fetch...',
+          name: 'HealthDataSource',
+        );
+        final sleepTypes = [
+          HealthDataType.SLEEP_SESSION,
+          // HealthDataType.SLEEP_IN_BED, // Removed
+          HealthDataType.SLEEP_ASLEEP,
+          HealthDataType.SLEEP_AWAKE,
+        ];
+        final sleep = await _fetchBatch(start, end, sleepTypes);
+        dev.log(
+          'DEBUG: Isolated SLEEP fetch result count: ${sleep.length}',
+          name: 'HealthDataSource',
+        );
+        if (sleep.isNotEmpty) {
+          dev.log(
+            'DEBUG: Sleep found: ${sleep.length}',
+            name: 'HealthDataSource',
+          );
+          allPoints.addAll(sleep);
         }
       }
 

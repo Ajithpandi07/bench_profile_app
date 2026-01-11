@@ -25,6 +25,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
   @override
   void initState() {
     super.initState();
+
     if (widget.existingLog != null) {
       _startDateTime = widget.existingLog!.startTime;
       _endDateTime = widget.existingLog!.endTime;
@@ -32,29 +33,30 @@ class _SleepLogPageState extends State<SleepLogPage> {
     } else {
       // Default: Bedtime 11:00 PM yesterday, Wakeup 7:00 AM today (relative to initialDate)
       final referenceDate = widget.initialDate;
-      // If initialDate is Today, Bedtime is Yesterday 11pm.
-      // If initialDate is Yesterday, Bedtime is DayBefore 11pm.
-      // Wait, if I'm logging for "Oct 18" (Fri), I probably mean the sleep that happened on the night of Oct 18 leading into Oct 19?
-      // OR the sleep that woke me up on Oct 18?
-      // Usually "Sleep on Friday" means Friday night -> Saturday morning.
-      // Let's assume start time is on initialDate 22:00, end time next day 07:00.
+      final previousDay = referenceDate.subtract(const Duration(days: 1));
 
       _startDateTime = DateTime(
+        previousDay.year,
+        previousDay.month,
+        previousDay.day,
+        22,
+        0,
+      ); // 10 PM Yesterday
+
+      // End Time: 7 AM on Initial Date
+      _endDateTime = DateTime(
         referenceDate.year,
         referenceDate.month,
         referenceDate.day,
-        22,
+        7,
         0,
-      ); // 10 PM
-      _endDateTime = _startDateTime.add(const Duration(hours: 9));
+      );
       _quality = 75;
     }
   }
 
   // Helper to maintain reasonable duration logic when times change
   void _updateDuration() {
-    // If end is before start, it means next day. logic handles in slider.
-    // Just ensure day wrapping consistency if needed.
     if (_endDateTime.isBefore(_startDateTime)) {
       if (_endDateTime.day == _startDateTime.day) {
         _endDateTime = _endDateTime.add(const Duration(days: 1));
@@ -85,15 +87,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
           _endDateTime = newDateTime;
         }
 
-        // Auto-fix day crossing if needed?
         if (_endDateTime.isBefore(_startDateTime)) {
-          // If we picked a wake time earlier than bed time, assume next day
           if (!_isSameDay(_startDateTime, _endDateTime)) {
             // already handled?
           }
-          // If the user explicitly picked a time, we respect the hour/minute.
-          // We just need to ensure the Day part is correct.
-          // Simple logic: Wake time is usually next day if hour < bed hour.
           if (_endDateTime.hour < _startDateTime.hour) {
             _endDateTime = _endDateTime.add(const Duration(days: 1));
           }
@@ -139,9 +136,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
             children: [
               // Header Date
               Text(
-                DateFormat('E, MMM d').format(
-                  widget.initialDate,
-                ), // "Yesterday" logic could be added
+                DateFormat('E, MMM d').format(widget.initialDate),
                 style: const TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
@@ -158,7 +153,6 @@ class _SleepLogPageState extends State<SleepLogPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  // Soft neumorphic-like shadow for depth
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withOpacity(0.1),
@@ -247,7 +241,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
 
   void _saveLog() {
     final log = SleepLog(
-      id: widget.existingLog?.id ?? '',
+      id:
+          widget.existingLog?.id ??
+          DateTime.now().millisecondsSinceEpoch
+              .toString(), // Fix: Ensure ID is generated for new logs
       startTime: _startDateTime,
       endTime: _endDateTime,
       quality: _quality, // Hardcoded for now, could add slider
@@ -255,10 +252,29 @@ class _SleepLogPageState extends State<SleepLogPage> {
     context.read<SleepBloc>().add(LogSleep(log));
   }
 
+  // ... (rest of methods: _deleteLog, _getDateLabel, _buildTimeCard)
+
   void _deleteLog() {
     if (widget.existingLog != null) {
       context.read<SleepBloc>().add(DeleteSleepLog(widget.existingLog!));
     }
+  }
+
+  String _getDateLabel(DateTime date) {
+    if (_isSameDay(date, widget.initialDate)) {
+      return 'Today';
+    } else if (_isSameDay(
+      date,
+      widget.initialDate.subtract(const Duration(days: 1)),
+    )) {
+      return 'Yesterday';
+    } else if (_isSameDay(
+      date,
+      widget.initialDate.add(const Duration(days: 1)),
+    )) {
+      return 'Tomorrow';
+    }
+    return DateFormat('MMM d').format(date);
   }
 
   Widget _buildTimeCard(
@@ -325,9 +341,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
             ),
             const SizedBox(height: 2),
             Text(
-              widget.initialDate.day == time.day
-                  ? 'Today'
-                  : 'Tomorrow', // Simple logic
+              _getDateLabel(time),
               style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
             ),
           ],

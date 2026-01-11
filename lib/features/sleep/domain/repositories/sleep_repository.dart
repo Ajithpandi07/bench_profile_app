@@ -10,4 +10,5 @@ abstract class SleepRepository {
     DateTime end,
   );
   Future<Either<Failure, void>> deleteSleepLog(SleepLog log);
+  Future<Either<Failure, SleepLog?>> fetchSleepFromHealthConnect(DateTime date);
 }

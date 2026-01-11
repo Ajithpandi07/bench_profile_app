@@ -279,7 +279,10 @@ class SleepTimerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 25; // Padding for handles
+    // strokeWidth is 30. radius + 15 = outer edge.
+    // To fit full width (outer edge = size.width/2), radius must be size.width/2 - 15.
+    final strokeWidth = 30.0;
+    final radius = size.width / 2;
 
     // 1. Tick Marks
     final tickPaint = Paint()
@@ -292,48 +295,60 @@ class SleepTimerPainter extends CustomPainter {
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
 
-    // Draw 48 ticks (every 15 mins? or 12 hours * 4?)
-    // 60 ticks = 12 * 5. Every minute mark.
-    // Let's do 12 large ticks (hours) and small ticks in between.
+    // Radius for ticks (inner than circle track)
+    // Track inner edge is at radius - 15. So ticks at radius - 25.
+    final tickRadius = radius - 25;
+
     for (int i = 0; i < 60; i++) {
+      // Logic: 0 is top.
       double angle = (2 * pi / 60) * i - pi / 2;
       bool isHour = i % 5 == 0;
-      double tickLen = isHour ? 15.0 : 8.0;
 
-      // Inner radius
+      // Skip ticks where numbers will be (12, 3, 6, 9)
+      if (i == 0 || i == 15 || i == 30 || i == 45) {
+        continue;
+      }
+
+      double tickLen = isHour ? 10.0 : 6.0;
+
       Offset p1 = Offset(
-        center.dx + (radius - tickLen) * cos(angle),
-        center.dy + (radius - tickLen) * sin(angle),
+        center.dx + (tickRadius - tickLen) * cos(angle),
+        center.dy + (tickRadius - tickLen) * sin(angle),
       );
-      // Outer radius (on the circle track)
       Offset p2 = Offset(
-        center.dx + radius * cos(angle),
-        center.dy + radius * sin(angle),
+        center.dx + tickRadius * cos(angle),
+        center.dy + tickRadius * sin(angle),
       );
 
       canvas.drawLine(p1, p2, isHour ? hourTickPaint : tickPaint);
-
-      // Draw Hour Numbers
-      if (isHour) {
-        int h = i ~/ 5;
-        if (h == 0) h = 12;
-        // Draw text logic can be added here if needed, but might clutter.
-      }
     }
 
-    // 2. Active Arc
-    final paintArc = Paint()
-      ..color =
-          const Color(0xffEF5350) // Red color from design
+    // 2. Draw Clock Numbers
+    _drawClockNumber(canvas, center, tickRadius - 15, '12', -pi / 2);
+    _drawClockNumber(canvas, center, tickRadius - 15, '3', 0);
+    _drawClockNumber(canvas, center, tickRadius - 15, '6', pi / 2);
+    _drawClockNumber(canvas, center, tickRadius - 15, '9', pi);
+
+    // 3. Tracks
+
+    // Background Track (Full Circle)
+    final bgTrackPaint = Paint()
+      ..color = Colors.grey.shade200
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 30
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    // Calculate proper sweep with wrap around
+    canvas.drawCircle(center, radius, bgTrackPaint);
+
+    // Active Arc
+    final paintArc = Paint()
+      ..color = const Color(0xffEF5350)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
     double sweep = endAngle - startAngle;
     if (sweep <= 0) sweep += 2 * pi;
-
-    // Draw background track slightly visible behind arc? No, simpler.
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
@@ -343,7 +358,17 @@ class SleepTimerPainter extends CustomPainter {
       paintArc,
     );
 
-    // 3. Handles icons
+    // Inner Dotted Arc
+    _drawDottedArc(
+      canvas,
+      center,
+      radius, // Center of track
+      startAngle,
+      sweep,
+      Colors.white,
+    );
+
+    // 4. Handles
     _drawIconHandle(
       canvas,
       center,
@@ -362,6 +387,81 @@ class SleepTimerPainter extends CustomPainter {
     );
   }
 
+  void _drawDottedArc(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    double startAngle,
+    double sweepAngle,
+    Color color,
+  ) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    // Dash/Dot logic
+    final double dashWidth = 4;
+    final double dashSpace = 4;
+    final double circumference = 2 * pi * radius;
+
+    // Convert dash width/space to angle
+    final double dashAngle = (dashWidth / circumference) * 2 * pi;
+    final double spaceAngle = (dashSpace / circumference) * 2 * pi;
+
+    double currentAngle = startAngle;
+    double remainingSweep = sweepAngle;
+
+    while (remainingSweep > 0) {
+      final double drawAngle = remainingSweep < dashAngle
+          ? remainingSweep
+          : dashAngle;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        currentAngle,
+        drawAngle,
+        false,
+        paint,
+      );
+
+      currentAngle += drawAngle + spaceAngle;
+      remainingSweep -= (drawAngle + spaceAngle);
+    }
+  }
+
+  void _drawClockNumber(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    String text,
+    double angle,
+  ) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          color: Colors.grey,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    // Position text centered at the angle
+    final x = center.dx + radius * cos(angle);
+    final y = center.dy + radius * sin(angle);
+    final offset = Offset(
+      x - textPainter.width / 2,
+      y - textPainter.height / 2,
+    );
+
+    textPainter.paint(canvas, offset);
+  }
+
   void _drawIconHandle(
     Canvas canvas,
     Offset center,
@@ -375,9 +475,6 @@ class SleepTimerPainter extends CustomPainter {
     final y = center.dy + radius * sin(angle);
     final pos = Offset(x, y);
 
-    // White circle background
-    // Note: Paint does not have a shadows property directly. We simulate shadow with another circle.
-
     canvas.drawCircle(
       pos,
       handleRadius + 2,
@@ -387,7 +484,6 @@ class SleepTimerPainter extends CustomPainter {
     );
     canvas.drawCircle(pos, handleRadius, Paint()..color = Colors.white);
 
-    // Icon
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     textPainter.text = TextSpan(
       text: String.fromCharCode(icon.codePoint),

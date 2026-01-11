@@ -223,7 +223,11 @@ Future<void> init() async {
 
   // Repository
   sl.registerLazySingleton<SleepRepository>(
-    () => SleepRepositoryImpl(remoteDataSource: sl(), networkInfo: sl()),
+    () => SleepRepositoryImpl(
+      remoteDataSource: sl(),
+      healthMetricsDataSource: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   // Data sources

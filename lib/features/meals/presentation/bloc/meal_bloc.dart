@@ -33,6 +33,7 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     // However, if we refresh tabs...
     // Let's just fetch and emit Loaded.
 
+    emit(MealLoading()); // Emit loading for shimmer
     final result = await repository.getDailySummaries(start, end);
     result.fold(
       (failure) => emit(MealOperationFailure(failure.message)),

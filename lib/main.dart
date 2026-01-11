@@ -12,6 +12,7 @@ import 'features/auth/auth.dart';
 import 'features/health_metrics/health_metrics.dart' hide SyncManager;
 
 import 'firebase_options.dart';
+import 'features/meals/presentation/bloc/bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,6 +76,7 @@ void main() async {
       providers: [
         BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()),
         BlocProvider(create: (_) => di.sl<AuthBloc>()),
+        BlocProvider(create: (_) => di.sl<MealBloc>()),
       ],
       child: const BenchApp(),
     ),

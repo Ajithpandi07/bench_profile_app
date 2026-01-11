@@ -11,7 +11,7 @@ abstract class MealRemoteDataSource {
   Future<List<FoodItem>> getUserFoods();
   Future<void> saveUserMeal(UserMeal meal);
   Future<List<UserMeal>> getUserMeals();
-  Future<List<UserMeal>> getUserMeals();
+
   Future<List<DailyMealSummary>> getDailySummaries(
     DateTime start,
     DateTime end,
@@ -286,6 +286,18 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
             .whereType<FoodItem>()
             .toList(); // Filter out nulls
       }
+
+      return UserMeal(
+        id: data['id'] ?? '',
+        name: data['name'] ?? '',
+        foods: hydratedFoods,
+        totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
+        creatorId: data['creatorId'] ?? '',
+        quantity: (data['quantity'] as num?)?.toInt() ?? 1,
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : null,
+      );
     }).toList();
   }
 
