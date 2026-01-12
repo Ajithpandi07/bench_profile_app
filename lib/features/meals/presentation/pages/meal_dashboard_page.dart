@@ -19,8 +19,9 @@ class MealDashboardPage extends StatefulWidget {
 }
 
 class _MealDashboardPageState extends State<MealDashboardPage> {
-  String _selectedView = '7 days'; // 7 days, 31 days, 12 months
+  String _selectedView = 'Weekly'; // Weekly, Monthly, Yearly
   List<DailyMealSummary> _allSummaries = [];
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -65,11 +66,12 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
             children: [
               // View Selector
               DashboardDateSelector(
-                views: const ['7 days', '31 days', '12 months'],
+                views: const ['Weekly', 'Monthly', 'Yearly'],
                 selectedView: _selectedView,
                 onSelected: (view) {
                   setState(() {
                     _selectedView = view;
+                    _selectedDate = DateTime.now();
                   });
                 },
                 activeColor: const Color(0xFFE93448),
@@ -100,7 +102,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
     double maxVal = 100; // Minimum scale
 
     // Prepare data based on view
-    if (_selectedView == '7 days') {
+    if (_selectedView == 'Weekly') {
       final monday = now.subtract(Duration(days: now.weekday - 1));
       for (int i = 0; i < 7; i++) {
         final date = monday.add(Duration(days: i));
@@ -118,13 +120,13 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
             label: DateFormat('E').format(date),
             value: val,
             isHighlight:
-                date.day == now.day &&
-                date.month == now.month &&
-                date.year == now.year,
+                date.year == _selectedDate.year &&
+                date.month == _selectedDate.month &&
+                date.day == _selectedDate.day,
           ),
         );
       }
-    } else if (_selectedView == '31 days') {
+    } else if (_selectedView == 'Monthly') {
       final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
       for (int i = 1; i <= daysInMonth; i++) {
         final date = DateTime(now.year, now.month, i);
@@ -141,7 +143,10 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
           DashboardChartItem(
             label: i.toString(),
             value: val,
-            isHighlight: i == now.day,
+            isHighlight:
+                date.year == _selectedDate.year &&
+                date.month == _selectedDate.month &&
+                date.day == _selectedDate.day,
           ),
         );
       }
@@ -172,7 +177,8 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
           DashboardChartItem(
             label: DateFormat('MMM').format(DateTime(now.year, i))[0],
             value: monthAvg,
-            isHighlight: i == now.month,
+            isHighlight:
+                i == _selectedDate.month && now.year == _selectedDate.year,
           ),
         );
       }
@@ -233,6 +239,28 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
           maxVal: maxVal,
           highlightColor: const Color(0xFFE93448),
           barBackgroundColor: const Color(0xFFFFEBEB),
+          chartHeight: 250,
+          formatValue: (val) =>
+              val.toInt().toString(), // Explicit integer formatting
+          onBarTap: (index) {
+            setState(() {
+              if (_selectedView == 'Weekly') {
+                final now = DateTime.now();
+                final monday = now.subtract(Duration(days: now.weekday - 1));
+                _selectedDate = monday.add(Duration(days: index));
+              } else if (_selectedView == 'Monthly') {
+                // index 0 -> day 1
+                _selectedDate = DateTime(
+                  DateTime.now().year,
+                  DateTime.now().month,
+                  index + 1,
+                );
+              } else {
+                // index 0 -> month 1 (Jan)
+                _selectedDate = DateTime(DateTime.now().year, index + 1, 1);
+              }
+            });
+          },
         ),
 
         const SizedBox(height: 32),
@@ -262,11 +290,11 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
 
   String _getDateRangeText() {
     final now = DateTime.now();
-    if (_selectedView == '7 days') {
+    if (_selectedView == 'Weekly') {
       final monday = now.subtract(Duration(days: now.weekday - 1));
       final sunday = monday.add(const Duration(days: 6));
       return '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
-    } else if (_selectedView == '31 days') {
+    } else if (_selectedView == 'Monthly') {
       final start = DateTime(now.year, now.month, 1);
       final end = DateTime(now.year, now.month + 1, 0);
       return '${DateFormat('MMM d').format(start)} - ${DateFormat('MMM d').format(end)}';

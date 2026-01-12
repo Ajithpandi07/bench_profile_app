@@ -159,4 +159,18 @@ class MealRepositoryImpl implements MealRepository {
       return const Left(NetworkFailure('No internet connection'));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> deleteMealLog(String id, DateTime date) async {
+    if (await networkInfo.isConnected) {
+      try {
+        await remoteDataSource.deleteMealLog(id, date);
+        return const Right(null);
+      } catch (e) {
+        return Left(ServerFailure(e.toString()));
+      }
+    } else {
+      return const Left(NetworkFailure('No internet connection'));
+    }
+  }
 }

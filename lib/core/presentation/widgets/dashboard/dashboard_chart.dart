@@ -20,6 +20,7 @@ class DashboardChart extends StatelessWidget {
   final Color highlightColor;
   final Color barBackgroundColor;
   final String Function(double)? formatValue;
+  final Function(int)? onBarTap;
 
   const DashboardChart({
     super.key,
@@ -30,6 +31,7 @@ class DashboardChart extends StatelessWidget {
     this.highlightColor = const Color(0xFFE93448),
     this.barBackgroundColor = const Color(0xFFFFEBEB),
     this.formatValue,
+    this.onBarTap,
   });
 
   @override
@@ -110,11 +112,17 @@ class DashboardChart extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: items
+                                  .asMap()
+                                  .entries
                                   .map(
-                                    (item) => _buildBarItem(
-                                      item,
-                                      safeMaxVal,
-                                      isScrollable: true,
+                                    (entry) => GestureDetector(
+                                      onTap: () => onBarTap?.call(entry.key),
+                                      behavior: HitTestBehavior.opaque,
+                                      child: _buildBarItem(
+                                        entry.value,
+                                        safeMaxVal,
+                                        isScrollable: true,
+                                      ),
                                     ),
                                   )
                                   .toList(),
@@ -126,12 +134,18 @@ class DashboardChart extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: items
+                              .asMap()
+                              .entries
                               .map(
-                                (item) => Expanded(
-                                  child: _buildBarItem(
-                                    item,
-                                    safeMaxVal,
-                                    isScrollable: false,
+                                (entry) => Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => onBarTap?.call(entry.key),
+                                    behavior: HitTestBehavior.opaque,
+                                    child: _buildBarItem(
+                                      entry.value,
+                                      safeMaxVal,
+                                      isScrollable: false,
+                                    ),
                                   ),
                                 ),
                               )

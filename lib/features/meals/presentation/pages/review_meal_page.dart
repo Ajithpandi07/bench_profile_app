@@ -12,6 +12,7 @@ class ReviewMealPage extends StatefulWidget {
   final List<UserMeal> selectedMeals;
   final List<FoodItem> allFoods;
   final DateTime? logDate;
+  final List<String> existingLogIds; // To handle edits
 
   const ReviewMealPage({
     super.key,
@@ -20,6 +21,7 @@ class ReviewMealPage extends StatefulWidget {
     required this.selectedMeals,
     required this.allFoods,
     this.logDate,
+    this.existingLogIds = const [],
   });
 
   @override
@@ -149,7 +151,18 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       totalCalories: _calories, // User can override with slider
       createdAt: DateTime.now(),
     );
-    context.read<MealBloc>().add(LogMealEvent(log));
+
+    if (widget.existingLogIds.isNotEmpty) {
+      context.read<MealBloc>().add(
+        ReplaceMealLogEvent(
+          newLog: log,
+          oldLogIds: widget.existingLogIds,
+          oldDate: widget.logDate ?? DateTime.now(),
+        ),
+      );
+    } else {
+      context.read<MealBloc>().add(LogMealEvent(log));
+    }
   }
 
   @override
@@ -160,9 +173,17 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
 
     return BlocListener<MealBloc, MealState>(
       listener: (context, state) {
-        if (state is MealSaveSuccess) {
+        if (state is MealConsumptionLogged) {
           showModernSnackbar(context, '${widget.mealType} logged successfully');
-          Navigator.popUntil(context, (route) => route.isFirst);
+          // Return to MealListingPage, not Dashboard
+          // Assuming navigation stack: Dashboard -> MealListing -> ReviewMeal
+          // Pop once (ReviewMeal) -> MealListing
+          // Or pop twice if we want dashboard? User asked for "return meal listing page only".
+          // So pop() goes back to MealListingPage.
+          // Return to MealReportPage (pop ListingPage too)
+          Navigator.of(context)
+            ..pop()
+            ..pop();
         } else if (state is MealOperationFailure) {
           showModernSnackbar(context, state.message, isError: true);
         }

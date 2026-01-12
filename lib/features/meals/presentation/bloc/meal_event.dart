@@ -57,3 +57,18 @@ class LoadDashboardStats extends MealEvent {
   @override
   List<Object> get props => [start ?? DateTime(0), end ?? DateTime(0)];
 }
+
+class ReplaceMealLogEvent extends MealEvent {
+  final MealLog newLog;
+  final List<String> oldLogIds;
+  final DateTime oldDate;
+
+  const ReplaceMealLogEvent({
+    required this.newLog,
+    required this.oldLogIds,
+    required this.oldDate,
+  });
+
+  @override
+  List<Object> get props => [newLog, oldLogIds, oldDate];
+}

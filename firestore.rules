@@ -60,6 +60,18 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    match /bench_profile/{userId}/sleep_logs_monthly/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /bench_profile/{userId}/meal_logs_monthly/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /bench_profile/{userId}/water_logs_monthly/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // ---------------------------------------------------------
     // Default Deny
     // ---------------------------------------------------------

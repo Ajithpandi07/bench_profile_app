@@ -49,8 +49,8 @@ class _SleepPageState extends State<SleepPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart, color: Colors.black),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => BlocProvider.value(
@@ -59,6 +59,7 @@ class _SleepPageState extends State<SleepPage> {
                   ),
                 ),
               );
+              if (mounted) _loadLogs();
             },
           ),
           IconButton(
@@ -358,7 +359,9 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   Widget _buildContent(SleepState state) {
-    if (state is SleepLoading || state is SleepOperationSuccess) {
+    if (state is SleepLoading ||
+        state is SleepOperationSuccess ||
+        state is SleepStatsLoaded) {
       return const SleepShimmerLoading();
     } else if (state is SleepLoaded) {
       final logs = state.logs;
@@ -432,13 +435,6 @@ class _SleepPageState extends State<SleepPage> {
 
     if (result == true) {
       _loadLogs();
-      // Also refresh dashboard stats?
-      context.read<SleepBloc>().add(
-        LoadSleepStats(
-          _selectedDate.subtract(const Duration(days: 7)),
-          _selectedDate,
-        ),
-      );
     }
   }
 }

@@ -13,6 +13,10 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     on<LogMealEvent>(_onLogMeal);
     on<AddUserMeal>(_onAddUserMeal);
     on<LoadDashboardStats>(_onLoadDashboardStats);
+    on<LoadUserLibrary>(_onLoadUserLibrary); // Added
+    on<AddUserFood>(_onAddUserFood);
+    on<SearchFoodEvent>(_onSearchFood);
+    on<ReplaceMealLogEvent>(_onReplaceMealLog); // Added
   }
 
   Future<void> _onLoadDashboardStats(
@@ -21,8 +25,16 @@ class MealBloc extends Bloc<MealEvent, MealState> {
   ) async {
     // Default range: Last 12 months from today to cover all views
     final now = DateTime.now();
-    final start = event.start ?? DateTime(now.year - 1, now.month, now.day);
-    final end = event.end ?? now;
+    final start =
+        event.start ??
+        DateTime(now.year - 1, now.month, now.day); // 1 year back
+    final end =
+        event.end ??
+        DateTime(
+          now.year + 1,
+          12,
+          31,
+        ); // End of next year to be safe, or just ample future.
 
     // We don't emit Loading to avoid full screen spinner if possible,
     // or we can emit a specific loading state if the UI handles it separately.
@@ -59,7 +71,7 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(MealSaveSuccess());
+      emit(MealConsumptionLogged());
       // Optionally reload the day's meals
       add(LoadMealsForDate(event.log.timestamp));
     });
@@ -130,7 +142,7 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(MealSaveSuccess());
+      emit(UserLibraryItemSaved());
       add(LoadUserLibrary()); // Reload library
     });
   }
@@ -144,8 +156,42 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(MealSaveSuccess());
+      emit(UserLibraryItemSaved());
       add(LoadUserLibrary()); // Reload library
+    });
+  }
+
+  Future<void> _onReplaceMealLog(
+    ReplaceMealLogEvent event,
+    Emitter<MealState> emit,
+  ) async {
+    emit(MealSaving());
+    // 1. Delete all old logs
+    for (final id in event.oldLogIds) {
+      final deleteResult = await repository.deleteMealLog(id, event.oldDate);
+      // If delete fails, we assume it might not exist or network err.
+      // We proceed or fail? Let's proceed to try to save the new one,
+      // but ideally we should be robust.
+      // If delete fails, we might end up with duplicates.
+      if (deleteResult.isLeft()) {
+        // Log intent? Or just emit failure?
+        // Let's stop and emit failure to prevent partial state.
+        emit(
+          MealOperationFailure(
+            'Failed to update meal: Could not remove old entry.',
+          ),
+        );
+        return;
+      }
+    }
+
+    // 2. Add new log
+    final result = await repository.logMeal(event.newLog);
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      success,
+    ) {
+      emit(MealConsumptionLogged());
+      add(LoadMealsForDate(event.newLog.timestamp));
     });
   }
 }

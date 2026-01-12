@@ -15,4 +15,5 @@ abstract class MealRepository {
     DateTime start,
     DateTime end,
   );
+  Future<Either<Failure, void>> deleteMealLog(String id, DateTime date);
 }

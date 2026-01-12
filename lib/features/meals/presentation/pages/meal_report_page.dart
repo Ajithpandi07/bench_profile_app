@@ -65,53 +65,71 @@ class _MealReportPageState extends State<MealReportPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: BlocListener<MealBloc, MealState>(
-        listener: (context, state) {
-          if (state is MealOperationFailure) {
-            showModernSnackbar(context, state.message, isError: true);
-          }
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _loadLogs();
         },
-        child: Column(
-          children: [
-            const SizedBox(height: 2),
-            // Date Selector
-            AppDateSelector(
-              selectedDate: _selectedDate,
-              onDateSelected: (date) {
-                setState(() {
-                  _selectedDate = date;
-                });
-                _loadLogs();
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Content
-            Expanded(
-              child: BlocBuilder<MealBloc, MealState>(
-                builder: (context, state) {
-                  if (state is MealLoading) {
-                    return const MealReportShimmer();
-                  } else if (state is MealsLoaded) {
-                    if (state.meals.isEmpty) {
-                      return _buildEmptyState();
-                    } else {
-                      return _buildLoggedState(state.meals);
-                    }
-                  } else if (state is MealOperationFailure) {
-                    return const Center(
-                      child: Text(
-                        'Failed to load logs',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
+        child: BlocListener<MealBloc, MealState>(
+          listener: (context, state) {
+            if (state is MealOperationFailure) {
+              showModernSnackbar(context, state.message, isError: true);
+            }
+          },
+          child: Column(
+            children: [
+              const SizedBox(height: 2),
+              // Date Selector
+              AppDateSelector(
+                selectedDate: _selectedDate,
+                onDateSelected: (date) {
+                  setState(() {
+                    _selectedDate = date;
+                  });
+                  _loadLogs();
                 },
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              // Content
+              Expanded(
+                child: BlocBuilder<MealBloc, MealState>(
+                  builder: (context, state) {
+                    if (state is MealLoading) {
+                      return const MealReportShimmer();
+                    } else if (state is MealsLoaded) {
+                      if (state.meals.isEmpty) {
+                        return _buildEmptyState();
+                      } else {
+                        return _buildLoggedState(state.meals);
+                      }
+                    } else if (state is MealOperationFailure) {
+                      // Allow retry or show empty to prevent stuck state?
+                      // For now center text is fine.
+                      return const Center(
+                        child: Text(
+                          'Failed to load logs',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+      floatingActionButton: BlocBuilder<MealBloc, MealState>(
+        builder: (context, state) {
+          if (state is MealsLoaded && state.meals.isNotEmpty) {
+            return FloatingActionButton(
+              onPressed: _showMealTypeSelector,
+              backgroundColor: const Color(0xFFE93448),
+              child: const Icon(Icons.add, color: Colors.white),
+            );
+          }
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
@@ -263,6 +281,7 @@ class _MealReportPageState extends State<MealReportPage> {
                         selectedMeals: allUserMeals,
                         allFoods: const [],
                         logDate: _selectedDate,
+                        existingLogIds: typeMeals.map((e) => e.id).toList(),
                       ),
                     ),
                   ),
@@ -501,7 +520,10 @@ class _MealReportPageState extends State<MealReportPage> {
             MaterialPageRoute(
               builder: (_) => BlocProvider.value(
                 value: context.read<MealBloc>(),
-                child: const QuickLogPage(mealType: 'Snack'),
+                child: QuickLogPage(
+                  mealType: 'Snack',
+                  initialDate: _selectedDate,
+                ),
               ),
             ),
           );
@@ -512,7 +534,10 @@ class _MealReportPageState extends State<MealReportPage> {
             MaterialPageRoute(
               builder: (_) => BlocProvider.value(
                 value: context.read<MealBloc>(),
-                child: MealListingPage(mealType: type),
+                child: MealListingPage(
+                  mealType: type,
+                  initialDate: _selectedDate,
+                ),
               ),
             ),
           );

@@ -19,6 +19,7 @@ class HydrationDashboardPage extends StatefulWidget {
 
 class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
   String _selectedView = 'Weekly'; // 'Weekly', 'Monthly', 'Yearly'
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -36,10 +37,10 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
       // Find Monday of current week
       // weekday: Mon=1 ... Sun=7
       final daysToSubtract = now.weekday - 1;
-      startDate = now.subtract(Duration(days: daysToSubtract));
-      endDate = startDate.add(const Duration(days: 6));
-      // Ensure we strip time or handle it. Repo uses start/end.
-      // If today is Wed, we want Mon-Sun. End date is future? That's fine, data will be 0.
+      final start = now.subtract(Duration(days: daysToSubtract));
+      startDate = DateTime(start.year, start.month, start.day);
+      final end = startDate.add(const Duration(days: 6));
+      endDate = DateTime(end.year, end.month, end.day, 23, 59, 59);
     } else if (_selectedView == 'Monthly') {
       // Calendar Month (1st to End)
       startDate = DateTime(now.year, now.month, 1);
@@ -125,16 +126,18 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
         }
       }
 
-      final isToday =
-          item.date.year == DateTime.now().year &&
-          item.date.month == DateTime.now().month &&
-          item.date.day == DateTime.now().day;
+      final isHighlight = _selectedView == 'Yearly'
+          ? (item.date.month == _selectedDate.month &&
+                item.date.year == _selectedDate.year)
+          : (item.date.year == _selectedDate.year &&
+                item.date.month == _selectedDate.month &&
+                item.date.day == _selectedDate.day);
 
       chartItems.add(
         DashboardChartItem(
           label: label,
           value: item.totalLiters,
-          isHighlight: isToday, // We can use this for today highlight logic
+          isHighlight: isHighlight,
         ),
       );
     }
@@ -187,6 +190,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                 onSelected: (view) {
                   setState(() {
                     _selectedView = view;
+                    _selectedDate = DateTime.now();
                   });
                   _loadStats();
                 },
@@ -238,8 +242,12 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                       0.0,
                       (prev, e) => e.value > prev ? e.value : prev,
                     );
-                    if (calculatedMax < 1.0) calculatedMax = 1.0;
-                    maxVal = calculatedMax * 1.2;
+                    // Ensure sensible minimum and nice rounding for grid lines
+                    // Round up to nearest integer for clean quarters (0.25, 0.5, 0.75 steps)
+                    if (calculatedMax < 2.0) calculatedMax = 2.0;
+                    maxVal = calculatedMax.ceilToDouble();
+                    // Add buffer if close to top
+                    if (maxVal - calculatedMax < 0.2) maxVal += 1.0;
                   }
 
                   return Column(
@@ -290,10 +298,33 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                         items: chartData,
                         maxVal: maxVal,
                         highlightColor: const Color(0xFFEE374D),
-                        chartHeight: 280,
+                        chartHeight: 250,
                         formatValue: (val) {
                           if (val % 1 == 0) return val.toInt().toString();
                           return val.toStringAsFixed(1);
+                        },
+                        onBarTap: (index) {
+                          setState(() {
+                            if (_selectedView == 'Weekly') {
+                              final now = DateTime.now();
+                              final monday = now.subtract(
+                                Duration(days: now.weekday - 1),
+                              );
+                              _selectedDate = monday.add(Duration(days: index));
+                            } else if (_selectedView == 'Monthly') {
+                              _selectedDate = DateTime(
+                                DateTime.now().year,
+                                DateTime.now().month,
+                                index + 1,
+                              );
+                            } else {
+                              _selectedDate = DateTime(
+                                DateTime.now().year,
+                                index + 1,
+                                1,
+                              );
+                            }
+                          });
                         },
                       ),
                       const SizedBox(height: 32),

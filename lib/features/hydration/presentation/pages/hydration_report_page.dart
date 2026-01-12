@@ -147,7 +147,6 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                     offset: const Offset(0, 4),
                   ),
                 ],
-                border: Border.all(color: const Color(0xFF3B9BFF), width: 1.5),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

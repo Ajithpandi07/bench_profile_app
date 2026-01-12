@@ -19,7 +19,8 @@ class SleepStatsPage extends StatefulWidget {
 }
 
 class _SleepStatsPageState extends State<SleepStatsPage> {
-  String _selectedView = '7 days'; // '7 days', '31 days', '12 months'
+  String _selectedView = 'Weekly'; // 'Weekly', 'Monthly', 'Yearly'
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -30,23 +31,26 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
   void _loadStats() {
     final now = DateTime.now();
     DateTime start;
-    if (_selectedView == '7 days') {
+    DateTime end;
+
+    if (_selectedView == 'Weekly') {
       // Current Week (Mon-Sun)
       int daysToSubtract = now.weekday - 1;
-      start = DateTime(
-        now.year,
-        now.month,
-        now.day,
-      ).subtract(Duration(days: daysToSubtract));
-    } else if (_selectedView == '31 days') {
+      start = DateTime(now.year, now.month, now.day).subtract(
+        Duration(days: daysToSubtract + 1),
+      ); // Extra day for overnight sleeps
+      end = start.add(const Duration(days: 7));
+    } else if (_selectedView == 'Monthly') {
       // Current Month (1st to last day)
       start = DateTime(now.year, now.month, 1);
+      end = DateTime(now.year, now.month + 1, 0);
     } else {
       // Current Year (Jan 1 to Dec 31)
       start = DateTime(now.year, 1, 1);
+      end = DateTime(now.year, 12, 31);
     }
 
-    context.read<SleepBloc>().add(LoadSleepStats(start, now));
+    context.read<SleepBloc>().add(LoadSleepStats(start, end));
   }
 
   @override
@@ -95,11 +99,15 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
               children: [
                 // View Selector
                 DashboardDateSelector(
-                  views: const ['7 days', '31 days', '12 months'],
+                  views: const ['Weekly', 'Monthly', 'Yearly'],
                   selectedView: _selectedView,
                   onSelected: (view) {
                     setState(() {
                       _selectedView = view;
+                      // Reset selected date to today when view changes,
+                      // or keep it if it falls within range?
+                      // Simplest UX: Reset to today or nearest valid date.
+                      _selectedDate = DateTime.now();
                     });
                     _loadStats();
                   },
@@ -165,7 +173,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
 
   String _getDateRangeText() {
     final now = DateTime.now();
-    if (_selectedView == '7 days') {
+    if (_selectedView == 'Weekly') {
       // Mon - Sun of current week
       int daysToSubtract = now.weekday - 1;
       final start = now.subtract(Duration(days: daysToSubtract));
@@ -173,12 +181,12 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       return '${DateFormat('MMM d').format(start)} - ${DateFormat('MMM d').format(end)}';
     }
 
-    final start = _selectedView == '31 days'
+    final start = _selectedView == 'Monthly'
         ? DateTime(now.year, now.month, 1) // Start of month
         : DateTime(now.year, 1, 1); // Start of year
 
     // For end date logic to match visual expectation
-    final end = _selectedView == '31 days'
+    final end = _selectedView == 'Monthly'
         ? DateTime(now.year, now.month + 1, 0)
         : DateTime(now.year, 12, 31);
 
@@ -267,20 +275,18 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
     List<DashboardChartItem> items = [];
     double maxVal = 12; // 12 hours max default?
 
-    if (_selectedView == '7 days') {
+    if (_selectedView == 'Weekly') {
       final monday = now.subtract(Duration(days: now.weekday - 1));
+      final startOfWeek = DateTime(monday.year, monday.month, monday.day);
+
       for (int i = 0; i < 7; i++) {
-        final date = monday.add(Duration(days: i));
-        // Find log for this day (start time on this day?)
-        // Sleep data usually spans days. Let's use start time.
-        // Or finding log that *ends* on this day? Usually start time is logical "night of"
-        // Logic in previous impl was likely simplistic. Let's check matching.
+        final date = startOfWeek.add(Duration(days: i));
 
         final log = logs.firstWhere(
           (l) =>
-              l.startTime.year == date.year &&
-              l.startTime.month == date.month &&
-              l.startTime.day == date.day,
+              l.endTime.year == date.year &&
+              l.endTime.month == date.month &&
+              l.endTime.day == date.day,
           orElse: () =>
               SleepLog(id: '', startTime: date, endTime: date, quality: 0),
         );
@@ -292,20 +298,23 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
           DashboardChartItem(
             label: DateFormat('E').format(date),
             value: hours,
-            isHighlight: date.day == now.day,
+            isHighlight:
+                date.year == _selectedDate.year &&
+                date.month == _selectedDate.month &&
+                date.day == _selectedDate.day,
           ),
         );
       }
-    } else if (_selectedView == '31 days') {
+    } else if (_selectedView == 'Monthly') {
       final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
       for (int i = 1; i <= daysInMonth; i++) {
         final date = DateTime(now.year, now.month, i);
         // Better matching: filter list for day
         final log = logs.firstWhere(
           (l) =>
-              l.startTime.year == date.year &&
-              l.startTime.month == date.month &&
-              l.startTime.day == date.day,
+              l.endTime.year == date.year &&
+              l.endTime.month == date.month &&
+              l.endTime.day == date.day,
           orElse: () =>
               SleepLog(id: '', startTime: date, endTime: date, quality: 0),
         );
@@ -316,7 +325,10 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
           DashboardChartItem(
             label: i.toString(),
             value: hours,
-            isHighlight: i == now.day,
+            isHighlight:
+                date.year == _selectedDate.year &&
+                date.month == _selectedDate.month &&
+                date.day == _selectedDate.day,
           ),
         );
       }
@@ -324,7 +336,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       // 12 months
       for (int i = 1; i <= 12; i++) {
         final monthLogs = logs.where(
-          (l) => l.startTime.year == now.year && l.startTime.month == i,
+          (l) => l.endTime.year == now.year && l.endTime.month == i,
         );
         double avgHours = 0;
         if (monthLogs.isNotEmpty) {
@@ -341,7 +353,8 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
           DashboardChartItem(
             label: DateFormat('MMM').format(DateTime(now.year, i))[0],
             value: avgHours,
-            isHighlight: i == now.month,
+            isHighlight:
+                i == _selectedDate.month && now.year == _selectedDate.year,
           ),
         );
       }
@@ -359,6 +372,26 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       formatValue: (val) {
         if (val % 1 == 0) return val.toInt().toString();
         return val.toStringAsFixed(1);
+      },
+      onBarTap: (index) {
+        setState(() {
+          if (_selectedView == 'Weekly') {
+            final now = DateTime.now();
+            final monday = now.subtract(Duration(days: now.weekday - 1));
+            final startOfWeek = DateTime(monday.year, monday.month, monday.day);
+            _selectedDate = startOfWeek.add(Duration(days: index));
+          } else if (_selectedView == 'Monthly') {
+            // Index 0 is 1st day of month
+            _selectedDate = DateTime(
+              DateTime.now().year,
+              DateTime.now().month,
+              index + 1,
+            );
+          } else {
+            // 12 months, index 0 is Jan
+            _selectedDate = DateTime(DateTime.now().year, index + 1, 1);
+          }
+        });
       },
     );
   }

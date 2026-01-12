@@ -22,7 +22,6 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
   @override
   Future<void> logWaterIntake(HydrationLog log) async {
     final user = auth.currentUser;
-
     if (user == null) {
       throw ServerException('User not authenticated');
     }
@@ -32,7 +31,7 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
       final dateId =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-      // New Path: bench_profile/{userId}/water_logs/{dateId}/logs/{logId}
+      // 1. Save detailed log
       final docRef = firestore
           .collection('bench_profile')
           .doc(user.uid)
@@ -53,7 +52,7 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // 1b. Update daily total liters
+      // 1b. Update daily total liters (Keep for legacy/daily view speed if needed)
       final dateDocRef = firestore
           .collection('bench_profile')
           .doc(user.uid)
@@ -69,13 +68,62 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
       }, SetOptions(merge: true));
 
       await docRef.set(data);
+
+      // 2. Update Monthly Summary
+      await _updateMonthlySummary(user.uid, log);
     } catch (e) {
       throw ServerException(e.toString());
     }
   }
 
+  Future<void> _updateMonthlySummary(String userId, HydrationLog log) async {
+    final year = log.timestamp.year;
+    final month = log.timestamp.month;
+    final day = log.timestamp.day;
+    final summaryId = '${year}_$month';
+
+    final summaryRef = firestore
+        .collection('bench_profile')
+        .doc(userId)
+        .collection('water_logs_monthly')
+        .doc(summaryId);
+
+    return firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(summaryRef);
+
+      if (!snapshot.exists) {
+        transaction.set(summaryRef, {
+          'id': summaryId,
+          'userId': userId,
+          'year': year,
+          'month': month,
+          'totalLiters': log.amountLiters,
+          'dailyBreakdown': {day.toString(): log.amountLiters},
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        final data = snapshot.data() as Map<String, dynamic>;
+        final currentTotal = (data['totalLiters'] as num?)?.toDouble() ?? 0.0;
+        final dailyBreakdown = Map<String, dynamic>.from(
+          data['dailyBreakdown'] ?? {},
+        );
+        final currentDayVal =
+            (dailyBreakdown[day.toString()] as num?)?.toDouble() ?? 0.0;
+
+        dailyBreakdown[day.toString()] = currentDayVal + log.amountLiters;
+
+        transaction.update(summaryRef, {
+          'totalLiters': currentTotal + log.amountLiters,
+          'dailyBreakdown': dailyBreakdown,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    });
+  }
+
   @override
   Future<List<HydrationLog>> getHydrationLogsForDate(DateTime date) async {
+    // ... existing implementation ...
     final user = auth.currentUser;
     if (user == null) {
       throw ServerException('User not authenticated');
@@ -127,11 +175,17 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
       throw ServerException('User not authenticated');
     }
 
-    try {
-      // Query water_logs collection where date is within range
-      // Path: bench_profile/{userId}/water_logs
-      // Note: We need to filter by 'date' field which we added in logWaterIntake
+    // Optimization: Use monthly summaries for long ranges (> 32 days)
+    // For simplicity and to match request, let's use summaries if available or fallback.
+    // Actually, user wants optimization.
+    // Let's implement fetching from monthly summaries logic.
 
+    final diff = endDate.difference(startDate).inDays;
+    if (diff > 32) {
+      return _getStatsFromMonthlySummaries(user.uid, startDate, endDate);
+    }
+
+    try {
       final querySnapshot = await firestore
           .collection('bench_profile')
           .doc(user.uid)
@@ -149,6 +203,58 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
       }).toList();
     } catch (e) {
       throw ServerException(e.toString());
+    }
+  }
+
+  Future<List<HydrationDailySummary>> _getStatsFromMonthlySummaries(
+    String userId,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final summaries = <HydrationDailySummary>[];
+    try {
+      // Fetch months in range
+      // Simplification: just fetch all monthly logs for these years?
+      // Or iterate years/months.
+      var current = DateTime(start.year, start.month);
+      while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+        final summaryId = '${current.year}_${current.month}';
+        final doc = await firestore
+            .collection('bench_profile')
+            .doc(userId)
+            .collection('water_logs_monthly')
+            .doc(summaryId)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data()!;
+          final breakdown = Map<String, dynamic>.from(
+            data['dailyBreakdown'] ?? {},
+          );
+          breakdown.forEach((dayStr, volDynamic) {
+            final day = int.tryParse(dayStr);
+            if (day != null) {
+              final date = DateTime(current.year, current.month, day);
+              if ((date.isAfter(start) || date.isAtSameMomentAs(start)) &&
+                  (date.isBefore(end) || date.isAtSameMomentAs(end))) {
+                summaries.add(
+                  HydrationDailySummary(
+                    date: date,
+                    totalLiters: (volDynamic as num).toDouble(),
+                  ),
+                );
+              }
+            }
+          });
+        }
+
+        // Next month
+        current = DateTime(current.year, current.month + 1);
+      }
+      return summaries;
+    } catch (e) {
+      // Fallback or rethrow
+      return [];
     }
   }
 }

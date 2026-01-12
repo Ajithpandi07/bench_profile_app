@@ -16,7 +16,7 @@ abstract class MealRemoteDataSource {
     DateTime start,
     DateTime end,
   );
-  // Future<List<FoodItem>> searchFood(String query); // Optional: if using external API or local DB
+  Future<void> deleteMealLog(String id, DateTime date);
 }
 
 class MealRemoteDataSourceImpl implements MealRemoteDataSource {
@@ -33,7 +33,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final dateId =
         '${log.timestamp.year}-${log.timestamp.month.toString().padLeft(2, '0')}-${log.timestamp.day.toString().padLeft(2, '0')}';
 
-    // 1. Save detailed log in 'meal_logs' collection
+    final batch = firestore.batch();
+
+    // 1. Save detailed log
     final logRef = firestore
         .collection('bench_profile')
         .doc(user.uid)
@@ -42,23 +44,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .collection('logs')
         .doc(log.id);
 
-    // 1b. Update daily total calories
-    final dateDocRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
-        .doc(dateId);
-
-    await dateDocRef.set({
-      'totalCalories': FieldValue.increment(log.totalCalories),
-      'date': Timestamp.fromDate(
-        DateTime(log.timestamp.year, log.timestamp.month, log.timestamp.day),
-      ),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    // Normalize: Store only necessary fields
-    await logRef.set({
+    batch.set(logRef, {
       'id': log.id,
       'userId': user.uid,
       'timestamp': Timestamp.fromDate(log.timestamp),
@@ -73,13 +59,60 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
           .map(
             (item) => {
               'id': item.id,
+              'name': item.name,
               'calories': item.calories,
+              'carbs': item.carbs,
+              'protein': item.protein,
+              'fat': item.fat,
               'quantity': item.quantity,
               'servingSize': item.servingSize,
             },
           )
           .toList(),
     });
+
+    // 2. DAILY Total (Atomic Increment)
+    final dateDocRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs')
+        .doc(dateId);
+
+    batch.set(dateDocRef, {
+      'totalCalories': FieldValue.increment(log.totalCalories),
+      'date': Timestamp.fromDate(
+        DateTime(log.timestamp.year, log.timestamp.month, log.timestamp.day),
+      ),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // 3. MONTHLY Total (Atomic Increment)
+    final year = log.timestamp.year;
+    final month = log.timestamp.month;
+    final day = log.timestamp.day;
+    final summaryId = '${year}_$month';
+
+    final summaryRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs_monthly')
+        .doc(summaryId);
+
+    // Note: To use atomic increment on a map field like `dailyBreakdown.5`, the map field `dailyBreakdown` must exist.
+    // SetOptions(merge: true) handles creates.
+    batch.set(summaryRef, {
+      'id': summaryId,
+      'userId': user.uid,
+      'year': year,
+      'month': month,
+      'totalCalories': FieldValue.increment(log.totalCalories),
+      'dailyBreakdown': {
+        day.toString(): FieldValue.increment(log.totalCalories),
+      },
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
   }
 
   @override
@@ -102,14 +135,33 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
 
     if (query.docs.isEmpty) return [];
 
-    // 2. Fetch User Foods to re-hydrate the full details
-    // Optimization: In a real app, query only needed IDs using whereIn (chunks of 10)
-    // For now, fetching all user foods is acceptable or we rely on what we have.
-    // Let's assume we need to fetch all to be safe or map them.
-    final userFoods = await getUserFoods();
-    final foodMap = {for (var f in userFoods) f.id: f};
+    // 2. Process logs and check if we need to hydrate (Lazy Fetch)
+    final docs = query.docs;
+    final List<MealLog> resultLogs = [];
+    bool needsHydration = false;
 
-    return query.docs.map((doc) {
+    // First pass: Try to build from snapshot
+    for (var doc in docs) {
+      final data = doc.data();
+      final itemsList = (data['items'] as List);
+
+      for (var i in itemsList) {
+        if (i['name'] == null) {
+          needsHydration = true;
+          break;
+        }
+      }
+      if (needsHydration) break;
+    }
+
+    Map<String, FoodItem>? foodMap;
+    if (needsHydration) {
+      // Fallback: Fetch all user foods only if necessary (Legacy logs)
+      final userFoods = await getUserFoods();
+      foodMap = {for (var f in userFoods) f.id: f};
+    }
+
+    for (var doc in docs) {
       final data = doc.data();
       final itemsList = (data['items'] as List);
 
@@ -119,51 +171,69 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         final snapshotCalories = (i['calories'] as num).toDouble();
         final quantity = i['quantity'] ?? 1;
         final serving = i['servingSize'] ?? '';
+        final snapshotName = i['name'];
+        final snapshotCarbs = (i['carbs'] as num?)?.toDouble();
+        final snapshotProtein = (i['protein'] as num?)?.toDouble();
+        final snapshotFat = (i['fat'] as num?)?.toDouble();
 
-        final definition = foodMap[id];
-        if (definition != null) {
-          // Merge definition with specific snapshot data (like quantity/calories)
-          // Note: Calories in definition are per unit. Snapshot calories might be total or per unit?
-          // Usually logs store total calories for that entry.
-          // FoodItem.calories generic is 'per serving/quantity 1' usually?
-          // Let's rely on the definitions macros but respect the logged quantities.
-          return definition.copyWith(
+        if (snapshotName != null) {
+          // Fast path: Data is in the log
+          return FoodItem(
+            id: id,
+            name: snapshotName,
+            calories:
+                snapshotCalories, // per total or unit? Logic implies these are saved properties
+            carbs: snapshotCarbs ?? 0,
+            protein: snapshotProtein ?? 0,
+            fat: snapshotFat ?? 0,
             quantity: quantity,
-            calories: snapshotCalories, // keep the logged calorie value?
             servingSize: serving,
           );
         } else {
-          // Fallback if food definition missing (deleted or legacy)
-          return FoodItem(
-            id: id,
-            name: 'Unknown Food', // or store name in log as fallback
-            calories: snapshotCalories,
-            quantity: quantity,
-            servingSize: serving,
-          );
+          // Slow path: Need hydration
+          final definition = foodMap?[id];
+          if (definition != null) {
+            return definition.copyWith(
+              quantity: quantity,
+              calories: snapshotCalories,
+              servingSize: serving,
+            );
+          } else {
+            return FoodItem(
+              id: id,
+              name: 'Unknown Food',
+              calories: snapshotCalories,
+              quantity: quantity,
+              servingSize: serving,
+            );
+          }
         }
       }).toList();
 
-      return MealLog(
-        id: data['id'],
-        userId: data['userId'],
-        timestamp: (data['timestamp'] as Timestamp).toDate(),
-        mealType: data['mealType'],
-        totalCalories: (data['totalCalories'] as num).toDouble(),
-        items: hydratedItems,
-        userMeals:
-            (data['userMeals'] as List<dynamic>?)
-                ?.map((e) => UserMeal.fromMap(e as Map<String, dynamic>))
-                .toList() ??
-            [],
-        createdAt: data['createdAt'] != null
-            ? (data['createdAt'] as Timestamp).toDate()
-            : null,
-        updatedAt: data['updatedAt'] != null
-            ? (data['updatedAt'] as Timestamp).toDate()
-            : null,
+      resultLogs.add(
+        MealLog(
+          id: data['id'],
+          userId: data['userId'],
+          timestamp: (data['timestamp'] as Timestamp).toDate(),
+          mealType: data['mealType'],
+          totalCalories: (data['totalCalories'] as num).toDouble(),
+          items: hydratedItems,
+          userMeals:
+              (data['userMeals'] as List<dynamic>?)
+                  ?.map((e) => UserMeal.fromMap(e as Map<String, dynamic>))
+                  .toList() ??
+              [],
+          createdAt: data['createdAt'] != null
+              ? (data['createdAt'] as Timestamp).toDate()
+              : null,
+          updatedAt: data['updatedAt'] != null
+              ? (data['updatedAt'] as Timestamp).toDate()
+              : null,
+        ),
       );
-    }).toList();
+    }
+
+    return resultLogs;
   }
 
   @override
@@ -309,6 +379,12 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
+    // Optimization: Use monthly summaries for range > 32 days
+    final diff = end.difference(start).inDays;
+    if (diff > 32) {
+      return _getSummariesFromMonthly(user.uid, start, end);
+    }
+
     final query = await firestore
         .collection('bench_profile')
         .doc(user.uid)
@@ -324,5 +400,119 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
       );
     }).toList();
+  }
+
+  Future<List<DailyMealSummary>> _getSummariesFromMonthly(
+    String userId,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final summaries = <DailyMealSummary>[];
+    try {
+      var current = DateTime(start.year, start.month);
+      while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+        final summaryId = '${current.year}_${current.month}';
+        final doc = await firestore
+            .collection('bench_profile')
+            .doc(userId)
+            .collection('meal_logs_monthly')
+            .doc(summaryId)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data()!;
+          final breakdown = Map<String, dynamic>.from(
+            data['dailyBreakdown'] ?? {},
+          );
+          breakdown.forEach((dayStr, calDynamic) {
+            final day = int.tryParse(dayStr);
+            if (day != null) {
+              final date = DateTime(current.year, current.month, day);
+              if ((date.isAfter(start) || date.isAtSameMomentAs(start)) &&
+                  (date.isBefore(end) || date.isAtSameMomentAs(end))) {
+                summaries.add(
+                  DailyMealSummary(
+                    date: date,
+                    totalCalories: (calDynamic as num).toDouble(),
+                  ),
+                );
+              }
+            }
+          });
+        }
+        current = DateTime(current.year, current.month + 1);
+      }
+      return summaries;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  @override
+  Future<void> deleteMealLog(String id, DateTime date) async {
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
+
+    final dateId =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    final logRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs')
+        .doc(dateId)
+        .collection('logs')
+        .doc(id);
+
+    // Note: We need to know the calories of the log we are deleting to decrement.
+    // This is the ONE read we cannot easily skip unless we trust the client OR store negative value.
+    // However, for consistency, let's fetch it. This is strictly ONE read.
+    // The previous implementation had a read + transaction read (2 reads).
+    // Now it's 1 read + batch write (0 reads).
+
+    final logSnapshot = await logRef.get();
+    if (!logSnapshot.exists) return; // Nothing to delete
+
+    final logData = logSnapshot.data()!;
+    final totalCalories = (logData['totalCalories'] as num).toDouble();
+
+    final batch = firestore.batch();
+
+    // 1. Delete Log
+    batch.delete(logRef);
+
+    // 2. Decrement Daily Total
+    final dateDocRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs')
+        .doc(dateId);
+
+    batch.set(dateDocRef, {
+      'totalCalories': FieldValue.increment(-totalCalories),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // 3. Update Monthly Summary (Decrement)
+    final year = date.year;
+    final month = date.month;
+    final day = date.day;
+    final summaryId = '${year}_$month';
+
+    final summaryRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs_monthly')
+        .doc(summaryId);
+
+    // Decrement using negative value.
+    // Note: If the field doesn't exist, this creates it with negative value, which shouldn't happen if logic is correct.
+    batch.set(summaryRef, {
+      'totalCalories': FieldValue.increment(-totalCalories),
+      'dailyBreakdown': {day.toString(): FieldValue.increment(-totalCalories)},
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
   }
 }

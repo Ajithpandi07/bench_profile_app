@@ -123,8 +123,15 @@ class _MealListingPageState extends State<MealListingPage>
       ),
       body: BlocListener<MealBloc, MealState>(
         listener: (context, state) {
-          if (state is MealSaveSuccess) {
-            showModernSnackbar(context, 'Added successfully');
+          if (state is UserLibraryItemSaved) {
+            showModernSnackbar(context, 'Added to your library');
+          } else if (state is MealConsumptionLogged) {
+            // In case listener is active when returning
+            // Can handle if needed, or ignore since Review page handles it.
+            // But ReviewPage pops. So ListingPage is visible.
+            // If ListingPage receives this state, it might snackbar again?
+            // ReviewPage snackbar happens before pop?
+            // If we rely on ReviewPage snackbar, we don't need it here.
           } else if (state is MealOperationFailure) {
             showModernSnackbar(context, state.message, isError: true);
           }

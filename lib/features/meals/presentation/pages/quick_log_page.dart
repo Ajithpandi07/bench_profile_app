@@ -9,7 +9,9 @@ import 'add_food_page.dart';
 
 class QuickLogPage extends StatefulWidget {
   final String mealType;
-  const QuickLogPage({super.key, required this.mealType});
+  final DateTime? initialDate;
+
+  const QuickLogPage({super.key, required this.mealType, this.initialDate});
 
   @override
   State<QuickLogPage> createState() => _QuickLogPageState();
@@ -172,7 +174,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
     final log = MealLog(
       id: const Uuid().v4(),
       userId: '',
-      timestamp: DateTime.now(),
+      timestamp: widget.initialDate ?? DateTime.now(),
       mealType: _selectedMealType,
       items: _addedFoods,
       userMeals: const [],
