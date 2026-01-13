@@ -2,7 +2,7 @@ import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.d
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_average_display.dart';
+
 import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
 import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
 import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
@@ -145,19 +145,6 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
     return chartItems;
   }
 
-  String _getDateRangeText() {
-    final now = DateTime.now();
-    if (_selectedView == 'Weekly') {
-      final monday = now.subtract(Duration(days: now.weekday - 1));
-      final sunday = monday.add(const Duration(days: 6));
-      return '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
-    } else if (_selectedView == 'Monthly') {
-      return DateFormat('MMMM yyyy').format(now);
-    } else {
-      return DateFormat('yyyy').format(now);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -205,8 +192,6 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     return const DashboardLoadingView();
                   }
 
-                  // Default values
-                  double average = 0;
                   String waterGoal = '0/7';
                   String timeGoal = '0/7';
                   List<DashboardChartItem> chartData = [];
@@ -215,13 +200,6 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                   if (state is HydrationStatsLoaded) {
                     // Process Average
                     final processedItems = _processChartData(state.stats);
-                    if (processedItems.isNotEmpty) {
-                      double total = processedItems.fold(
-                        0.0,
-                        (sum, item) => sum + item.value,
-                      );
-                      average = (total * 1000) / processedItems.length;
-                    }
 
                     // Process Goals
                     int achieved = state.stats
@@ -250,22 +228,73 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     if (maxVal - calculatedMax < 0.2) maxVal += 1.0;
                   }
 
+                  // Calculate selected value
+                  double selectedValue = 0;
+                  String selectedLabel = '';
+
+                  if (state is HydrationStatsLoaded) {
+                    if (_selectedView == 'Yearly') {
+                      final monthStats = state.stats.where(
+                        (e) =>
+                            e.date.month == _selectedDate.month &&
+                            e.date.year == _selectedDate.year,
+                      );
+                      selectedValue = monthStats.fold(
+                        0.0,
+                        (sum, e) => sum + e.totalLiters,
+                      );
+                      selectedLabel = DateFormat('MMMM').format(_selectedDate);
+                    } else {
+                      final dayStat = state.stats.firstWhere(
+                        (e) =>
+                            e.date.year == _selectedDate.year &&
+                            e.date.month == _selectedDate.month &&
+                            e.date.day == _selectedDate.day,
+                        orElse: () => HydrationDailySummary(
+                          date: _selectedDate,
+                          totalLiters: 0,
+                        ),
+                      );
+                      selectedValue = dayStat.totalLiters;
+                      selectedLabel = DateFormat('d MMM').format(_selectedDate);
+                    }
+                  }
+
                   return Column(
                     children: [
-                      Text(
-                        _getDateRangeText(),
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Average Display
-                      DashboardAverageDisplay(
-                        value: average > 0 ? average.toStringAsFixed(0) : '0',
-                        unit: 'ml',
-                        label: 'Average Hydration',
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '$_selectedView Overview',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF131313),
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (selectedLabel.isNotEmpty)
+                                Text(
+                                  selectedLabel,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              Text(
+                                '${(selectedValue * 1000).toInt()} ml',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFEE374D),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 32),
 

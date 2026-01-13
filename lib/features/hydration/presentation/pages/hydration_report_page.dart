@@ -9,6 +9,7 @@ import '../../domain/entities/hydration_log.dart';
 import '../widgets/water_list_shimmer.dart';
 import 'hydration_tracker_page.dart';
 import 'hydration_dashboard_page.dart';
+import '../widgets/hydration_summary_card.dart';
 
 class HydrationReportPage extends StatefulWidget {
   const HydrationReportPage({super.key});
@@ -134,120 +135,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            // Water Target Card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Water',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                '0',
-                                style: TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF131313),
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'ml',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEBF6FF),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.water_drop,
-                          color: Color(0xFF3B9BFF),
-                          size: 24,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFFEE374D).withOpacity(0.5),
-                              const Color(0xFFEE374D),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Daily Target',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF131313),
-                            ),
-                          ),
-                          Text(
-                            '3 Litre', // Dynamic? For now hardcoded or from logic
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            HydrationSummaryCard(currentLiters: 0, targetLiters: 3.0),
             const SizedBox(height: 40),
 
             // Manual Entry Button
@@ -301,6 +189,37 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
   Widget _buildLoggedState(List<HydrationLog> logs) {
     final totalLiters = logs.fold(0.0, (sum, log) => sum + log.amountLiters);
     final targetLiters = 3.0;
+
+    // Get last added time
+    String? lastAddedTime;
+    if (logs.isNotEmpty) {
+      // Assuming logs are sorted or we find the latest
+      // logs are usually sorted by date descending in Bloc or Repository
+      // Let's sort just in case or take the one with max date
+      final latestLog = logs.reduce(
+        (a, b) => a.timestamp.isAfter(b.timestamp) ? a : b,
+      );
+      lastAddedTime = DateFormat('hh:mm a').format(latestLog.timestamp);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      children: [
+        HydrationSummaryCard(
+          currentLiters: totalLiters,
+          targetLiters: targetLiters,
+          lastAddedTime: lastAddedTime,
+        ),
+        const SizedBox(height: 24),
+        ...logs.map((log) => _buildLogItem(log)),
+        const SizedBox(height: 24),
+        _buildInsightCard(totalLiters, targetLiters),
+        const SizedBox(height: 100), // Spacing for bottom
+      ],
+    );
+  }
+
+  Widget _buildInsightCard(double totalLiters, double targetLiters) {
     // Calculate percentage and prevent overflow/infinity
     double percentage = 0;
     if (targetLiters > 0) {
@@ -316,7 +235,6 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
       statusMessage = 'Your water intake is low.';
       statusColor = Colors.red;
     } else if (percentage < 80) {
-      // Adjusted threshold for "Average" to be a bit wider or as requested
       statusTitle = 'Average';
       statusMessage = 'Your water intake is average.';
       statusColor = Colors.orange;
@@ -326,94 +244,80 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
       statusColor = Colors.green;
     }
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      children: [
-        ...logs.map((log) => _buildLogItem(log)),
-        const SizedBox(height: 24),
-        // Insight Card
-        Container(
-          clipBehavior: Clip.hardEdge,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.shade100),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Banner Image with Status Chip
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('lib/assets/images/water_card_bg.png'),
-                    fit: BoxFit.cover,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Banner Image with Status Chip
+          Container(
+            height: 120,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('lib/assets/images/water_card_bg.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      statusTitle,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          statusTitle,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${percentage.toInt()} / 100',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF131313),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      statusMessage,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(
-          height: 100,
-        ), // Space for FAB if needed, or just scrolling
-      ],
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${percentage.toInt()} / 100',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF131313),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(statusMessage, style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -3,7 +3,7 @@ import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.d
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/app_theme.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_average_display.dart';
+
 import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
 import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
 import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
@@ -194,23 +194,71 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
   }
 
   Widget _buildMainAverage(List<SleepLog> logs) {
-    if (logs.isEmpty) {
-      return const DashboardAverageDisplay(
-        value: '0',
-        unit: 'h 0m',
-        label: 'Average Sleep',
-      );
-    }
-    final totalMin = logs.fold(0, (sum, log) => sum + log.duration.inMinutes);
-    final avgMin = totalMin ~/ logs.length;
-    final h = avgMin ~/ 60;
-    final m = avgMin % 60;
+    // Determine which date's log is currently selected
+    // If weekly, _selectedDate might be one specific day.
 
-    // Custom display since standard is "Value Unit" side by side, but sleep usually likes "8h 30m"
-    // We can reuse DashboardAverageDisplay if we format value strictly or just use custom here to match design
-    // The DashboardAverageDisplay takes value and unit.
-    // Let's pass "7h 30m" as value and empty unit? Or "7" as value and "h 30m" as unit?
-    // Let's try to stick to the design: "8h 30m"
+    // Default value
+    int h = 0;
+    int m = 0;
+
+    // Logic to find log for _selectedDate
+    // This depends on how _selectedDate works. In chart onBarTap, we set _selectedDate.
+    // So we just find the log for that date.
+
+    if (logs.isNotEmpty) {
+      if (_selectedView == 'Weekly') {
+        // Find log for _selectedDate
+        final log = logs.firstWhere(
+          (l) =>
+              l.endTime.year == _selectedDate.year &&
+              l.endTime.month == _selectedDate.month &&
+              l.endTime.day == _selectedDate.day,
+          orElse: () => SleepLog(
+            id: '',
+            startTime: DateTime.now(),
+            endTime: DateTime.now(),
+            quality: 0,
+          ),
+        );
+        if (log.id.isNotEmpty || log.duration != Duration.zero) {
+          h = log.duration.inHours;
+          m = log.duration.inMinutes.remainder(60);
+        }
+      } else if (_selectedView == 'Monthly') {
+        final log = logs.firstWhere(
+          (l) =>
+              l.endTime.year == _selectedDate.year &&
+              l.endTime.month == _selectedDate.month &&
+              l.endTime.day == _selectedDate.day,
+          orElse: () => SleepLog(
+            id: '',
+            startTime: DateTime.now(),
+            endTime: DateTime.now(),
+            quality: 0,
+          ),
+        );
+        if (log.id.isNotEmpty || log.duration != Duration.zero) {
+          h = log.duration.inHours;
+          m = log.duration.inMinutes.remainder(60);
+        }
+      } else {
+        // Yearly - Average for month
+        final monthLogs = logs.where(
+          (l) =>
+              l.endTime.year == _selectedDate.year &&
+              l.endTime.month == _selectedDate.month,
+        );
+        if (monthLogs.isNotEmpty) {
+          final totalMin = monthLogs.fold(
+            0,
+            (sum, l) => sum + l.duration.inMinutes,
+          );
+          final avg = totalMin ~/ monthLogs.length;
+          h = avg ~/ 60;
+          m = avg % 60;
+        }
+      }
+    }
 
     return Column(
       children: [
@@ -232,7 +280,10 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
             const Text('m', style: TextStyle(fontSize: 24, color: Colors.grey)),
           ],
         ),
-        const Text('Average Sleep', style: TextStyle(color: Colors.grey)),
+        Text(
+          '$_selectedView Overview',
+          style: const TextStyle(color: Colors.grey),
+        ),
       ],
     );
   }

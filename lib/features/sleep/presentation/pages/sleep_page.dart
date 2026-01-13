@@ -11,6 +11,7 @@ import 'package:bench_profile_app/features/sleep/presentation/widgets/sleep_shim
 import '../../domain/entities/sleep_log.dart';
 import '../widgets/sleep_summary_card.dart';
 import '../widgets/sleep_quality_card.dart';
+import '../widgets/sleep_log_item.dart';
 
 class SleepPage extends StatefulWidget {
   const SleepPage({super.key});
@@ -371,7 +372,7 @@ class _SleepPageState extends State<SleepPage> {
       // Assuming one main sleep per night for now, or summing them?
       // Design implies single "Sleep time" block. Let's take the longest one or sum them.
       // For now, take the first one or calculate total.
-      return _buildSleepSummary(logs.first); // Simplification using first log
+      return _buildLoggedState(logs); // Pass all logs
     } else if (state is SleepError) {
       return Center(child: Text(state.message));
     }
@@ -379,44 +380,229 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   Widget _buildEmptyState() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          'No sleep data for this day',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-        const SizedBox(height: 32),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: PrimaryButton(
-            text: 'Record Sleep',
-            onPressed: () => _navigateToLogPage(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSleepSummary(SleepLog log) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
         children: [
+          const SizedBox(height: 20),
+          const SleepSummaryCard(), // Empty card state
+          const SizedBox(height: 40),
+
+          // Action Button (Enter Manually)
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: _navigateToLogPage,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF111827),
+                elevation: 0,
+                side: BorderSide(color: Colors.grey.shade200),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.edit, size: 20, color: Color(0xFFEF4444)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Enter manually',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoggedState(List<SleepLog> logs) {
+    // Find the "main" sleep (longest duration) for the top summary
+    final mainLog = logs.fold(
+      logs.first,
+      (prev, curr) => curr.duration > prev.duration ? curr : prev,
+    );
+
+    // Calculate quality percentage for insight
+    final qualityScore = mainLog.quality;
+
+    String statusTitle;
+    Color statusColor;
+
+    if (qualityScore < 50) {
+      statusTitle = 'Needs Attention';
+      statusColor = Colors.red;
+    } else if (qualityScore < 80) {
+      statusTitle = 'Good';
+      statusColor = Colors.orange;
+    } else {
+      statusTitle = 'Excellent';
+      statusColor = Colors.green;
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
+      child: Column(
+        children: [
+          // Summary Card (Main Sleep)
           SleepSummaryCard(
-            log: log,
-            onTap: () => _navigateToLogPage(log: log),
+            log: mainLog,
+            // onTap: () => _navigateToLogPage(log: mainLog),
           ),
           const SizedBox(height: 24),
-          SleepQualityCard(
-            quality: log.quality,
-            message: log.quality < 70
-                ? 'Your sleep quality was low.'
-                : 'Your sleep quality was great.',
+
+          // List of Logs (Separate Cards)
+          ListView.separated(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: logs.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final log = logs[index];
+              return SleepLogItem(
+                log: log,
+                onTap: () => _navigateToLogPage(log: log),
+              );
+            },
           ),
 
-          // Debug/Fallback: Manual Edit button if card tap isn't obvious?
-          // Design doesn't show it. The card arrow implies tap.
+          const SizedBox(height: 24),
+
+          // Insight Card
+          Container(
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A), // Dark blue/navy bg
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Stack(
+              children: [
+                // Stars/Background decorations (simplified)
+                Positioned(
+                  top: 20,
+                  left: 20,
+                  child: Icon(
+                    Icons.star,
+                    color: Colors.yellow.withOpacity(0.5),
+                    size: 12,
+                  ),
+                ),
+                Positioned(
+                  bottom: 40,
+                  right: 30,
+                  child: Icon(
+                    Icons.star,
+                    color: Colors.yellow.withOpacity(0.5),
+                    size: 8,
+                  ),
+                ),
+                Positioned(
+                  top: 50,
+                  right: 80,
+                  child: Icon(
+                    Icons.star,
+                    color: Colors.yellow.withOpacity(0.5),
+                    size: 10,
+                  ),
+                ),
+
+                // Moon Icon (Large)
+                Positioned(
+                  top: 20,
+                  left: 80,
+                  child: Transform.rotate(
+                    angle: -0.5,
+                    child: const Icon(
+                      Icons.nightlight_round,
+                      color: Colors.white,
+                      size: 80, // Large moon
+                    ),
+                  ),
+                ),
+
+                Column(
+                  children: [
+                    // Top Pill
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          statusTitle,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 60), // Space for moon/graphic
+                    // Bottom White Area
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          bottom: Radius.circular(24),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$qualityScore',
+                                  style: const TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF111827),
+                                  ),
+                                ),
+                                const TextSpan(
+                                  text: ' /100',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            qualityScore < 70
+                                ? 'Your sleep quality was low.'
+                                : 'Your sleep quality was great.',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

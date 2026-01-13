@@ -3,7 +3,7 @@ import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.d
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/services/app_theme.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_average_display.dart';
+
 import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
 import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
 import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
@@ -186,24 +186,63 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
 
     // Dynamic max scale rounding
     maxVal = ((maxVal + 499) ~/ 500) * 500.0;
+
+    // Average Kcal moved to selection logic below
     double averageKcal = daysWithData > 0
         ? totalCaloriesInView / daysWithData
         : 0;
 
+    // Calculate selected value
+    double selectedValue = 0;
+    String selectedLabel = '';
+    if (_selectedView == 'Yearly') {
+      final monthSum = _allSummaries
+          .where(
+            (s) =>
+                s.date.year == _selectedDate.year &&
+                s.date.month == _selectedDate.month,
+          )
+          .fold(0.0, (sum, s) => sum + s.totalCalories);
+      selectedValue = monthSum;
+      selectedLabel = DateFormat('MMMM').format(_selectedDate);
+    } else {
+      final summary = _findSummaryForDate(_selectedDate);
+      selectedValue = summary?.totalCalories ?? 0.0;
+      selectedLabel = DateFormat('d MMM').format(_selectedDate);
+    }
+
     return Column(
       children: [
-        // Date Range
-        Text(
-          _getDateRangeText(),
-          style: const TextStyle(color: Colors.grey, fontSize: 14),
-        ),
-        const SizedBox(height: 8),
-
-        // Average Kcal Display
-        DashboardAverageDisplay(
-          value: averageKcal.toStringAsFixed(0),
-          unit: 'Kcal',
-          label: 'Average Kcal',
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '$_selectedView Overview',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF131313),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (selectedLabel.isNotEmpty)
+                  Text(
+                    selectedLabel,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                Text(
+                  '${selectedValue.toStringAsFixed(0)} Kcal',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFE93448),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
 
         const SizedBox(height: 32),
@@ -285,21 +324,6 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
       );
     } catch (e) {
       return null;
-    }
-  }
-
-  String _getDateRangeText() {
-    final now = DateTime.now();
-    if (_selectedView == 'Weekly') {
-      final monday = now.subtract(Duration(days: now.weekday - 1));
-      final sunday = monday.add(const Duration(days: 6));
-      return '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
-    } else if (_selectedView == 'Monthly') {
-      final start = DateTime(now.year, now.month, 1);
-      final end = DateTime(now.year, now.month + 1, 0);
-      return '${DateFormat('MMM d').format(start)} - ${DateFormat('MMM d').format(end)}';
-    } else {
-      return 'Jan 1 - Dec 31';
     }
   }
 }
