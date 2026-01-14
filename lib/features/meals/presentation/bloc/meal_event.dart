@@ -72,3 +72,13 @@ class ReplaceMealLogEvent extends MealEvent {
   @override
   List<Object> get props => [newLog, oldLogIds, oldDate];
 }
+
+class DeleteMealLog extends MealEvent {
+  final String mealLogId;
+  final DateTime date;
+
+  const DeleteMealLog(this.mealLogId, this.date);
+
+  @override
+  List<Object> get props => [mealLogId, date];
+}

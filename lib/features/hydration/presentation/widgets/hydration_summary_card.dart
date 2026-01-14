@@ -32,15 +32,17 @@ class HydrationSummaryCard extends StatelessWidget {
     final progress = (currentLiters / targetLiters).clamp(0.0, 1.0);
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: 356,
+      height: 192,
+      padding: const EdgeInsets.all(20), // Reduced from 24
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
             blurRadius: 20,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 4),
+            spreadRadius: -2,
           ),
         ],
       ),
@@ -62,7 +64,7 @@ class HydrationSummaryCard extends StatelessWidget {
                       letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4), // Reduced from 8
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
@@ -73,6 +75,7 @@ class HydrationSummaryCard extends StatelessWidget {
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF131313),
+                          height: 1.0, // Tighter line height
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -102,8 +105,7 @@ class HydrationSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-
+          Spacer(), // Use Spacer to distribute available space instead of fixed SizedBox
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -117,8 +119,7 @@ class HydrationSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-
+          const SizedBox(height: 8), // Reduced from 12
           // Progress Bar
           Stack(
             children: [
@@ -146,7 +147,7 @@ class HydrationSummaryCard extends StatelessWidget {
           ),
 
           if (lastAddedTime != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 12), // Reduced from 16
             Center(
               child: Text(
                 'Last water added at $lastAddedTime',

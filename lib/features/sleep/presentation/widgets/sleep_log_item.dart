@@ -15,20 +15,22 @@ class SleepLogItem extends StatelessWidget {
     final m = duration.inMinutes.remainder(60);
 
     // Start time
-    final timeString = DateFormat('h:mm a').format(log.startTime);
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        width: 356,
+        height: 81,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 10,
+              color: const Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 20,
               offset: const Offset(0, 4),
+              spreadRadius: -2,
             ),
           ],
         ),
@@ -36,80 +38,71 @@ class SleepLogItem extends StatelessWidget {
           children: [
             // Icon
             Container(
-              padding: const EdgeInsets.all(12),
+              width: 40,
+              height: 40,
               decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC), // very light grey/blue
+                color: Color(0xFFFEF2F2), // Light red bg
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.bedtime_rounded,
                 color: Color(0xFFEF4444), // Red
-                size: 24,
+                size: 20,
               ),
             ),
             const SizedBox(width: 16),
 
-            // Text Info
+            // Duration and Time
             Expanded(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'SLEEP',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B), // Slate 500
-                      letterSpacing: 0.5,
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: h > 0 ? '$h' : '',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF131313),
+                          ),
+                        ),
+                        if (h > 0)
+                          const TextSpan(
+                            text: 'h ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF909DAD),
+                            ),
+                          ),
+                        TextSpan(
+                          text: '$m',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF131313),
+                          ),
+                        ),
+                        const TextSpan(
+                          text: 'm',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF909DAD),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    timeString,
+                    '${DateFormat('h:mm a').format(log.startTime)} - ${DateFormat('h:mm a').format(log.endTime)}',
                     style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF94A3B8), // Slate 400
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Value
-            RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: h > 0 ? '$h' : '',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A), // Slate 900
-                    ),
-                  ),
-                  if (h > 0)
-                    const TextSpan(
-                      text: 'h ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
-                      ),
-                    ),
-                  TextSpan(
-                    text: '$m',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const TextSpan(
-                    text: 'm',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                      color: Color(0xFF909DAD),
                     ),
                   ),
                 ],

@@ -10,6 +10,7 @@ import '../widgets/water_list_shimmer.dart';
 import 'hydration_tracker_page.dart';
 import 'hydration_dashboard_page.dart';
 import '../widgets/hydration_summary_card.dart';
+import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
 
 class HydrationReportPage extends StatefulWidget {
   const HydrationReportPage({super.key});
@@ -19,7 +20,7 @@ class HydrationReportPage extends StatefulWidget {
 }
 
 class _HydrationReportPageState extends State<HydrationReportPage> {
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
 
   @override
   void initState() {
@@ -95,7 +96,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
               selectedDate: _selectedDate,
               onDateSelected: (date) {
                 setState(() {
-                  _selectedDate = date;
+                  _selectedDate = DateUtils.dateOnly(date);
                 });
                 _loadLogs();
               },
@@ -322,110 +323,93 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
   }
 
   Widget _buildLogItem(HydrationLog log) {
-    return Container(
-      height: 140, // Fixed height as per request
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromRGBO(0, 0, 0, 0.06),
-            offset: const Offset(0, 19),
-            blurRadius: 32.6,
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Dismissible(
+        key: Key(log.id),
+        direction: DismissDirection.endToStart,
+        background: buildSwipeBackground(),
+        confirmDismiss: (direction) => showDeleteConfirmationDialog(context),
+        onDismissed: (direction) {
+          context.read<HydrationBloc>().add(
+            DeleteHydrationLog(log.id, _selectedDate),
+          );
+        },
+        child: GestureDetector(
+          onTap: () => _navigateToTracker(logToEdit: log),
+          child: Container(
+            width: 356,
+            height: 81,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color.fromRGBO(0, 0, 0, 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                  spreadRadius: -2,
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Top Row: Icon + "WATER"
-                Row(
-                  children: [
-                    Container(
-                      width: 32, // Reduced from 40
-                      height: 32, // Reduced from 40
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEBF6FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.water_drop,
-                        color: Color(0xFF3B9BFF),
-                        size: 16, // Reduced from 20
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'WATER',
-                      style: TextStyle(
-                        fontSize: 12, // Reduced from 14
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                // Amount
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      '${(log.amountLiters * 1000).toInt()}',
-                      style: const TextStyle(
-                        fontSize: 28, // Reduced from 32
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF131313),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'ml',
-                      style: TextStyle(
-                        fontSize: 16, // Reduced from 18
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2), // Reduced from 4
-                // Time
-                Text(
-                  DateFormat('hh:mm a').format(log.timestamp),
-                  style: TextStyle(
-                    fontSize: 13, // Reduced from 14
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade500,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEBF2FF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.water_drop,
+                    color: Color(0xFF0064F6),
+                    size: 20,
                   ),
                 ),
-                const SizedBox(height: 4), // Reduced from 8
+                const SizedBox(width: 16),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${log.amountLiters} ',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF131313),
+                            ),
+                          ),
+                          const TextSpan(
+                            text: 'L',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF909DAD),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      DateFormat('hh:mm a').format(log.timestamp),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF909DAD),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          // Right Button
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F8FA), // Light grey background
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.chevron_right, color: Colors.black87),
-              onPressed: () => _navigateToTracker(logToEdit: log),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

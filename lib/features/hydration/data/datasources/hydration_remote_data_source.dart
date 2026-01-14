@@ -6,6 +6,7 @@ import 'package:bench_profile_app/features/hydration/domain/entities/hydration_d
 
 abstract class HydrationRemoteDataSource {
   Future<void> logWaterIntake(HydrationLog log);
+  Future<void> deleteHydrationLog(String id, DateTime date);
   Future<List<HydrationLog>> getHydrationLogsForDate(DateTime date);
   Future<List<HydrationDailySummary>> getHydrationStats(
     DateTime startDate,
@@ -119,6 +120,30 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
         });
       }
     });
+  }
+
+  @override
+  Future<void> deleteHydrationLog(String id, DateTime date) async {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw ServerException('User not authenticated');
+    }
+
+    try {
+      final dateId =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      await firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('water_logs')
+          .doc(dateId)
+          .collection('logs')
+          .doc(id)
+          .delete();
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
   }
 
   @override

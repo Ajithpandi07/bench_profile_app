@@ -16,7 +16,8 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     on<LoadUserLibrary>(_onLoadUserLibrary); // Added
     on<AddUserFood>(_onAddUserFood);
     on<SearchFoodEvent>(_onSearchFood);
-    on<ReplaceMealLogEvent>(_onReplaceMealLog); // Added
+    on<ReplaceMealLogEvent>(_onReplaceMealLog);
+    on<DeleteMealLog>(_onDeleteMealLog); // Added
   }
 
   Future<void> _onLoadDashboardStats(
@@ -192,6 +193,20 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     ) {
       emit(MealConsumptionLogged());
       add(LoadMealsForDate(event.newLog.timestamp));
+    });
+  }
+
+  Future<void> _onDeleteMealLog(
+    DeleteMealLog event,
+    Emitter<MealState> emit,
+  ) async {
+    // Optimistic update could be done here, but safe bet is to reload
+    final result = await repository.deleteMealLog(event.mealLogId, event.date);
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      success,
+    ) {
+      // Reload meals for the date
+      add(LoadMealsForDate(event.date));
     });
   }
 }

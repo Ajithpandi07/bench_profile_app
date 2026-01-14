@@ -3,15 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/presentation/widgets/app_date_selector.dart';
 import '../../../../core/services/app_theme.dart';
-import '../../../reminder/presentation/widgets/primary_button.dart';
 import '../bloc/bloc.dart';
 import 'sleep_log_page.dart';
 import 'sleep_stats_page.dart';
 import 'package:bench_profile_app/features/sleep/presentation/widgets/sleep_shimmer_loading.dart';
 import '../../domain/entities/sleep_log.dart';
 import '../widgets/sleep_summary_card.dart';
-import '../widgets/sleep_quality_card.dart';
 import '../widgets/sleep_log_item.dart';
+import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
 
 class SleepPage extends StatefulWidget {
   const SleepPage({super.key});
@@ -464,9 +463,19 @@ class _SleepPageState extends State<SleepPage> {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final log = logs[index];
-              return SleepLogItem(
-                log: log,
-                onTap: () => _navigateToLogPage(log: log),
+              return Dismissible(
+                key: Key(log.id),
+                direction: DismissDirection.endToStart,
+                background: buildSwipeBackground(),
+                confirmDismiss: (direction) =>
+                    showDeleteConfirmationDialog(context),
+                onDismissed: (direction) {
+                  context.read<SleepBloc>().add(DeleteSleepLog(log));
+                },
+                child: SleepLogItem(
+                  log: log,
+                  onTap: () => _navigateToLogPage(log: log),
+                ),
               );
             },
           ),

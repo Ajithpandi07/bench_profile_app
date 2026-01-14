@@ -34,3 +34,13 @@ class LoadHydrationStats extends HydrationEvent {
   @override
   List<Object> get props => [startDate, endDate];
 }
+
+class DeleteHydrationLog extends HydrationEvent {
+  final String id;
+  final DateTime date;
+
+  const DeleteHydrationLog(this.id, this.date);
+
+  @override
+  List<Object> get props => [id, date];
+}

@@ -8,6 +8,8 @@ abstract class HydrationRepository {
   /// Does not cache locally.
   Future<Either<Failure, void>> logWaterIntake(HydrationLog log);
 
+  Future<Either<Failure, void>> deleteHydrationLog(String id, DateTime date);
+
   /// Fetches hydration logs for a specific date from remote server.
   Future<Either<Failure, List<HydrationLog>>> getHydrationLogsForDate(
     DateTime date,

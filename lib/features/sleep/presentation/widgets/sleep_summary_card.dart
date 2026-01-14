@@ -27,15 +27,18 @@ class SleepSummaryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        width: 356,
+        height: 192,
+        padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05), // Subtle shadow
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              color: const Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+              spreadRadius: -2,
             ),
           ],
         ),

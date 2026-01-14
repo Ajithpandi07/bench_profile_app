@@ -20,15 +20,18 @@ class MealSummaryCard extends StatelessWidget {
     final progress = (currentKcal / targetKcal).clamp(0.0, 1.0);
 
     return Container(
+      width: 356,
+      height: 192,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
             blurRadius: 20,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 4),
+            spreadRadius: -2,
           ),
         ],
       ),

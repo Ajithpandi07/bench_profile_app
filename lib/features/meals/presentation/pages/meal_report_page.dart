@@ -17,6 +17,7 @@ import 'quick_log_page.dart';
 import 'meal_dashboard_page.dart';
 import 'review_meal_page.dart';
 import '../widgets/meal_summary_card.dart';
+import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
 
 class MealReportPage extends StatefulWidget {
   const MealReportPage({super.key});
@@ -235,136 +236,148 @@ class _MealReportPageState extends State<MealReportPage> {
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
-            child: GestureDetector(
-              onTap: () {
-                final allFoods = <FoodItem>[];
-                final allUserMeals = <UserMeal>[];
+            child: Dismissible(
+              key: Key(type),
+              direction: DismissDirection.endToStart,
+              background: buildSwipeBackground(),
+              confirmDismiss: (direction) =>
+                  showDeleteConfirmationDialog(context),
+              onDismissed: (direction) {
                 for (var m in typeMeals) {
-                  allFoods.addAll(m.items);
-                  allUserMeals.addAll(m.userMeals);
+                  context.read<MealBloc>().add(
+                    DeleteMealLog(m.id, _selectedDate),
+                  );
                 }
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<MealBloc>(),
-                      child: ReviewMealPage(
-                        mealType: type,
-                        selectedFoods: allFoods,
-                        selectedMeals: allUserMeals,
-                        allFoods: const [],
-                        logDate: _selectedDate,
-                        existingLogIds: typeMeals.map((e) => e.id).toList(),
+              },
+              child: GestureDetector(
+                onTap: () {
+                  final allFoods = <FoodItem>[];
+                  final allUserMeals = <UserMeal>[];
+                  for (var m in typeMeals) {
+                    allFoods.addAll(m.items);
+                    allUserMeals.addAll(m.userMeals);
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<MealBloc>(),
+                        child: ReviewMealPage(
+                          mealType: type,
+                          selectedFoods: allFoods,
+                          selectedMeals: allUserMeals,
+                          allFoods: const [],
+                          logDate: _selectedDate,
+                          existingLogIds: typeMeals.map((e) => e.id).toList(),
+                        ),
                       ),
+                    ),
+                  );
+                },
+                child: Center(
+                  child: Container(
+                    width: 356,
+                    height: 81,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color.fromRGBO(0, 0, 0, 0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Icon + Type
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFFEBEB),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.restaurant,
+                                    color: Color(0xFFE93448),
+                                    size: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  type.toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF556073),
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        // Calories
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  '${totalCals.toStringAsFixed(0)} ',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF131313),
+                                  ),
+                                ),
+                                const Text(
+                                  'Kcal',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF909DAD),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Time
+                            if (typeMeals.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2.0),
+                                child: Text(
+                                  DateFormat(
+                                    'hh:mm a',
+                                  ).format(typeMeals.first.timestamp),
+                                  style: const TextStyle(
+                                    color: Color(0xFF556073),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Content Column
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header: Icon + Name
-                          Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFEBEB),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.restaurant,
-                                  color: Color(0xFFE93448),
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                type.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF556073),
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          // Calories
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                '${totalCals.toStringAsFixed(0)} ',
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF131313),
-                                ),
-                              ),
-                              const Text(
-                                'Kcal',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Color(0xFF909DAD),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Time
-                          if (typeMeals.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                DateFormat(
-                                  'hh:mm a',
-                                ).format(typeMeals.first.timestamp),
-                                style: const TextStyle(
-                                  color: Color(0xFF556073),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Action Arrow (Right Side)
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAFAFA),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_right,
-                        color: Color(0xFF131313),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
