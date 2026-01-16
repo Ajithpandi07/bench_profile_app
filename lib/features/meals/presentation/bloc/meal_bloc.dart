@@ -17,7 +17,39 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     on<AddUserFood>(_onAddUserFood);
     on<SearchFoodEvent>(_onSearchFood);
     on<ReplaceMealLogEvent>(_onReplaceMealLog);
-    on<DeleteMealLog>(_onDeleteMealLog); // Added
+    on<DeleteMealLog>(_onDeleteMealLog);
+    on<DeleteAllMealsForDate>(_onDeleteAllMealsForDate);
+    on<DeleteMultipleMeals>(_onDeleteMultipleMeals);
+  }
+
+  Future<void> _onDeleteMultipleMeals(
+    DeleteMultipleMeals event,
+    Emitter<MealState> emit,
+  ) async {
+    emit(MealLoading());
+    // Iterate and delete. Ideally, repository should support bulk delete,
+    // but we'll iterate for now as per previous pattern.
+    for (final id in event.mealLogIds) {
+      await repository.deleteMealLog(id, event.date);
+    }
+    add(LoadMealsForDate(event.date));
+  }
+
+  Future<void> _onDeleteAllMealsForDate(
+    DeleteAllMealsForDate event,
+    Emitter<MealState> emit,
+  ) async {
+    emit(MealLoading());
+    final result = await repository.getMealsForDate(event.date);
+    await result.fold(
+      (failure) async => emit(MealOperationFailure(failure.message)),
+      (meals) async {
+        for (var meal in meals) {
+          await repository.deleteMealLog(meal.id, event.date);
+        }
+        add(LoadMealsForDate(event.date));
+      },
+    );
   }
 
   Future<void> _onLoadDashboardStats(

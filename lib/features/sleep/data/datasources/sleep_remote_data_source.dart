@@ -35,15 +35,31 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
       notes: log.notes,
     );
 
-    final logRef = firestore
+    // Date bucket based on End Time (wake up time)
+    final date = log.endTime;
+    final dateId =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    final dateDocRef = firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('sleep_logs')
-        .doc(docId);
+        .doc(dateId);
 
-    await logRef.set(model.toMap());
+    final logRef = dateDocRef.collection('logs').doc(docId);
 
-    // Update Monthly Summary
+    // Batch write to ensure consistency
+    final batch = firestore.batch();
+    batch.set(logRef, model.toMap());
+    batch.set(dateDocRef, {
+      'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
+      'totalDurationMinutes': FieldValue.increment(log.duration.inMinutes),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
+
+    // Update Monthly Summary (Legacy/Redundant but keeping for now if used elsewhere)
     await _updateMonthlySummary(user.uid, log);
   }
 
@@ -52,20 +68,16 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User is not authenticated');
 
-    // Range for the entire day (based on End Date)
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
+    final dateId =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
     final snapshot = await firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('sleep_logs')
-        .where(
-          'end_time',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
-        )
-        .where('end_time', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-        .orderBy('end_time') // Sort by end time
+        .doc(dateId)
+        .collection('logs')
+        .orderBy('end_time')
         .get();
 
     return snapshot.docs
@@ -82,36 +94,31 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User is not authenticated');
 
-    // Optimization: If range > 7 days, try using Monthly Summaries
-    if (end.difference(start).inDays > 7) {
-      try {
-        final summaryLogs = await _getLogsFromMonthlySummaries(
-          user.uid,
-          start,
-          end,
-        );
-        if (summaryLogs.isNotEmpty) {
-          return summaryLogs;
-        }
-      } catch (e) {
-        // Fallback to legacy daily iteration if summary fails or doesn't exist
-      }
-    }
-
-    // Fallback or Short Range: Direct Query
+    // Query parent documents directly for the range
     final snapshot = await firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('sleep_logs')
-        .where('end_time', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('end_time', isLessThanOrEqualTo: Timestamp.fromDate(end))
-        .orderBy('end_time')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
         .get();
 
-    return snapshot.docs
-        .map((doc) => SleepLogModel.fromFirestore(doc))
-        .cast<SleepLog>()
-        .toList();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      final date = (data['date'] as Timestamp).toDate();
+      final totalMinutes = data['totalDurationMinutes'] as int? ?? 0;
+
+      // Return synthetic log representing the day's total
+      return SleepLog(
+        id: 'daily_summary_${doc.id}',
+        startTime: date, // Just the date
+        endTime: date.add(
+          Duration(minutes: totalMinutes),
+        ), // Duration representation
+        quality: 0, // Not stored in summary currently
+        notes: 'Daily Summary',
+      );
+    }).toList();
   }
 
   Future<void> _updateMonthlySummary(String uid, SleepLog log) async {
@@ -172,48 +179,10 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     DateTime start,
     DateTime end,
   ) async {
-    // Determine months needed
-    // E.g. Start 2025-01-01 End 2025-12-31 -> 12 docs
-    List<SleepLog> syntheticLogs = [];
-
-    DateTime currentMonth = DateTime(start.year, start.month);
-    while (currentMonth.isBefore(end) ||
-        currentMonth.month == end.month && currentMonth.year == end.year) {
-      final summaryId =
-          '${currentMonth.year}-${currentMonth.month.toString().padLeft(2, '0')}';
-      final doc = await firestore
-          .collection('bench_profile')
-          .doc(uid)
-          .collection('sleep_logs_monthly')
-          .doc(summaryId)
-          .get();
-
-      if (doc.exists) {
-        final summary = SleepMonthlySummaryModel.fromFirestore(doc);
-        summary.dailyBreakdown.forEach((dayStr, minutes) {
-          final day = int.parse(dayStr);
-          final logDate = DateTime(summary.year, summary.month, day);
-
-          if (logDate.isAfter(start.subtract(const Duration(days: 1))) &&
-              logDate.isBefore(end.add(const Duration(days: 1)))) {
-            syntheticLogs.add(
-              SleepLog(
-                id: 'synthetic_$day',
-                startTime: logDate.subtract(
-                  Duration(minutes: minutes),
-                ), // Approximate start
-                endTime: logDate, // Date key represents wake-up day (End Date)
-                quality: summary.avgQuality.toInt(),
-              ),
-            );
-          }
-        });
-      }
-
-      currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-    }
-
-    return syntheticLogs;
+    // Deprecated by new daily summary optimization, but keeping code if needed or unused.
+    // Actually, can remove if we fully switch.
+    // Let's leave it accessible but unused in main path for safety unless instructed to clean up.
+    return [];
   }
 
   @override
@@ -221,11 +190,25 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User is not authenticated');
 
-    await firestore
+    final date = log.endTime;
+    final dateId =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    final dateDocRef = firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('sleep_logs')
-        .doc(log.id)
-        .delete();
+        .doc(dateId);
+
+    final logRef = dateDocRef.collection('logs').doc(log.id);
+
+    final batch = firestore.batch();
+    batch.delete(logRef);
+    batch.update(dateDocRef, {
+      'totalDurationMinutes': FieldValue.increment(-log.duration.inMinutes),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
   }
 }

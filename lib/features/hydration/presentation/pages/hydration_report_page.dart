@@ -21,6 +21,8 @@ class HydrationReportPage extends StatefulWidget {
 
 class _HydrationReportPageState extends State<HydrationReportPage> {
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
+  bool _isSelectionMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -37,37 +39,118 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Water',
-          style: TextStyle(
+        title: Text(
+          _isSelectionMode ? '${_selectedIds.length} selected' : 'Water',
+          style: const TextStyle(
             color: Color(0xFFEE374D),
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        leading: const BackButton(color: Colors.black),
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close, color: Colors.black),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedIds.clear();
+                  });
+                },
+              )
+            : const BackButton(color: Colors.black),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart_outlined, color: Colors.black54),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider.value(
-                    value: context.read<HydrationBloc>(),
-                    child: const HydrationDashboardPage(),
-                  ),
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
+                  onPressed: _selectedIds.isEmpty
+                      ? null
+                      : () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete selected logs?'),
+                              content: Text(
+                                'Are you sure you want to delete ${_selectedIds.length} items?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    context.read<HydrationBloc>().add(
+                                      DeleteMultipleHydrationLogs(
+                                        logIds: _selectedIds.toList(),
+                                        date: _selectedDate,
+                                      ),
+                                    );
+                                    setState(() {
+                                      _isSelectionMode = false;
+                                      _selectedIds.clear();
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text(
+                                    'Delete',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                 ),
-              );
-              if (mounted) {
-                _loadLogs();
-              }
-            },
-          ),
-        ],
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(
+                    Icons.bar_chart_outlined,
+                    color: Colors.black54,
+                  ),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<HydrationBloc>(),
+                          child: const HydrationDashboardPage(),
+                        ),
+                      ),
+                    );
+                    if (mounted) {
+                      _loadLogs();
+                    }
+                  },
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.black54),
+                  onSelected: (value) {
+                    if (value == 'add') {
+                      _navigateToTracker();
+                    } else if (value == 'delete') {
+                      setState(() {
+                        _isSelectionMode = true;
+                        _selectedIds.clear();
+                      });
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        const PopupMenuItem<String>(
+                          value: 'add',
+                          child: Text('Add new'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Text('Bulk delete'),
+                        ),
+                      ],
+                ),
+              ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: BlocBuilder<HydrationBloc, HydrationState>(
@@ -327,7 +410,9 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Dismissible(
         key: Key(log.id),
-        direction: DismissDirection.endToStart,
+        direction: _isSelectionMode
+            ? DismissDirection.none
+            : DismissDirection.endToStart,
         background: buildSwipeBackground(),
         confirmDismiss: (direction) => showDeleteConfirmationDialog(context),
         onDismissed: (direction) {
@@ -336,78 +421,116 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
           );
         },
         child: GestureDetector(
-          onTap: () => _navigateToTracker(logToEdit: log),
-          child: Container(
-            width: 356,
-            height: 81,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color.fromRGBO(0, 0, 0, 0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                  spreadRadius: -2,
-                ),
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEBF2FF),
-                    shape: BoxShape.circle,
+          onTap: () {
+            if (_isSelectionMode) {
+              setState(() {
+                if (_selectedIds.contains(log.id)) {
+                  _selectedIds.remove(log.id);
+                } else {
+                  _selectedIds.add(log.id);
+                }
+              });
+            } else {
+              _navigateToTracker(logToEdit: log);
+            }
+          },
+          child: Row(
+            children: [
+              if (_isSelectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: Checkbox(
+                    value: _selectedIds.contains(log.id),
+                    activeColor: const Color(0xFFEE374D), // Match theme
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          _selectedIds.add(log.id);
+                        } else {
+                          _selectedIds.remove(log.id);
+                        }
+                      });
+                    },
                   ),
-                  child: const Icon(
-                    Icons.water_drop,
-                    color: Color(0xFF0064F6),
-                    size: 20,
-                  ),
                 ),
-                const SizedBox(width: 16),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RichText(
-                      text: TextSpan(
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  height: 81,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromRGBO(0, 0, 0, 0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEBF2FF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.water_drop,
+                          color: Color(0xFF0064F6),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextSpan(
-                            text: '${log.amountLiters} ',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF131313),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '${log.amountLiters} ',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF131313),
+                                  ),
+                                ),
+                                const TextSpan(
+                                  text: 'L',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF909DAD),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const TextSpan(
-                            text: 'L',
-                            style: TextStyle(
+                          const SizedBox(height: 4),
+                          Text(
+                            DateFormat('hh:mm a').format(log.timestamp),
+                            style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w600,
                               color: Color(0xFF909DAD),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('hh:mm a').format(log.timestamp),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF909DAD),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -27,8 +27,8 @@ class SleepSummaryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 356,
-        height: 192,
+        width: double.infinity,
+        constraints: BoxConstraints(minHeight: hasLog ? 256 : 184),
         padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -121,7 +121,7 @@ class SleepSummaryCard extends StatelessWidget {
                 ],
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // Bedtime -> Wake Up Visual Row
             Row(
@@ -156,7 +156,7 @@ class SleepSummaryCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(
                       startTimeStr,
                       style: const TextStyle(
@@ -191,7 +191,7 @@ class SleepSummaryCard extends StatelessWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(
                       endTimeStr,
                       style: const TextStyle(

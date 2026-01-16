@@ -335,9 +335,6 @@ class _MealListingPageState extends State<MealListingPage>
       child: Container(
         width: 100.56,
         height: 116,
-        // Remove padding that might conflict with fixed height/centering
-        // or keep vertical padding if content dictates.
-        // Let's use Column's MainAxisAlignment to center content.
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -355,10 +352,21 @@ class _MealListingPageState extends State<MealListingPage>
           children: [
             Icon(icon, color: const Color(0xFFE93448), size: 26),
             const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 90,
+              ), // Constrain text width
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 2, // Allow up to 2 lines
+                overflow:
+                    TextOverflow.ellipsis, // Handle overflow with ellipsis
+              ),
             ),
             const SizedBox(height: 4),
             const CircleAvatar(

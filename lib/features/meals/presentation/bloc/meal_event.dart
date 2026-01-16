@@ -82,3 +82,21 @@ class DeleteMealLog extends MealEvent {
   @override
   List<Object> get props => [mealLogId, date];
 }
+
+class DeleteAllMealsForDate extends MealEvent {
+  final DateTime date;
+  const DeleteAllMealsForDate(this.date);
+
+  @override
+  List<Object> get props => [date];
+}
+
+class DeleteMultipleMeals extends MealEvent {
+  final List<String> mealLogIds;
+  final DateTime date;
+
+  const DeleteMultipleMeals(this.mealLogIds, this.date);
+
+  @override
+  List<Object> get props => [mealLogIds, date];
+}

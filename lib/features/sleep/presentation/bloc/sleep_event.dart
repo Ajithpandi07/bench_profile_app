@@ -44,3 +44,21 @@ class DeleteSleepLog extends SleepEvent {
   @override
   List<Object> get props => [log];
 }
+
+class DeleteAllSleepLogsForDate extends SleepEvent {
+  final DateTime date;
+  const DeleteAllSleepLogsForDate(this.date);
+
+  @override
+  List<Object> get props => [date];
+}
+
+class DeleteMultipleSleepLogs extends SleepEvent {
+  final List<String> logIds;
+  final DateTime date;
+
+  const DeleteMultipleSleepLogs(this.logIds, this.date);
+
+  @override
+  List<Object> get props => [logIds, date];
+}

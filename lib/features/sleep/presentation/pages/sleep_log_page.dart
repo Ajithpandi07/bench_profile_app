@@ -124,9 +124,12 @@ class _SleepLogPageState extends State<SleepLogPage> {
           if (state is SleepOperationSuccess) {
             Navigator.pop(context, true);
           } else if (state is SleepError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
         },
         child: SingleChildScrollView(
@@ -240,6 +243,32 @@ class _SleepLogPageState extends State<SleepLogPage> {
   }
 
   void _saveLog() {
+    // 1. Check for overlapping inputs against loaded logs
+    final state = context.read<SleepBloc>().state;
+    if (state is SleepLoaded) {
+      final newStart = _startDateTime;
+      final newEnd = _endDateTime;
+      // Allow 24h log rule
+      if (newEnd.difference(newStart) < const Duration(hours: 24)) {
+        for (var log in state.logs) {
+          if (widget.existingLog != null && log.id == widget.existingLog!.id)
+            continue;
+
+          if (newStart.isBefore(log.endTime) && newEnd.isAfter(log.startTime)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Selection overlaps with existing log (${DateFormat('h:mm a').format(log.startTime)} - ${DateFormat('h:mm a').format(log.endTime)})',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+        }
+      }
+    }
+
     final log = SleepLog(
       id:
           widget.existingLog?.id ??

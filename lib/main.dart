@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:device_preview/device_preview.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'app/bench_app.dart';
 import 'core/core.dart';
@@ -70,15 +71,21 @@ void main() async {
   //   });
   // }
 
+  // Toggle this to enable/disable Device Preview
+  const bool enableDevicePreview = true;
+
   // Provide blocs at the app level
   runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()),
-        BlocProvider(create: (_) => di.sl<AuthBloc>()),
-        BlocProvider(create: (_) => di.sl<MealBloc>()),
-      ],
-      child: const BenchApp(),
+    DevicePreview(
+      enabled: enableDevicePreview,
+      builder: (context) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()),
+          BlocProvider(create: (_) => di.sl<AuthBloc>()),
+          BlocProvider(create: (_) => di.sl<MealBloc>()),
+        ],
+        child: const BenchApp(),
+      ),
     ),
   );
 }

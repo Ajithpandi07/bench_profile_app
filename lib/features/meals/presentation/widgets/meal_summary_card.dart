@@ -20,8 +20,8 @@ class MealSummaryCard extends StatelessWidget {
     final progress = (currentKcal / targetKcal).clamp(0.0, 1.0);
 
     return Container(
-      width: 356,
-      height: 192,
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 192),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,

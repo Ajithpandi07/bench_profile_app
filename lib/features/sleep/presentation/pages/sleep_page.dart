@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
+
 import '../../../../core/presentation/widgets/app_date_selector.dart';
 import '../../../../core/services/app_theme.dart';
 import '../bloc/bloc.dart';
@@ -21,6 +21,8 @@ class SleepPage extends StatefulWidget {
 
 class _SleepPageState extends State<SleepPage> {
   DateTime _selectedDate = DateTime.now();
+  bool _isSelectionMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -37,324 +39,138 @@ class _SleepPageState extends State<SleepPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Sleep',
-          style: TextStyle(
+        title: Text(
+          _isSelectionMode ? '${_selectedIds.length} selected' : 'Sleep',
+          style: const TextStyle(
             color: AppTheme.primaryColor,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        leading: const BackButton(color: Colors.black),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart, color: Colors.black),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider.value(
-                    value: context.read<SleepBloc>(),
-                    child: const SleepStatsPage(),
-                  ),
-                ),
-              );
-              if (mounted) _loadLogs();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: BlocListener<SleepBloc, SleepState>(
-        listener: (context, state) {
-          if (state is SleepLoaded &&
-              state.healthConnectDraft != null &&
-              state.logs.isEmpty) {
-            _showHealthConnectDialog(context, state.healthConnectDraft!);
-          }
-        },
-        child: BlocBuilder<SleepBloc, SleepState>(
-          builder: (context, state) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Date Selector
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: AppDateSelector(
-                    selectedDate: _selectedDate,
-                    onDateSelected: (date) {
-                      setState(() {
-                        _selectedDate = date;
-                      });
-                      _loadLogs();
-                    },
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                Expanded(child: _buildContent(state)),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  void _showHealthConnectDialog(BuildContext context, SleepLog log) {
-    // Capture the Bloc instance from the current context
-    final sleepBloc = context.read<SleepBloc>();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        // Return a helper wrapped in BlocProvider.value
-        // We use sheetContext for the builder, but use sleepBloc from parent
-        return BlocProvider.value(
-          value: sleepBloc,
-          child: Builder(
-            builder: (context) {
-              final duration = log.duration;
-              final h = duration.inHours;
-              final m = duration.inMinutes.remainder(60);
-              final startFormat = DateFormat('h:mm a');
-              final endFormat = DateFormat('h:mm a');
-
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 32.0,
-                ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Row: "Sleep time" and Moon Icon
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Sleep time',
-                          style: TextStyle(
-                            color: Color(0xFF6B7280), // Colors.grey[500]
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF2F2), // Light red bg
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.bedtime_outlined, // Moon outline style
-                            color: AppTheme.primaryColor,
-                            size: 24,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Big Duration Text (e.g. "9 h" or "9 h 30 m")
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          '$h',
-                          style: const TextStyle(
-                            fontSize: 56,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Text(
-                          'h',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                        if (m > 0) ...[
-                          const SizedBox(width: 16),
-                          Text(
-                            '$m',
-                            style: const TextStyle(
-                              fontSize: 56,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'm',
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Bedtime -> Wake Up Visual Row
-                    Row(
-                      children: [
-                        // BEDTIME
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 4,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFEF4444),
-                                        Color(0xFFFF8A8A),
-                                      ],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                    ),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close, color: Colors.black),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedIds.clear();
+                  });
+                },
+              )
+            : const BackButton(color: Colors.black),
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
+                  onPressed: _selectedIds.isEmpty
+                      ? null
+                      : () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete selected logs?'),
+                              content: Text(
+                                'Are you sure you want to delete ${_selectedIds.length} items?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
                                 ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'BEDTIME',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B7280),
-                                    letterSpacing: 0.5,
+                                TextButton(
+                                  onPressed: () {
+                                    context.read<SleepBloc>().add(
+                                      DeleteMultipleSleepLogs(
+                                        _selectedIds.toList(),
+                                        _selectedDate,
+                                      ),
+                                    );
+                                    setState(() {
+                                      _isSelectionMode = false;
+                                      _selectedIds.clear();
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text(
+                                    'Delete',
+                                    style: TextStyle(color: Colors.red),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              startFormat.format(log.startTime),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF111827),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Arrow
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24.0),
-                          child: Icon(
-                            Icons.arrow_forward,
-                            size: 20,
-                            color: Color(0xFF9CA3AF),
-                          ),
-                        ),
-
-                        // WAKE UP
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'WAKE UP',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B7280),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              endFormat.format(log.endTime),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF111827),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Action Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final newLog = SleepLog(
-                            id: DateTime.now().millisecondsSinceEpoch
-                                .toString(),
-                            startTime: log.startTime,
-                            endTime: log.endTime,
-                            quality: log.quality,
-                            notes: log.notes,
                           );
-                          context.read<SleepBloc>().add(LogSleep(newLog));
-                          Navigator.pop(context);
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(
-                            0xFFEF4444,
-                          ), // Primary Red
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle_outline, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Record this time',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.bar_chart, color: Colors.black),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<SleepBloc>(),
+                          child: const SleepStatsPage(),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                    );
+                    if (mounted) _loadLogs();
+                  },
                 ),
-              );
-            },
-          ),
-        );
-      },
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.black),
+                  onSelected: (value) {
+                    if (value == 'add') {
+                      _navigateToLogPage();
+                    } else if (value == 'delete') {
+                      setState(() {
+                        _isSelectionMode = true;
+                        _selectedIds.clear();
+                      });
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        const PopupMenuItem<String>(
+                          value: 'add',
+                          child: Text('Add new'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Text('Bulk delete'),
+                        ),
+                      ],
+                ),
+              ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: BlocBuilder<SleepBloc, SleepState>(
+        builder: (context, state) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Date Selector
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: AppDateSelector(
+                  selectedDate: _selectedDate,
+                  onDateSelected: (date) {
+                    setState(() {
+                      _selectedDate = date;
+                    });
+                    _loadLogs();
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              Expanded(child: _buildContent(state)),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -387,31 +203,39 @@ class _SleepPageState extends State<SleepPage> {
           const SleepSummaryCard(), // Empty card state
           const SizedBox(height: 40),
 
-          // Action Button (Enter Manually)
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _navigateToLogPage,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF111827),
-                elevation: 0,
-                side: BorderSide(color: Colors.grey.shade200),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          Center(
+            child: GestureDetector(
+              onTap: _navigateToLogPage,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.edit, size: 20, color: Color(0xFFEF4444)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Enter manually',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ],
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.edit, color: Color(0xFFE93448), size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Enter manually',
+                      style: TextStyle(
+                        color: Color(0xFF131313),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -465,16 +289,67 @@ class _SleepPageState extends State<SleepPage> {
               final log = logs[index];
               return Dismissible(
                 key: Key(log.id),
-                direction: DismissDirection.endToStart,
+                direction: _isSelectionMode
+                    ? DismissDirection.none
+                    : DismissDirection.endToStart,
                 background: buildSwipeBackground(),
                 confirmDismiss: (direction) =>
                     showDeleteConfirmationDialog(context),
                 onDismissed: (direction) {
                   context.read<SleepBloc>().add(DeleteSleepLog(log));
                 },
-                child: SleepLogItem(
-                  log: log,
-                  onTap: () => _navigateToLogPage(log: log),
+                child: GestureDetector(
+                  onTap: () {
+                    if (_isSelectionMode) {
+                      setState(() {
+                        if (_selectedIds.contains(log.id)) {
+                          _selectedIds.remove(log.id);
+                        } else {
+                          _selectedIds.add(log.id);
+                        }
+                      });
+                    } else {
+                      _navigateToLogPage(log: log);
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      if (_isSelectionMode)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: Checkbox(
+                            value: _selectedIds.contains(log.id),
+                            activeColor: AppTheme.primaryColor,
+                            onChanged: (val) {
+                              setState(() {
+                                if (val == true) {
+                                  _selectedIds.add(log.id);
+                                } else {
+                                  _selectedIds.remove(log.id);
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      Expanded(
+                        child: SleepLogItem(
+                          log: log,
+                          // Disable internal tap in selection mode if item has one,
+                          // but GestureDetector above handles it.
+                          // Pass null or handle? SleepLogItem likely has no internal tap
+                          // if we passed onTap previously?
+                          // Ah, we passed onTap: () => _navigateToLogPage(log: log).
+                          // We should disable that callback if selection mode, BUT
+                          // our GestureDetector above intercepts taps on the whole row?
+                          // Yes, but if SleepLogItem uses InkWell/GestureDetector it might compete.
+                          // The safest is to suppress the callback if selection mode.
+                          onTap: _isSelectionMode
+                              ? null
+                              : () => _navigateToLogPage(log: log),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -612,6 +487,45 @@ class _SleepPageState extends State<SleepPage> {
               ],
             ),
           ),
+          const SizedBox(height: 40),
+
+          Center(
+            child: GestureDetector(
+              onTap: _navigateToLogPage,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.edit, color: Color(0xFFE93448), size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Enter manually',
+                      style: TextStyle(
+                        color: Color(0xFF131313),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
         ],
       ),
     );
