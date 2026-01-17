@@ -30,7 +30,7 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
       (failure) async => emit(SleepError(_mapFailureToMessage(failure))),
       (logs) async {
         for (var log in logs) {
-          await repository.deleteSleepLog(log);
+          await repository.deleteSleepLog(log.id, log.endTime);
         }
         add(LoadSleepLogs(event.date));
       },
@@ -203,7 +203,10 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     Emitter<SleepState> emit,
   ) async {
     emit(SleepLoading());
-    final result = await repository.deleteSleepLog(event.log);
+    final result = await repository.deleteSleepLog(
+      event.log.id,
+      event.log.endTime,
+    );
     result.fold(
       (failure) => emit(SleepError(_mapFailureToMessage(failure))),
       (_) => emit(SleepOperationSuccess()),
@@ -216,28 +219,7 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
   ) async {
     emit(SleepLoading());
     for (var id in event.logIds) {
-      // Assuming we need to fetch log first or repository supports ID delete.
-      // Repository interface: deleteSleepLog(SleepLog log).
-      // I need to fetch logs or refactor repo.
-      // But SleepLog requires ID only usually.
-      // Let's create a dummy log with ID if possible or fetch.
-      // Fetching is safer.
-      // Optimization: Filter from current state if available.
-      // Simpler: Just delete by ID if repo supported it.
-      // Since repo takes object, I'll pass a dummy object with ID if validation allows,
-      // or better, update repo to delete by ID.
-      // Given constraints, I'll assume I can pass a log with just ID.
-      // Looking at `deleteSleepLog` in repo (I don't have it visible but usually it deletes by ID).
-      // Wait, `deleteSleepLog(log)` -> likely uses log.id.
-      // valid log needs other fields?
-      // I'll try constructing minimal log.
-      final log = SleepLog(
-        id: id,
-        startTime: DateTime.now(),
-        endTime: DateTime.now(),
-        quality: 0,
-      );
-      await repository.deleteSleepLog(log);
+      await repository.deleteSleepLog(id, event.date);
     }
     add(LoadSleepLogs(event.date));
   }

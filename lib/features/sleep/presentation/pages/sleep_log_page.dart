@@ -73,28 +73,59 @@ class _SleepLogPageState extends State<SleepLogPage> {
 
     if (picked != null) {
       setState(() {
-        final newDateTime = DateTime(
-          initial.year,
-          initial.month,
-          initial.day,
-          picked.hour,
-          picked.minute,
-        );
-
         if (isStart) {
-          _startDateTime = newDateTime;
+          // Heuristic: "Closest to Previous Selection"
+          // Candidates: Yesterday and Today (relative to reporting date)
+          // We compare which candidate is closer to the *current* _startDateTime
+          // This allows natural transitions (e.g. 11pm -> 1am moves forward, 1am -> 11pm moves backward)
+
+          final today = DateTime(
+            widget.initialDate.year,
+            widget.initialDate.month,
+            widget.initialDate.day,
+            picked.hour,
+            picked.minute,
+          );
+          final yesterday = today.subtract(const Duration(days: 1));
+
+          final diffToday = today.difference(_startDateTime).abs();
+          final diffYesterday = yesterday.difference(_startDateTime).abs();
+
+          DateTime newStart;
+          if (diffToday < diffYesterday) {
+            newStart = today;
+          } else {
+            newStart = yesterday;
+          }
+
+          // Smart Shift: Move End Time to preserve duration
+          final currentDuration = _endDateTime.difference(_startDateTime);
+          _startDateTime = newStart;
+          _endDateTime = newStart.add(currentDuration);
         } else {
-          _endDateTime = newDateTime;
+          // Heuristic: "Next Valid Time"
+          // Candidates: Same Day as Start and Next Day
+          // Choose the first one that is AFTER Start Time (ensuring positive duration)
+
+          final start = _startDateTime;
+          final candidateSameDay = DateTime(
+            start.year,
+            start.month,
+            start.day,
+            picked.hour,
+            picked.minute,
+          );
+          final candidateNextDay = candidateSameDay.add(
+            const Duration(days: 1),
+          );
+
+          if (candidateSameDay.isAfter(start)) {
+            _endDateTime = candidateSameDay;
+          } else {
+            _endDateTime = candidateNextDay;
+          }
         }
 
-        if (_endDateTime.isBefore(_startDateTime)) {
-          if (!_isSameDay(_startDateTime, _endDateTime)) {
-            // already handled?
-          }
-          if (_endDateTime.hour < _startDateTime.hour) {
-            _endDateTime = _endDateTime.add(const Duration(days: 1));
-          }
-        }
         _updateDuration();
       });
     }

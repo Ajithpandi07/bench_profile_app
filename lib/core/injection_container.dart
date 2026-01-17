@@ -28,6 +28,10 @@ import 'package:bench_profile_app/features/hydration/presentation/presentation.d
 import 'package:bench_profile_app/features/meals/data/data.dart';
 import 'package:bench_profile_app/features/meals/domain/repositories/meal_repository.dart';
 import 'package:bench_profile_app/features/meals/presentation/bloc/bloc.dart';
+import 'package:bench_profile_app/features/activity/domain/repositories/activity_repository.dart';
+import 'package:bench_profile_app/features/activity/data/datasources/activity_remote_data_source.dart';
+import 'package:bench_profile_app/features/activity/data/repositories/activity_repository_impl.dart';
+import 'package:bench_profile_app/features/activity/presentation/bloc/activity_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -285,6 +289,32 @@ Future<void> init() async {
 
   if (!sl.isRegistered<MealBloc>()) {
     sl.registerFactory(() => MealBloc(repository: sl<MealRepository>()));
+  }
+
+  //================
+  // Features - Activity
+  //================
+  if (!sl.isRegistered<ActivityRemoteDataSource>()) {
+    sl.registerLazySingleton<ActivityRemoteDataSource>(
+      () => ActivityRemoteDataSourceImpl(
+        firestore: sl<FirebaseFirestore>(),
+        auth: sl<FirebaseAuth>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<ActivityRepository>()) {
+    sl.registerLazySingleton<ActivityRepository>(
+      () => ActivityRepositoryImpl(
+        remoteDataSource: sl<ActivityRemoteDataSource>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<ActivityBloc>()) {
+    sl.registerFactory(
+      () => ActivityBloc(repository: sl<ActivityRepository>()),
+    );
   }
 
   // Optional debug logs

@@ -9,6 +9,6 @@ abstract class SleepRepository {
     DateTime start,
     DateTime end,
   );
-  Future<Either<Failure, void>> deleteSleepLog(SleepLog log);
+  Future<Either<Failure, void>> deleteSleepLog(String id, DateTime date);
   Future<Either<Failure, SleepLog?>> fetchSleepFromHealthConnect(DateTime date);
 }

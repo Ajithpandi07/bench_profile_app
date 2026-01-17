@@ -9,7 +9,7 @@ abstract class SleepRemoteDataSource {
   Future<void> logSleep(SleepLog log);
   Future<List<SleepLog>> getSleepLogs(DateTime date);
   Future<List<SleepLog>> getSleepLogsInRange(DateTime start, DateTime end);
-  Future<void> deleteSleepLog(SleepLog log);
+  Future<void> deleteSleepLog(String id, DateTime date);
 }
 
 class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
@@ -186,11 +186,10 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
   }
 
   @override
-  Future<void> deleteSleepLog(SleepLog log) async {
+  Future<void> deleteSleepLog(String id, DateTime date) async {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User is not authenticated');
 
-    final date = log.endTime;
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
@@ -200,14 +199,33 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
         .collection('sleep_logs')
         .doc(dateId);
 
-    final logRef = dateDocRef.collection('logs').doc(log.id);
+    final logRef = dateDocRef.collection('logs').doc(id);
+
+    // Fetch log to get duration for stats update
+    final snapshot = await logRef.get();
+    if (!snapshot.exists) return;
+
+    // Remove unused durationMinutes logic
+    // final data = snapshot.data();
+    // final durationMinutes = ...
+
+    // Some older models might not have durationMinutes in root?
+    // SleepLogModel.toMap uses: 'startTime', 'endTime', 'quality', 'notes'.
+    // It does NOT store duration explicitly in map?
+    // Let's check SleepLogModel toMap in previous turn or infer.
+    // Line 53: batch.set(logRef, model.toMap());
+    // Line 30: SleepLogModel...
+    // Let's rely on reconstructing model to get duration.
+
+    final logModel = SleepLogModel.fromFirestore(snapshot);
+    final durationToRemove = logModel.duration.inMinutes;
 
     final batch = firestore.batch();
     batch.delete(logRef);
-    batch.update(dateDocRef, {
-      'totalDurationMinutes': FieldValue.increment(-log.duration.inMinutes),
+    batch.set(dateDocRef, {
+      'totalDurationMinutes': FieldValue.increment(-durationToRemove),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
 
     await batch.commit();
   }

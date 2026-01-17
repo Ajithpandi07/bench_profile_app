@@ -32,7 +32,10 @@ class DashboardChart extends StatelessWidget {
     this.barBackgroundColor = const Color(0xFFFFEBEB),
     this.formatValue,
     this.onBarTap,
+    this.fitAll = false,
   });
+
+  final bool fitAll;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +105,7 @@ class DashboardChart extends StatelessWidget {
                       // Heuristic: Scroll if item width would be too small
                       // e.g. < 24px per item
                       final widthPerItem = constraints.maxWidth / items.length;
-                      final isScrollable = widthPerItem < 28;
+                      final isScrollable = !fitAll && widthPerItem < 28;
 
                       if (isScrollable) {
                         return SingleChildScrollView(

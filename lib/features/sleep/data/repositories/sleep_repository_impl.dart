@@ -88,10 +88,10 @@ class SleepRepositoryImpl implements SleepRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteSleepLog(SleepLog log) async {
+  Future<Either<Failure, void>> deleteSleepLog(String id, DateTime date) async {
     if (await networkInfo.isConnected) {
       try {
-        await remoteDataSource.deleteSleepLog(log);
+        await remoteDataSource.deleteSleepLog(id, date);
         return const Right(null);
       } on ServerException {
         return const Left(ServerFailure('Server Failure'));

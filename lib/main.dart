@@ -14,6 +14,7 @@ import 'features/health_metrics/health_metrics.dart' hide SyncManager;
 
 import 'firebase_options.dart';
 import 'features/meals/presentation/bloc/bloc.dart';
+import 'features/activity/presentation/bloc/activity_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,17 +73,19 @@ void main() async {
   // }
 
   // Toggle this to enable/disable Device Preview
-  const bool enableDevicePreview = true;
+  const bool enableDevicePreview = false;
 
   // Provide blocs at the app level
   runApp(
     DevicePreview(
       enabled: enableDevicePreview,
+      devices: [...Devices.ios.all, ...Devices.android.all],
       builder: (context) => MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()),
           BlocProvider(create: (_) => di.sl<AuthBloc>()),
           BlocProvider(create: (_) => di.sl<MealBloc>()),
+          BlocProvider(create: (_) => di.sl<ActivityBloc>()),
         ],
         child: const BenchApp(),
       ),

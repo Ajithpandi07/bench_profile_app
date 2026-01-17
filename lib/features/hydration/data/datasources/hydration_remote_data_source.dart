@@ -133,14 +133,49 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
       final dateId =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-      await firestore
+      final dateDocRef = firestore
           .collection('bench_profile')
           .doc(user.uid)
           .collection('water_logs')
-          .doc(dateId)
-          .collection('logs')
-          .doc(id)
-          .delete();
+          .doc(dateId);
+
+      final logRef = dateDocRef.collection('logs').doc(id);
+
+      // Fetch log to get amount for stats decrement
+      final snapshot = await logRef.get();
+      if (!snapshot.exists) return;
+
+      final data = snapshot.data();
+      final amountLiters = (data?['amountLiters'] as num?)?.toDouble() ?? 0.0;
+
+      final batch = firestore.batch();
+      batch.delete(logRef);
+
+      // Decrement Daily Total
+      batch.set(dateDocRef, {
+        'totalLiters': FieldValue.increment(-amountLiters),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Decrement Monthly Summary
+      final year = date.year;
+      final month = date.month;
+      final day = date.day;
+      final summaryId = '${year}_$month';
+
+      final summaryRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('water_logs_monthly')
+          .doc(summaryId);
+
+      batch.set(summaryRef, {
+        'totalLiters': FieldValue.increment(-amountLiters),
+        'dailyBreakdown': {day.toString(): FieldValue.increment(-amountLiters)},
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await batch.commit();
     } catch (e) {
       throw ServerException(e.toString());
     }
