@@ -152,19 +152,6 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                 ),
               ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: BlocBuilder<HydrationBloc, HydrationState>(
-        builder: (context, state) {
-          if (state is HydrationLogsLoaded && state.logs.isNotEmpty) {
-            return FloatingActionButton(
-              onPressed: _navigateToTracker,
-              backgroundColor: const Color(0xFFEE374D),
-              child: const Icon(Icons.add, color: Colors.white),
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
       body: BlocListener<HydrationBloc, HydrationState>(
         listener: (context, state) {
           if (state is HydrationFailure) {
@@ -212,6 +199,47 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
     );
   }
 
+  Widget _buildManualEntryButton() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _navigateToTracker,
+            borderRadius: BorderRadius.circular(30),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.edit, color: Color(0xFFEE374D), size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Enter water manually',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF131313),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return SingleChildScrollView(
       child: Padding(
@@ -223,47 +251,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
             const SizedBox(height: 40),
 
             // Manual Entry Button
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _navigateToTracker,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.edit,
-                        color: Color(0xFFEE374D),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Enter water manually',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF131313),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            _buildManualEntryButton(),
           ],
         ),
       ),
@@ -298,7 +286,9 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
         ...logs.map((log) => _buildLogItem(log)),
         const SizedBox(height: 24),
         _buildInsightCard(totalLiters, targetLiters),
-        const SizedBox(height: 100), // Spacing for bottom
+        const SizedBox(height: 24),
+        _buildManualEntryButton(),
+        const SizedBox(height: 40), // Spacing for bottom
       ],
     );
   }

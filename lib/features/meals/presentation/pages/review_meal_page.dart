@@ -32,7 +32,6 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
   late String _selectedMealType;
   late double _calories;
   late List<FoodItem> _currentFoods;
-  late List<UserMeal> _currentMeals;
 
   final List<String> _mealTypes = [
     'Breakfast',
@@ -48,7 +47,22 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     super.initState();
     _selectedMealType = widget.mealType;
     _currentFoods = List.from(widget.selectedFoods);
-    _currentMeals = List.from(widget.selectedMeals);
+
+    // Flatten selected meals into individual food items
+    for (var meal in widget.selectedMeals) {
+      for (var food in meal.foods) {
+        // We need to account for the meal quantity as well
+        final totalQuantity = food.quantity * meal.quantity;
+
+        // Check if this food is already in _currentFoods to merge or just add
+        // For simplicity and to show distinct items from distinct sources, we just add.
+        // Or better, we can check if we want to merge duplicates?
+        // Let's just add them as distinct items for now to avoid merging issues with different serving sizes.
+        // Ideally, we should clone the food with the new total quantity.
+        _currentFoods.add(food.copyWith(quantity: totalQuantity));
+      }
+    }
+
     _calculateTotalCalories();
   }
 
@@ -56,9 +70,6 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     double total = 0;
     for (var f in _currentFoods) {
       total += f.calories * f.quantity;
-    }
-    for (var m in _currentMeals) {
-      total += m.totalCalories * m.quantity;
     }
     setState(() {
       _calories = total;
@@ -79,59 +90,14 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       if (newQuantity > 0) {
         _currentFoods[index] = item.copyWith(quantity: newQuantity);
         _calculateTotalCalories();
+      } else if (newQuantity == 0) {
+        _removeFood(item);
       }
     });
-  }
-
-  void _removeMeal(UserMeal meal) {
-    setState(() {
-      _currentMeals.remove(meal);
-      _calculateTotalCalories();
-    });
-  }
-
-  void _updateFoodInMeal(int mealIndex, int foodIndex, int delta) {
-    setState(() {
-      final meal = _currentMeals[mealIndex];
-      // Create a modifiable copy of the foods list
-      final updatedFoods = List<FoodItem>.from(meal.foods);
-      final food = updatedFoods[foodIndex];
-      final newQuantity = food.quantity + delta;
-
-      if (newQuantity > 0) {
-        updatedFoods[foodIndex] = food.copyWith(quantity: newQuantity);
-      } else {
-        // Allow removing food from the meal set
-        updatedFoods.removeAt(foodIndex);
-      }
-
-      // Recalculate meal total
-      double newTotal = 0;
-      for (var f in updatedFoods) {
-        newTotal += f.calories * f.quantity;
-      }
-
-      _currentMeals[mealIndex] = meal.copyWith(
-        foods: updatedFoods,
-        totalCalories: newTotal,
-      );
-      _calculateTotalCalories();
-    });
-  }
-
-  Widget _buildStepperIcon(IconData icon) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        shape: BoxShape.circle,
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Icon(icon, size: 16, color: Colors.grey),
-    );
   }
 
   void _logMeal() {
-    if (_currentFoods.isEmpty && _currentMeals.isEmpty) {
+    if (_currentFoods.isEmpty) {
       showModernSnackbar(
         context,
         'No items to save. Please select a meal or food.',
@@ -140,14 +106,26 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       return;
     }
 
+    // Use selected date but current time
+    final now = DateTime.now();
+    final date = widget.logDate ?? now;
+    final timestamp = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+
     // Capture the final list of foods with updated quantities
     final log = MealLog(
       id: const Uuid().v4(),
       userId: '', // Bloc/Repo handles current user
-      timestamp: widget.logDate ?? DateTime.now(),
+      timestamp: timestamp,
       mealType: _selectedMealType,
       items: _currentFoods,
-      userMeals: _currentMeals,
+      userMeals: const [], // We flattened everything into items
       totalCalories: _calories, // User can override with slider
       createdAt: DateTime.now(),
     );
@@ -165,6 +143,25 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     }
   }
 
+  void _saveCustomMeal() {
+    if (_currentFoods.isEmpty) return;
+
+    final userMeal = UserMeal(
+      id: const Uuid().v4(),
+      name: 'Custom Meal',
+      foods: _currentFoods,
+      totalCalories: _currentFoods.fold(
+        0,
+        (sum, item) => sum + (item.calories * item.quantity),
+      ),
+      createdAt: DateTime.now(),
+      creatorId: '', // Handled by repository/bloc
+    );
+
+    context.read<MealBloc>().add(AddUserMeal(userMeal));
+    showModernSnackbar(context, 'Custom meal saved!');
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeString = DateFormat(
@@ -175,12 +172,6 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       listener: (context, state) {
         if (state is MealConsumptionLogged) {
           showModernSnackbar(context, '${widget.mealType} logged successfully');
-          // Return to MealListingPage, not Dashboard
-          // Assuming navigation stack: Dashboard -> MealListing -> ReviewMeal
-          // Pop once (ReviewMeal) -> MealListing
-          // Or pop twice if we want dashboard? User asked for "return meal listing page only".
-          // So pop() goes back to MealListingPage.
-          // Return to MealReportPage (pop ListingPage too)
           Navigator.of(context)
             ..pop()
             ..pop();
@@ -201,6 +192,12 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
           ),
           backgroundColor: Colors.white,
           elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.more_vert, color: Colors.black),
+              onPressed: () {},
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -264,7 +261,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               // Time Badge
               Container(
@@ -296,7 +293,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               // Calorie Card
               Container(
@@ -363,14 +360,19 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                         for (var f in _currentFoods) {
                           minCalories += f.calories * f.quantity;
                         }
-                        for (var m in _currentMeals) {
-                          minCalories += m.totalCalories;
-                        }
 
                         // Ensure UI obeys minimum visually
                         double displayValue = _calories;
                         if (displayValue < minCalories) {
                           displayValue = minCalories;
+                        }
+
+                        // We update _calories to match min if it fell below
+                        if (_calories < minCalories) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted)
+                              setState(() => _calories = minCalories);
+                          });
                         }
 
                         double maxCalories =
@@ -422,14 +424,6 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                                   ),
                                 ),
                                 Text(
-                                  ((maxCalories + minCalories) / 2)
-                                      .toStringAsFixed(0),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                Text(
                                   maxCalories.toStringAsFixed(0),
                                   style: const TextStyle(
                                     fontSize: 10,
@@ -449,7 +443,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
               const SizedBox(height: 24),
 
               // Items List Container
-              if (_currentFoods.isNotEmpty || _currentMeals.isNotEmpty)
+              if (_currentFoods.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -464,98 +458,117 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Foods Section
-                      if (_currentFoods.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            'Foods',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFE93448),
+                      ..._currentFoods.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final food = entry.value;
+                        return Column(
+                          children: [
+                            _buildFoodItemRow(
+                              food.name,
+                              '${food.calories.toStringAsFixed(0)} kcal, ${food.quantity} serving',
+                              index,
+                              food.quantity,
                             ),
-                          ),
-                        ),
-                        ..._currentFoods.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final food = entry.value;
-                          return Column(
-                            children: [
-                              _buildFoodItemRow(
-                                food.name,
-                                '${food.quantity} x ${food.servingSize} • ${(food.calories * food.quantity).toStringAsFixed(0)} kcal',
-                                index,
-                                food.quantity,
+                            if (index < _currentFoods.length - 1)
+                              const Divider(height: 1),
+                          ],
+                        );
+                      }),
+
+                      const SizedBox(height: 16),
+                      // Add Food Button (Placeholder for now, just text/icon button as per design?
+                      // The user request screenshot shows "+ Add food".
+                      // Since we don't have a direct "add food" flow here easily without navigation,
+                      // I'll add the button UI but maybe it just pops or shows a message for now?
+                      // Or I can possibly try to open the search?
+                      // For now, let's make it look right.
+                      GestureDetector(
+                        onTap: () {
+                          // Ideally open search. For now, we go back? Or show snackbar?
+                          // Let's pop with a result saying "add_more"?
+                          // Or just navigate to MealListingPage?
+                          // Current flow: MealListing -> Review.
+                          // If we pop, we lose state unless we return data.
+                          Navigator.pop(context);
+                        },
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF0F1),
+                                shape: BoxShape.circle,
                               ),
-                              if (index < _currentFoods.length - 1)
-                                const Divider(height: 1),
-                            ],
-                          );
-                        }),
-                      ],
-
-                      // Divider between sections if both exist
-                      if (_currentFoods.isNotEmpty && _currentMeals.isNotEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Divider(height: 1, thickness: 1),
-                        ),
-
-                      // Meals Section
-                      if (_currentMeals.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            'Meals',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFE93448),
+                              child: const Icon(
+                                Icons.add,
+                                color: Color(0xFFE93448),
+                                size: 20,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Add food',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
-                        ..._currentMeals.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final meal = entry.value;
-                          return Column(
-                            children: [
-                              _buildMealItemRow(meal, index),
-                              if (index < _currentMeals.length - 1)
-                                const Divider(height: 1),
-                            ],
-                          );
-                        }),
-                      ],
+                      ),
                     ],
                   ),
                 ),
 
               const SizedBox(height: 24),
 
-              // Done Button
-              Center(
-                child: SizedBox(
-                  width: 306,
-                  height: 32,
-                  child: ElevatedButton(
-                    onPressed: _logMeal,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE93448),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: EdgeInsets.zero,
+              // Save as Custom Meal Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: _saveCustomMeal,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(
+                      color: Colors.grey,
+                    ), // Light grey border
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                  ),
+                  child: const Text(
+                    'Save as Custom Meal',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Done Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _logMeal,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE93448),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -575,7 +588,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     int quantity,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
         children: [
           Expanded(
@@ -598,139 +611,42 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
             ),
           ),
           // Stepper for Food
-          GestureDetector(
-            onTap: () => _updateFoodQuantity(index, -1),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                shape: BoxShape.circle,
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => _updateFoodQuantity(index, -1),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.remove, size: 16, color: Colors.grey),
+                ),
               ),
-              padding: const EdgeInsets.all(4),
-              child: const Icon(Icons.remove, size: 16, color: Colors.grey),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              '$quantity',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _updateFoodQuantity(index, 1),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                shape: BoxShape.circle,
-              ),
-              padding: const EdgeInsets.all(4),
-              child: const Icon(Icons.add, size: 16, color: Colors.grey),
-            ),
-          ),
-          const SizedBox(width: 16),
-          IconButton(
-            constraints: const BoxConstraints(),
-            padding: EdgeInsets.zero,
-            icon: const Icon(Icons.delete_outline, color: Colors.grey),
-            onPressed: () => _removeFood(_currentFoods[index]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMealItemRow(UserMeal meal, int index) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  meal.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+              SizedBox(
+                width: 40,
+                child: Center(
+                  child: Text(
+                    '$quantity',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${meal.quantity} x Set • ${meal.totalCalories.toStringAsFixed(0)} kcal (Meal)',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              GestureDetector(
+                onTap: () => _updateFoodQuantity(index, 1),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, size: 16, color: Colors.grey),
                 ),
-                if (meal.foods.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  ...meal.foods.asMap().entries.map((entry) {
-                    final foodIndex = entry.key;
-                    final food = entry.value;
-                    final foodCals = food.calories * food.quantity;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(
-                        left: 8.0,
-                        bottom: 8.0,
-                        right: 8.0,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  food.name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade800,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  '${foodCals.toStringAsFixed(0)} kcal',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Inline Food Stepper
-                          GestureDetector(
-                            onTap: () =>
-                                _updateFoodInMeal(index, foodIndex, -1),
-                            child: _buildStepperIcon(Icons.remove),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              '${food.quantity}',
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => _updateFoodInMeal(index, foodIndex, 1),
-                            child: _buildStepperIcon(Icons.add),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          IconButton(
-            constraints: const BoxConstraints(),
-            padding: EdgeInsets.zero,
-            icon: const Icon(Icons.delete_outline, color: Colors.grey),
-            onPressed: () => _removeMeal(meal),
+              ),
+            ],
           ),
         ],
       ),

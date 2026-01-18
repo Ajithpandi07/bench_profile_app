@@ -311,12 +311,14 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
+    final mealToSave = meal.copyWith(creatorId: user.uid);
+
     await firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('user_meals')
-        .doc(meal.id)
-        .set(meal.toMap());
+        .doc(mealToSave.id)
+        .set(mealToSave.toMap());
   }
 
   @override
