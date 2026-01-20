@@ -15,6 +15,8 @@ class SetScheduleStep extends StatelessWidget {
   final String selectedGoal;
   final String selectedUnit;
 
+  final TextEditingController nameController; // Added name controller
+
   // Custom Fields
   final int interval;
   final String customFrequency;
@@ -41,6 +43,7 @@ class SetScheduleStep extends StatelessWidget {
 
   const SetScheduleStep({
     super.key,
+    required this.nameController, // Required now
     required this.scheduleType,
     required this.startDate,
     required this.endDate,
@@ -83,15 +86,17 @@ class SetScheduleStep extends StatelessWidget {
             Stack(
               alignment: Alignment.center,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                    onPressed: onBack,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                if (onBack !=
+                    null) // Conditional back button if needed, or just remove if it's step 1
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                      onPressed: onBack,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                   ),
-                ),
                 const Center(
                   child: Text(
                     'Set Schedule',
@@ -104,6 +109,33 @@ class SetScheduleStep extends StatelessWidget {
                 ),
               ],
             ),
+
+            const SizedBox(height: 30),
+
+            // Reminder Name Input
+            const Text(
+              'Reminder Name',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  hintText: 'E.g., Drink water, Yoga, etc.',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
 
             const SizedBox(height: 30),
 
@@ -160,6 +192,15 @@ class SetScheduleStep extends StatelessWidget {
               _buildCustomScheduleOptions(context),
             ] else ...[
               if (scheduleType == 'Weekly') ...[
+                // Interval for Weekly
+                const Text(
+                  'Repeat Every',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                _buildSimpleIntervalSelector('Weeks'),
+                const SizedBox(height: 16),
+
                 const Text(
                   'Repeat on',
                   style: TextStyle(fontSize: 14, color: Colors.grey),
@@ -170,6 +211,15 @@ class SetScheduleStep extends StatelessWidget {
               ],
 
               if (scheduleType == 'Monthly') ...[
+                // Interval for Monthly
+                const Text(
+                  'Repeat Every',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                _buildSimpleIntervalSelector('Months'),
+                const SizedBox(height: 16),
+
                 const Text(
                   'Repeat on',
                   style: TextStyle(fontSize: 14, color: Colors.grey),
@@ -825,6 +875,70 @@ class SetScheduleStep extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSimpleIntervalSelector(String unit) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Text(
+                '$interval',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(unit, style: const TextStyle(color: Colors.grey)),
+            ],
+          ),
+
+          Row(
+            children: [
+              _buildIncrementButton(
+                icon: Icons.remove,
+                onTap: () {
+                  if (interval > 1) onIntervalChanged(interval - 1);
+                },
+              ),
+              const SizedBox(width: 8),
+              _buildIncrementButton(
+                icon: Icons.add,
+                onTap: () {
+                  onIntervalChanged(interval + 1);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIncrementButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Icon(icon, size: 16, color: Colors.black),
       ),
     );
   }

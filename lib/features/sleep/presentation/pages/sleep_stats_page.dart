@@ -68,16 +68,6 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
         leading: const BackButton(color: Colors.black),
         backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share, color: Colors.black),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: BlocBuilder<SleepBloc, SleepState>(
         builder: (context, state) {
@@ -111,7 +101,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                     });
                     _loadStats();
                   },
-                  activeColor: const Color(0xffFF4B55),
+                  activeColor: AppTheme.primaryColor,
                 ),
                 const SizedBox(height: 24),
 
@@ -134,7 +124,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                         title: 'AVG BEDTIME',
                         value: _calculateAvgBedtime(logs),
                         icon: Icons.bedtime,
-                        iconColor: Colors.red,
+                        iconColor: AppTheme.primaryColor,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -160,8 +150,8 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                   title: 'Great job!',
                   message:
                       'Your sleep schedule is consistent.', // Placeholder message
-                  iconBackgroundColor:
-                      Colors.purple, // Sleep theme color often purple/indigo
+                  iconBackgroundColor: AppTheme
+                      .primaryColor, // Sleep theme color often purple/indigo
                 ),
               ],
             ),
@@ -290,15 +280,23 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
 
   String _calculateAvgBedtime(List<SleepLog> logs) {
     if (logs.isEmpty) return '--:--';
+
+    // Filter out naps (e.g. < 3 hours) to avoid skewing "Bedtime"
+    final mainSleeps = logs.where((l) => l.duration.inHours >= 3).toList();
+    if (mainSleeps.isEmpty) return '--:--';
+
     int totalMinutes = 0;
-    for (var log in logs) {
+    for (var log in mainSleeps) {
       int min = log.startTime.hour * 60 + log.startTime.minute;
+      // Identify "Night" times vs "Early Morning" times for averaging
+      // e.g. 11 PM (23:00) vs 1 AM (1:00).
+      // We want 1 AM to be "later" than 11 PM, so 1 AM -> 25:00.
       if (log.startTime.hour < 12) {
         min += 1440;
       }
       totalMinutes += min;
     }
-    int avg = totalMinutes ~/ logs.length;
+    int avg = totalMinutes ~/ mainSleeps.length;
     if (avg >= 1440) avg -= 1440;
 
     final h = avg ~/ 60;
@@ -309,12 +307,17 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
 
   String _calculateAvgWakeup(List<SleepLog> logs) {
     if (logs.isEmpty) return '--:--';
+
+    // Filter out naps
+    final mainSleeps = logs.where((l) => l.duration.inHours >= 3).toList();
+    if (mainSleeps.isEmpty) return '--:--';
+
     int totalMinutes = 0;
-    for (var log in logs) {
+    for (var log in mainSleeps) {
       int min = log.endTime.hour * 60 + log.endTime.minute;
       totalMinutes += min;
     }
-    int avg = totalMinutes ~/ logs.length;
+    int avg = totalMinutes ~/ mainSleeps.length;
     final h = avg ~/ 60;
     final m = avg % 60;
     final dt = DateTime(2022, 1, 1, h, m);
@@ -360,7 +363,6 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
       for (int i = 1; i <= daysInMonth; i++) {
         final date = DateTime(now.year, now.month, i);
-        // Better matching: filter list for day
         final log = logs.firstWhere(
           (l) =>
               l.endTime.year == date.year &&
@@ -372,9 +374,15 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
         final hours = log.duration.inMinutes / 60.0;
         if (hours > maxVal) maxVal = hours;
 
+        // Sparse labels: 1, 5, 10, 15, 20, 25, 30
+        String label = '';
+        if (i == 1 || i % 5 == 0) {
+          label = i.toString();
+        }
+
         items.add(
           DashboardChartItem(
-            label: i.toString(),
+            label: label,
             value: hours,
             isHighlight:
                 date.year == _selectedDate.year &&
@@ -419,7 +427,8 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       items: items,
       maxVal: maxVal,
       chartHeight: 250,
-      highlightColor: const Color(0xffFF4B55),
+      fitAll: _selectedView == 'Monthly', // Disable scrolling for monthly
+      highlightColor: AppTheme.primaryColor,
       formatValue: (val) {
         if (val % 1 == 0) return val.toInt().toString();
         return val.toStringAsFixed(1);

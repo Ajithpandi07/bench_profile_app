@@ -11,6 +11,7 @@ import '../../../../core/injection_container.dart';
 import '../../../reminder/presentation/bloc/reminder_bloc.dart';
 import '../../../reminder/presentation/bloc/reminder_event.dart';
 import '../../../reminder/presentation/pages/reminder_page.dart';
+import '../../../health_metrics/presentation/pages/health_metrics_settings_page.dart';
 
 class ProfilePage extends StatelessWidget {
   final HealthMetricsSummary? metrics; // optional summary to show quick stats
@@ -169,6 +170,20 @@ class ProfilePage extends StatelessWidget {
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Privacy not implemented')),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.health_and_safety_outlined),
+                  title: const Text('Health Data Settings'),
+                  subtitle: const Text('Manage disconnected data types'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HealthMetricsSettingsPage(),
+                      ),
                     );
                   },
                 ),

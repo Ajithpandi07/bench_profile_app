@@ -22,6 +22,7 @@ class ReminderModel extends Reminder {
     super.customFrequency,
     super.recurrenceEndType,
     super.recurrenceCount,
+    super.skippedDates,
   });
 
   factory ReminderModel.fromSnapshot(DocumentSnapshot doc) {
@@ -50,6 +51,9 @@ class ReminderModel extends Reminder {
       customFrequency: data['customFrequency'] as String?,
       recurrenceEndType: data['recurrenceEndType'] as String?,
       recurrenceCount: data['recurrenceCount'] as int?,
+      skippedDates: (data['skippedDates'] as List<dynamic>?)
+          ?.map((e) => (e as Timestamp).toDate())
+          .toList(),
     );
   }
 
@@ -73,6 +77,7 @@ class ReminderModel extends Reminder {
       'customFrequency': customFrequency,
       'recurrenceEndType': recurrenceEndType,
       'recurrenceCount': recurrenceCount,
+      'skippedDates': skippedDates?.map((e) => Timestamp.fromDate(e)).toList(),
     };
   }
 
@@ -97,6 +102,7 @@ class ReminderModel extends Reminder {
       customFrequency: reminder.customFrequency,
       recurrenceEndType: reminder.recurrenceEndType,
       recurrenceCount: reminder.recurrenceCount,
+      skippedDates: reminder.skippedDates,
     );
   }
 
@@ -121,6 +127,7 @@ class ReminderModel extends Reminder {
       customFrequency: customFrequency,
       recurrenceEndType: recurrenceEndType,
       recurrenceCount: recurrenceCount,
+      skippedDates: skippedDates,
     );
   }
 
@@ -145,6 +152,7 @@ class ReminderModel extends Reminder {
     String? customFrequency,
     String? recurrenceEndType,
     int? recurrenceCount,
+    List<DateTime>? skippedDates,
   }) {
     return ReminderModel(
       id: id ?? this.id,
@@ -166,6 +174,7 @@ class ReminderModel extends Reminder {
       customFrequency: customFrequency ?? this.customFrequency,
       recurrenceEndType: recurrenceEndType ?? this.recurrenceEndType,
       recurrenceCount: recurrenceCount ?? this.recurrenceCount,
+      skippedDates: skippedDates ?? this.skippedDates,
     );
   }
 }

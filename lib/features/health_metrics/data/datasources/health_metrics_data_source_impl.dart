@@ -6,6 +6,7 @@ import 'package:health/health.dart';
 import '../../../../../core/core.dart';
 import 'health_metrics_data_source.dart';
 import '../../domain/entities/entities.dart';
+import 'local/health_preferences_service.dart';
 
 /// Simple global guard to avoid Health Connect rate limits
 class _HealthConnectRateGuard {
@@ -25,11 +26,14 @@ class _HealthConnectRateGuard {
 class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
   final Health _health;
   final MetricAggregator? _aggregator;
+  final HealthPreferencesService _preferencesService;
 
   HealthMetricsDataSourceImpl({
     required Health health,
+    required HealthPreferencesService preferencesService,
     MetricAggregator? aggregator,
   }) : _health = health,
+       _preferencesService = preferencesService,
        _aggregator = aggregator;
 
   // ---------------------------------------------------------------------------
@@ -243,20 +247,32 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
       final allPoints = <HealthDataPoint>[];
 
       // Collect all potential types for permission request
+      // Collect all potential types for permission request
       final allTypes = [
         ..._tier1CoreTypes(),
         ..._tier2BodyAndVitals(),
         ..._tier3MedicalAndNutrition(),
       ].toSet().toList(); // Deduplicate
 
-      // ENSURE PERMISSIONS FIRST
-      await _ensurePermissions(allTypes);
+      // FILTER BASED ON PREFERENCES
+      final prefs = await _preferencesService.getAllPreferences(allTypes);
+      final allowedTypes = allTypes.where((t) => prefs[t] == true).toList();
 
-      // OPTIMIZATION: Fetch ALL types in a single batch to avoid multiple rate-guard delays (10s each).
-      // Since all tiers use the same start/end date logic now (no custom lookbacks), we can combine them.
+      if (allowedTypes.isEmpty) {
+        // If all disabled, return empty list
+        dev.log(
+          'All health types disabled by user preferences.',
+          name: 'HealthDataSource',
+        );
+        return [];
+      }
 
-      // We reuse allTypes which contains the union of all tiers.
-      allPoints.addAll(await _fetchBatch(start, end, allTypes));
+      // ENSURE PERMISSIONS FIRST (only for allowed types)
+      await _ensurePermissions(allowedTypes);
+
+      // OPTIMIZATION: Fetch ALL types in a single batch
+      // We reuse allowedTypes which contains the filtered union of all tiers.
+      allPoints.addAll(await _fetchBatch(start, end, allowedTypes));
 
       dev.log(
         'Fetched ${allPoints.length} raw points from Health Connect for date $date (Start: $start, End: $end). Types found: ${allPoints.map((e) => e.typeString).toSet().toList()}',
@@ -356,27 +372,40 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
         ].toSet().toList();
       }
 
-      // ENSURE PERMISSIONS
-      await _ensurePermissions(typesToCheck);
+      // FILTER BASED ON PREFERENCES
+      final prefs = await _preferencesService.getAllPreferences(typesToCheck);
+      final allowedTypes = typesToCheck.where((t) => prefs[t] == true).toList();
 
-      // If specific types requested → fetch once
+      if (allowedTypes.isEmpty) return [];
+
+      // ENSURE PERMISSIONS
+      await _ensurePermissions(allowedTypes);
+
+      // If specific types requested → fetch once (filtered)
       if (types.isNotEmpty) {
-        allPoints.addAll(await _fetchBatch(start, end, types));
+        allPoints.addAll(await _fetchBatch(start, end, allowedTypes));
       } else {
-        // Otherwise use tiered strategy
-        allPoints.addAll(await _fetchBatch(start, end, _tier1CoreTypes()));
+        // Otherwise use tiered strategy (filtered)
+        // Helper to filter tier
+        List<HealthDataType> filterTier(List<HealthDataType> tier) {
+          return tier.where((t) => allowedTypes.contains(t)).toList();
+        }
+
+        allPoints.addAll(
+          await _fetchBatch(start, end, filterTier(_tier1CoreTypes())),
+        );
         allPoints.addAll(
           await _fetchBatch(
             start, // was start.subtract(Duration(days: 90))
             end,
-            _tier2BodyAndVitals(),
+            filterTier(_tier2BodyAndVitals()),
           ),
         );
         allPoints.addAll(
           await _fetchBatch(
             start, // was start.subtract(Duration(days: 180))
             end,
-            _tier3MedicalAndNutrition(),
+            filterTier(_tier3MedicalAndNutrition()),
           ),
         );
       }

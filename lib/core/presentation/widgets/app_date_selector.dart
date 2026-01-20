@@ -260,11 +260,11 @@ class _AppDateSelectorState extends State<AppDateSelector> {
         final availableListWidth = finalWidth - (listPadding * 2);
 
         // We want exactly 7 items visible?
-        final itemsToShow = 7;
+        final itemsToShow = 6.5;
         final itemSlotWidth = availableListWidth / itemsToShow;
         _lastItemSlotWidth = itemSlotWidth;
 
-        final horizontalMargin = 2.0;
+        final horizontalMargin = 4.0;
         final itemWidth = itemSlotWidth - (horizontalMargin * 2);
 
         return Center(
@@ -314,6 +314,7 @@ class _AppDateSelectorState extends State<AppDateSelector> {
                   child: ListView.builder(
                     controller: _scrollController,
                     scrollDirection: Axis.horizontal,
+                    itemExtent: itemSlotWidth,
                     itemCount: _days.length,
                     padding: EdgeInsets.symmetric(horizontal: listPadding),
                     itemBuilder: (context, index) {
@@ -351,6 +352,36 @@ class _AppDateSelectorState extends State<AppDateSelector> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              // Dot indicator (Moved to TOP)
+                              if (isToday || isSelected)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: 6,
+                                  ), // Add space between dot and text
+                                  child: Container(
+                                    width: 4,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : const Color(0xFFEE374D),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Container(
+                                    width: 4,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFD9D9D9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+
                               // Day Name (MON, TUE)
                               Text(
                                 DateFormat('EEE').format(date).toUpperCase(),
@@ -374,26 +405,6 @@ class _AppDateSelectorState extends State<AppDateSelector> {
                                       : const Color(0xFF1F2937),
                                 ),
                               ),
-
-                              // Dot indicator
-                              if (isToday || isSelected)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Container(
-                                    width: 4,
-                                    height: 4,
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? Colors.white
-                                          : const Color(0xFFEE374D),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                )
-                              else
-                                const SizedBox(
-                                  height: 8,
-                                ), // Spacer to keep alignment
                             ],
                           ),
                         ),

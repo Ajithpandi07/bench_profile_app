@@ -74,11 +74,6 @@ class _SleepLogPageState extends State<SleepLogPage> {
     if (picked != null) {
       setState(() {
         if (isStart) {
-          // Heuristic: "Closest to Previous Selection"
-          // Candidates: Yesterday and Today (relative to reporting date)
-          // We compare which candidate is closer to the *current* _startDateTime
-          // This allows natural transitions (e.g. 11pm -> 1am moves forward, 1am -> 11pm moves backward)
-
           final today = DateTime(
             widget.initialDate.year,
             widget.initialDate.month,
@@ -88,11 +83,12 @@ class _SleepLogPageState extends State<SleepLogPage> {
           );
           final yesterday = today.subtract(const Duration(days: 1));
 
-          final diffToday = today.difference(_startDateTime).abs();
-          final diffYesterday = yesterday.difference(_startDateTime).abs();
-
+          // Heuristic: "Smart Day Selection"
+          // Times 00:00 - 17:59 (Midnight to 6 PM) -> Assume Today (Morning sleep / Afternoon Nap)
+          // Times 18:00 - 23:59 (6 PM to Midnight) -> Assume Yesterday (Night Sleep start)
+          // This fixes the issue where 1 PM - 5 PM was incorrectly jumping to Yesterday.
           DateTime newStart;
-          if (diffToday < diffYesterday) {
+          if (picked.hour < 18) {
             newStart = today;
           } else {
             newStart = yesterday;
@@ -104,9 +100,6 @@ class _SleepLogPageState extends State<SleepLogPage> {
           _endDateTime = newStart.add(currentDuration);
         } else {
           // Heuristic: "Next Valid Time"
-          // Candidates: Same Day as Start and Next Day
-          // Choose the first one that is AFTER Start Time (ensuring positive duration)
-
           final start = _startDateTime;
           final candidateSameDay = DateTime(
             start.year,
@@ -115,20 +108,51 @@ class _SleepLogPageState extends State<SleepLogPage> {
             picked.hour,
             picked.minute,
           );
-          final candidateNextDay = candidateSameDay.add(
-            const Duration(days: 1),
-          );
-
+          // If candidate is before start, it must be next day (crossing midnight)
+          // or if it's explicitly the next day relative to start.
+          // Simple logic: Ensure End > Start.
           if (candidateSameDay.isAfter(start)) {
             _endDateTime = candidateSameDay;
           } else {
-            _endDateTime = candidateNextDay;
+            _endDateTime = candidateSameDay.add(const Duration(days: 1));
           }
         }
 
         _updateDuration();
       });
     }
+  }
+
+  void _handleTimeChange(DateTime newTime, bool isStart) {
+    setState(() {
+      DateTime oldTime = isStart ? _startDateTime : _endDateTime;
+      DateTime updatedTime = newTime;
+
+      // Logic: If we crossed midnight, shift the day.
+      // 23 -> 0/1 (PM to AM): Day +1
+      // 0/1 -> 23 (AM to PM): Day -1
+
+      // Note: CircularSleepTimer returns 'newTime' with the SAME Y/M/D as 'oldTime' passed to it.
+      // So we just need to adjust the Day of 'updatedTime'.
+
+      if (oldTime.hour >= 18 && newTime.hour < 6) {
+        // Crossed Midnight Forward (Evening -> Morning)
+        updatedTime = newTime.add(const Duration(days: 1));
+      } else if (oldTime.hour < 6 && newTime.hour >= 18) {
+        // Crossed Midnight Backward (Morning -> Evening)
+        updatedTime = newTime.subtract(const Duration(days: 1));
+      }
+
+      if (isStart) {
+        final duration = _endDateTime.difference(_startDateTime);
+        _startDateTime = updatedTime;
+        _endDateTime = updatedTime.add(duration);
+      } else {
+        _endDateTime = updatedTime;
+      }
+
+      _updateDuration();
+    });
   }
 
   bool _isSameDay(DateTime a, DateTime b) {
@@ -199,18 +223,8 @@ class _SleepLogPageState extends State<SleepLogPage> {
                 child: CircularSleepTimer(
                   startTime: _startDateTime,
                   endTime: _endDateTime,
-                  onStartTimeChanged: (val) {
-                    setState(() {
-                      _startDateTime = val;
-                      _updateDuration();
-                    });
-                  },
-                  onEndTimeChanged: (val) {
-                    setState(() {
-                      _endDateTime = val;
-                      _updateDuration();
-                    });
-                  },
+                  onStartTimeChanged: (val) => _handleTimeChange(val, true),
+                  onEndTimeChanged: (val) => _handleTimeChange(val, false),
                 ),
               ),
               const SizedBox(height: 32),

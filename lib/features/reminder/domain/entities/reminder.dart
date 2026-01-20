@@ -28,6 +28,7 @@ class Reminder extends Equatable {
   final String? customFrequency;
   final String? recurrenceEndType;
   final int? recurrenceCount;
+  final List<DateTime>? skippedDates;
 
   const Reminder({
     required this.id,
@@ -49,6 +50,7 @@ class Reminder extends Equatable {
     this.customFrequency,
     this.recurrenceEndType,
     this.recurrenceCount,
+    this.skippedDates,
   });
 
   Reminder copyWith({
@@ -71,6 +73,7 @@ class Reminder extends Equatable {
     String? customFrequency,
     String? recurrenceEndType,
     int? recurrenceCount,
+    List<DateTime>? skippedDates,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -92,6 +95,7 @@ class Reminder extends Equatable {
       customFrequency: customFrequency ?? this.customFrequency,
       recurrenceEndType: recurrenceEndType ?? this.recurrenceEndType,
       recurrenceCount: recurrenceCount ?? this.recurrenceCount,
+      skippedDates: skippedDates ?? this.skippedDates,
     );
   }
 
@@ -116,5 +120,6 @@ class Reminder extends Equatable {
     customFrequency,
     recurrenceEndType,
     recurrenceCount,
+    skippedDates,
   ];
 }

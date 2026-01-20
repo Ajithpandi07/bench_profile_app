@@ -94,31 +94,52 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User is not authenticated');
 
-    // Query parent documents directly for the range
-    final snapshot = await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('sleep_logs')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
-        .get();
+    // Optimization: If range is "small" (e.g. Weekly/Monthly views), fetch ACTUAL logs
+    // to allow accurate calculation of Bedtimes/WakeTimes.
+    // "Small" defined as <= 65 days (covers 2 months easily).
+    final days = end.difference(start).inDays;
 
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      final date = (data['date'] as Timestamp).toDate();
-      final totalMinutes = data['totalDurationMinutes'] as int? ?? 0;
+    if (days <= 65) {
+      List<SleepLog> allLogs = [];
+      // Iterate days and fetch collections.
+      // Note: This causes N reads (e.g. 7 or 30).
+      // For a better scalable solution, we would ideally duplicate log data into a top-level collection
+      // or use collection group queries if structured right.
+      // Given current structure, we iterate.
+      for (int i = 0; i <= days; i++) {
+        final date = start.add(Duration(days: i));
+        try {
+          final logs = await getSleepLogs(date);
+          allLogs.addAll(logs);
+        } catch (e) {
+          // Ignore empty days or errors
+        }
+      }
+      return allLogs;
+    } else {
+      // For Yearly view, stick to summaries to save reads.
+      final snapshot = await firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('sleep_logs')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+          .get();
 
-      // Return synthetic log representing the day's total
-      return SleepLog(
-        id: 'daily_summary_${doc.id}',
-        startTime: date, // Just the date
-        endTime: date.add(
-          Duration(minutes: totalMinutes),
-        ), // Duration representation
-        quality: 0, // Not stored in summary currently
-        notes: 'Daily Summary',
-      );
-    }).toList();
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        final date = (data['date'] as Timestamp).toDate();
+        final totalMinutes = data['totalDurationMinutes'] as int? ?? 0;
+
+        return SleepLog(
+          id: 'daily_summary_${doc.id}',
+          startTime: date,
+          endTime: date.add(Duration(minutes: totalMinutes)),
+          quality: 0,
+          notes: 'Daily Summary',
+        );
+      }).toList();
+    }
   }
 
   Future<void> _updateMonthlySummary(String uid, SleepLog log) async {

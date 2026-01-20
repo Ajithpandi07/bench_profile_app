@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/app_theme.dart';
 
 class ReminderItemCard extends StatelessWidget {
   final String title;
@@ -8,6 +9,9 @@ class ReminderItemCard extends StatelessWidget {
   final Color? color;
   final IconData? icon;
 
+  final bool isEnabled;
+  final ValueChanged<bool>? onToggle;
+
   const ReminderItemCard({
     super.key,
     required this.title,
@@ -16,45 +20,40 @@ class ReminderItemCard extends StatelessWidget {
     this.time,
     this.color,
     this.icon,
+    this.isEnabled = true,
+    this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 65, // Fixed height as per user request
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ), // Adjusted padding to fit height
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          bottomLeft: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Icon Container
           Container(
-            padding: const EdgeInsets.all(
-              8,
-            ), // Reduced padding for icon container
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: (color ?? Colors.blue).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon ?? Icons.notifications,
               color: color ?? Colors.blue,
-              size: 20, // Reduced icon size
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
@@ -62,71 +61,55 @@ class ReminderItemCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment:
-                  MainAxisAlignment.center, // Center text vertically
+              mainAxisSize: MainAxisSize.min, // Wrap content
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14, // Slightly reduced font size
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1D1617),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (color ?? Colors.blue).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            scheduleType,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: color ?? Colors.blue,
-                            ),
-                          ),
-                          if (time != null && time!.isNotEmpty) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              "| $time",
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: color ?? Colors.blue,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1D1617),
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    fontSize: 11, // Slightly reduced font size
+                    fontSize: 12,
                     color: Color(0xFF7B6F72),
+                    height: 1.3,
                   ),
                 ),
+                if (time != null && time!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    time!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: color ?? Colors.blue,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
+          // Toggle Switch
+          if (onToggle != null)
+            Transform.scale(
+              scale: 0.8,
+              child: Switch(
+                value: isEnabled,
+                onChanged: onToggle,
+                activeColor: Colors.white,
+                activeTrackColor: AppTheme.primaryColor,
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: Colors.grey.shade200,
+                trackOutlineColor: MaterialStateProperty.all(
+                  Colors.transparent,
+                ),
+              ),
+            ),
         ],
       ),
     );

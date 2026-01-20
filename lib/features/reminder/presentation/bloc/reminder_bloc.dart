@@ -23,6 +23,7 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     on<AddReminder>(_onAddReminder);
     on<UpdateReminder>(_onUpdateReminder);
     on<DeleteReminder>(_onDeleteReminder);
+    on<ToggleReminderForDate>(_onToggleReminderForDate);
     on<RescheduleAllNotifications>(_onRescheduleAllNotifications);
   }
 
@@ -56,6 +57,8 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       );
 
       final filteredReminders = allReminders.where((reminder) {
+        // Skipped dates handled by UI
+
         final start = DateTime(
           reminder.startDate.year,
           reminder.startDate.month,
@@ -203,6 +206,54 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     }
   }
 
+  Future<void> _onToggleReminderForDate(
+    ToggleReminderForDate event,
+    Emitter<ReminderState> emit,
+  ) async {
+    try {
+      final reminder = event.reminder;
+      final dateToToggle = DateTime(
+        event.date.year,
+        event.date.month,
+        event.date.day,
+      );
+      List<DateTime> updatedSkipped = List<DateTime>.from(
+        reminder.skippedDates ?? [],
+      );
+
+      if (event.isEnabled) {
+        // Turning ON -> Remove from skipped
+        updatedSkipped.removeWhere(
+          (d) =>
+              d.year == dateToToggle.year &&
+              d.month == dateToToggle.month &&
+              d.day == dateToToggle.day,
+        );
+      } else {
+        // Turning OFF -> Add to skipped
+        // Avoid duplicates
+        final exists = updatedSkipped.any(
+          (d) =>
+              d.year == dateToToggle.year &&
+              d.month == dateToToggle.month &&
+              d.day == dateToToggle.day,
+        );
+        if (!exists) {
+          updatedSkipped.add(dateToToggle);
+        }
+      }
+
+      final updatedReminder = reminder.copyWith(skippedDates: updatedSkipped);
+      await _repository.updateReminder(updatedReminder);
+
+      emit(const ReminderOperationSuccess('Reminder updated successfully'));
+      await Future.delayed(const Duration(milliseconds: 100));
+      add(LoadReminders(forceRefresh: true, selectedDate: event.date));
+    } catch (e) {
+      emit(ReminderError(e.toString()));
+    }
+  }
+
   Future<void> _onDeleteReminder(
     DeleteReminder event,
     Emitter<ReminderState> emit,
@@ -228,25 +279,15 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     Emitter<ReminderState> emit,
   ) async {
     try {
-      // 1. Cancel all existing notifications to match current DB state
-      // (Optional, but safer to avoid ghosts if IDs changed or deletions happened outside)
       await _notificationService.cancelAll();
-
-      // 2. Fetch all reminders
       final reminders = await _repository.getReminders();
-
-      // 3. Schedule each valid reminder
       for (final reminder in reminders) {
         if (reminder.endDate.isAfter(DateTime.now())) {
           await _scheduleNotification(reminder);
         }
       }
-
-      // 4. Update cache/state if needed, though this might be background
-      // If the UI is listening, we might want to refresh the list too
       add(const LoadReminders(forceRefresh: true));
     } catch (e) {
-      // Log error or emit state, but this might run in background/startup
       print('Failed to reschedule all notifications: $e');
     }
   }
@@ -254,16 +295,12 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
   Future<void> _scheduleNotification(Reminder reminder) async {
     if (reminder.time == null || reminder.time!.isEmpty) return;
 
-    // Parse time string "HH:mm"
     final parts = reminder.time!.split(':');
     if (parts.length != 2) return;
     final hour = int.tryParse(parts[0]);
     final minute = int.tryParse(parts[1]);
     if (hour == null || minute == null) return;
 
-    print('DEBUG: Bloc Scheduling - Parsed Time: $hour:$minute');
-
-    // Create a base date using start date + time
     final scheduledDate = DateTime(
       reminder.startDate.year,
       reminder.startDate.month,
@@ -272,10 +309,7 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       minute,
     );
 
-    // Determine payload type
     String type = 'meal';
-
-    // Simple heuristic: check category or name
     final lowerCat = reminder.category.toLowerCase();
     final lowerName = reminder.name.toLowerCase();
     if (lowerCat.contains('water') ||
@@ -289,7 +323,7 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     final payloadMap = {
       'type': type,
       'date': scheduledDate.toIso8601String(),
-      'subtype': reminder.name, // Pass name as subtype for Meal defaults
+      'subtype': reminder.name,
     };
 
     await _notificationService.scheduleReminder(

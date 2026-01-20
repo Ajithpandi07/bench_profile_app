@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'steps/add_details_step.dart';
+
 import 'steps/set_schedule_step.dart';
 import 'steps/review_reminder_step.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -121,12 +121,11 @@ class _AddReminderModalState extends State<AddReminderModal> {
   }
 
   void _nextStep() {
-    if (_currentStep < 2) {
-      if (_currentStep == 1 && _selectedTime == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please set a time and goal')),
-        );
-        return;
+    if (_currentStep < 1) {
+      // reduced from 2
+      // validation if needed for step 0 (schedule)
+      if (_currentStep == 0 && _selectedTime == null) {
+        // Optionally validate name too?
       }
 
       _pageController.nextPage(
@@ -246,16 +245,8 @@ class _AddReminderModalState extends State<AddReminderModal> {
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                AddDetailsStep(
-                  nameController: _nameController,
-                  quantityController: _quantityController,
-                  unitController: _unitController,
-                  selectedCategory: _selectedCategory,
-                  onCategoryChanged: (val) =>
-                      setState(() => _selectedCategory = val),
-                  onNext: _nextStep,
-                ),
                 SetScheduleStep(
+                  nameController: _nameController, // Pass it here
                   scheduleType: _scheduleType,
                   daysOfWeek: _daysOfWeek,
                   dayOfMonth: _dayOfMonth,
@@ -294,7 +285,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
                       setState(() => _recurrenceCount = val),
 
                   onNext: _nextStep,
-                  onBack: _prevStep,
+                  onBack: () {}, // No back action on first step
                 ),
                 ReviewReminderStep(
                   name: _nameController.text,
