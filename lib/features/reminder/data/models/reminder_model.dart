@@ -16,6 +16,7 @@ class ReminderModel extends Reminder {
     required super.endDate,
     super.smartReminder = false,
     super.isCompleted = false,
+    super.isStandard = false,
     super.createdAt,
     super.updatedAt,
     super.interval,
@@ -45,6 +46,9 @@ class ReminderModel extends Reminder {
       isCompleted: data['isCompleted'] is bool
           ? data['isCompleted']
           : data['isCompleted'].toString().toLowerCase() == 'true',
+      isStandard: data['isStandard'] is bool
+          ? data['isStandard']
+          : data['isStandard'].toString().toLowerCase() == 'true',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
       interval: data['interval'] as int?,
@@ -71,6 +75,7 @@ class ReminderModel extends Reminder {
       'endDate': Timestamp.fromDate(endDate),
       'smartReminder': smartReminder,
       'isCompleted': isCompleted,
+      'isStandard': isStandard,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'interval': interval,
@@ -96,6 +101,7 @@ class ReminderModel extends Reminder {
       endDate: reminder.endDate,
       smartReminder: reminder.smartReminder,
       isCompleted: reminder.isCompleted,
+      isStandard: reminder.isStandard,
       createdAt: reminder.createdAt,
       updatedAt: reminder.updatedAt,
       interval: reminder.interval,
@@ -121,6 +127,7 @@ class ReminderModel extends Reminder {
       endDate: endDate,
       smartReminder: smartReminder,
       isCompleted: isCompleted,
+      isStandard: isStandard,
       createdAt: createdAt,
       updatedAt: updatedAt,
       interval: interval,
@@ -146,6 +153,7 @@ class ReminderModel extends Reminder {
     DateTime? endDate,
     bool? smartReminder,
     bool? isCompleted,
+    bool? isStandard,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? interval,
@@ -168,6 +176,7 @@ class ReminderModel extends Reminder {
       endDate: endDate ?? this.endDate,
       smartReminder: smartReminder ?? this.smartReminder,
       isCompleted: isCompleted ?? this.isCompleted,
+      isStandard: isStandard ?? this.isStandard,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       interval: interval ?? this.interval,

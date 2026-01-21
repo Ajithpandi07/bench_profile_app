@@ -34,7 +34,14 @@ class SleepStatsLoaded extends SleepState {
   List<Object> get props => [logs];
 }
 
-class SleepOperationSuccess extends SleepState {}
+class SleepOperationSuccess extends SleepState {
+  final String? message;
+
+  const SleepOperationSuccess({this.message});
+
+  @override
+  List<Object> get props => [if (message != null) message!];
+}
 
 class SleepError extends SleepState {
   final String message;

@@ -11,11 +11,13 @@ import '../bloc/activity_event.dart';
 class AddActivityPage extends StatefulWidget {
   final String activityType;
   final DateTime initialDate;
+  final ActivityLog? existingActivity;
 
   const AddActivityPage({
     super.key,
     required this.activityType,
     required this.initialDate,
+    this.existingActivity,
   });
 
   @override
@@ -33,13 +35,19 @@ class _AddActivityPageState extends State<AddActivityPage> {
   @override
   void initState() {
     super.initState();
-    _startTime = DateTime(
-      widget.initialDate.year,
-      widget.initialDate.month,
-      widget.initialDate.day,
-      DateTime.now().hour,
-      DateTime.now().minute,
-    );
+    if (widget.existingActivity != null) {
+      _startTime = widget.existingActivity!.startTime;
+      _durationHours = widget.existingActivity!.durationMinutes ~/ 60;
+      _durationMinutes = widget.existingActivity!.durationMinutes % 60;
+    } else {
+      _startTime = DateTime(
+        widget.initialDate.year,
+        widget.initialDate.month,
+        widget.initialDate.day,
+        DateTime.now().hour,
+        DateTime.now().minute,
+      );
+    }
     _updateCaloriesPerMinute();
   }
 
@@ -298,7 +306,7 @@ class _AddActivityPageState extends State<AddActivityPage> {
                   child: ElevatedButton(
                     onPressed: () {
                       final activity = ActivityLog(
-                        id: const Uuid().v4(),
+                        id: widget.existingActivity?.id ?? const Uuid().v4(),
                         userId: '', // handled by repo
                         activityType: widget.activityType,
                         startTime: _startTime,
@@ -307,9 +315,15 @@ class _AddActivityPageState extends State<AddActivityPage> {
                         createdAt: DateTime.now(),
                       );
 
-                      context.read<ActivityBloc>().add(
-                        AddActivityEvent(activity),
-                      );
+                      if (widget.existingActivity != null) {
+                        context.read<ActivityBloc>().add(
+                          UpdateActivityEvent(activity),
+                        );
+                      } else {
+                        context.read<ActivityBloc>().add(
+                          AddActivityEvent(activity),
+                        );
+                      }
                       Navigator.pop(context); // Close page
                     },
                     style: ElevatedButton.styleFrom(

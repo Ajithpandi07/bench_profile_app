@@ -1,11 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/presentation/widgets/app_date_selector.dart';
-import '../../../../core/services/app_theme.dart';
-import '../../../../core/utils/snackbar_utils.dart';
+import '../../../../core/core.dart';
 
 import '../../domain/entities/entities.dart';
 import '../../domain/entities/meal_log.dart';
@@ -271,12 +270,12 @@ class _MealReportPageState extends State<MealReportPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.edit, color: Color(0xFFE93448), size: 20),
+                  Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
                   SizedBox(width: 8),
                   Text(
                     'Enter food manually',
                     style: TextStyle(
-                      color: Color(0xFF131313),
+                      color: AppTheme.textDark,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -334,21 +333,44 @@ class _MealReportPageState extends State<MealReportPage> {
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
-            child: Dismissible(
+            child: Slidable(
               key: Key(type),
-              direction: _isSelectionMode
-                  ? DismissDirection.none
-                  : DismissDirection.endToStart,
-              background: buildSwipeBackground(),
-              confirmDismiss: (direction) =>
-                  showDeleteConfirmationDialog(context),
-              onDismissed: (direction) {
-                for (var m in typeMeals) {
-                  context.read<MealBloc>().add(
-                    DeleteMealLog(m.id, _selectedDate),
-                  );
-                }
-              },
+              endActionPane: ActionPane(
+                motion: const ScrollMotion(),
+                extentRatio: 0.5,
+                children: [
+                  SlidableAction(
+                    onPressed: (context) {
+                      _navigateToReview(type, typeMeals);
+                    },
+                    backgroundColor: AppTheme.lightGray,
+                    foregroundColor: AppTheme.primaryColor,
+                    icon: Icons.edit,
+                    label: 'Edit',
+                  ),
+                  SlidableAction(
+                    onPressed: (context) async {
+                      final confirm = await showDeleteConfirmationDialog(
+                        context,
+                      );
+                      if (confirm == true && context.mounted) {
+                        for (var m in typeMeals) {
+                          context.read<MealBloc>().add(
+                            DeleteMealLog(m.id, _selectedDate),
+                          );
+                        }
+                      }
+                    },
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    icon: Icons.delete,
+                    label: 'Delete',
+                    borderRadius: const BorderRadius.horizontal(
+                      right: Radius.circular(16),
+                    ),
+                  ),
+                ],
+              ),
               child: GestureDetector(
                 onTap: () {
                   if (_isSelectionMode) {
@@ -374,22 +396,7 @@ class _MealReportPageState extends State<MealReportPage> {
                       allFoods.addAll(m.items);
                       allUserMeals.addAll(m.userMeals);
                     }
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BlocProvider.value(
-                          value: context.read<MealBloc>(),
-                          child: ReviewMealPage(
-                            mealType: type,
-                            selectedFoods: allFoods,
-                            selectedMeals: allUserMeals,
-                            allFoods: const [],
-                            logDate: _selectedDate,
-                            existingLogIds: typeMeals.map((e) => e.id).toList(),
-                          ),
-                        ),
-                      ),
-                    );
+                    _navigateToReview(type, typeMeals);
                   }
                 },
                 child: Row(
@@ -457,7 +464,7 @@ class _MealReportPageState extends State<MealReportPage> {
                                         ),
                                         child: const Icon(
                                           Icons.restaurant,
-                                          color: Color(0xFFE93448),
+                                          color: AppTheme.primaryColor,
                                           size: 14,
                                         ),
                                       ),
@@ -589,7 +596,7 @@ class _MealReportPageState extends State<MealReportPage> {
                           child: const Text(
                             'Needs Attention',
                             style: TextStyle(
-                              color: Color(0xFFE93448),
+                              color: AppTheme.primaryColor,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -664,7 +671,7 @@ class _MealReportPageState extends State<MealReportPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.edit, color: Color(0xFFE93448), size: 20),
+                  Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
                   SizedBox(width: 8),
                   Text(
                     'Enter food manually',
@@ -732,5 +739,30 @@ class _MealReportPageState extends State<MealReportPage> {
         }
       }
     });
+  }
+
+  void _navigateToReview(String type, List<MealLog> typeMeals) {
+    final allFoods = <FoodItem>[];
+    final allUserMeals = <UserMeal>[];
+    for (var m in typeMeals) {
+      allFoods.addAll(m.items);
+      allUserMeals.addAll(m.userMeals);
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<MealBloc>(),
+          child: ReviewMealPage(
+            mealType: type,
+            selectedFoods: allFoods,
+            selectedMeals: allUserMeals,
+            allFoods: const [],
+            logDate: _selectedDate,
+            existingLogIds: typeMeals.map((e) => e.id).toList(),
+          ),
+        ),
+      ),
+    );
   }
 }

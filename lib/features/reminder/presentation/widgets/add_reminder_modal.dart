@@ -17,6 +17,10 @@ class AddReminderModal extends StatefulWidget {
   final DateTime? initialEndDate;
   final String? initialTime; // Add this
   final bool initialSmartReminder;
+  final int? initialInterval;
+  final String? initialCustomFrequency;
+  final String? initialRecurrenceEndType;
+  final int? initialRecurrenceCount;
 
   const AddReminderModal({
     super.key,
@@ -31,6 +35,10 @@ class AddReminderModal extends StatefulWidget {
     this.initialEndDate,
     this.initialTime, // Add this
     this.initialSmartReminder = false,
+    this.initialInterval,
+    this.initialCustomFrequency,
+    this.initialRecurrenceEndType,
+    this.initialRecurrenceCount,
   });
 
   @override
@@ -80,6 +88,10 @@ class _AddReminderModalState extends State<AddReminderModal> {
     _endDate =
         widget.initialEndDate ?? DateTime.now().add(const Duration(days: 30));
     _isSmartReminder = widget.initialSmartReminder;
+    _interval = widget.initialInterval ?? 1;
+    _customFrequency = widget.initialCustomFrequency ?? 'Weeks';
+    _recurrenceEndType = widget.initialRecurrenceEndType ?? 'Forever';
+    _recurrenceCount = widget.initialRecurrenceCount ?? 1;
 
     // Initialize Time
     if (widget.initialTime != null) {
@@ -222,9 +234,9 @@ class _AddReminderModalState extends State<AddReminderModal> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.70,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor, // or cardColor
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
         children: [
@@ -234,7 +246,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Theme.of(context).dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

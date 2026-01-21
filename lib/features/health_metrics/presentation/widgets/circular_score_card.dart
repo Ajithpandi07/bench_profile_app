@@ -32,11 +32,14 @@ class _CircularScoreCardState extends State<CircularScoreCard>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(duration: widget.animateDuration, vsync: this);
-    _progressAnimation = Tween<double>(begin: 0, end: _progress).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _controller = AnimationController(
+      duration: widget.animateDuration,
+      vsync: this,
     );
+    _progressAnimation = Tween<double>(
+      begin: 0,
+      end: _progress,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _controller.forward();
   }
 
@@ -44,11 +47,10 @@ class _CircularScoreCardState extends State<CircularScoreCard>
   void didUpdateWidget(CircularScoreCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.metrics?.steps != oldWidget.metrics?.steps) {
-      _progressAnimation =
-          Tween<double>(begin: _progressAnimation.value, end: _progress)
-              .animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-      );
+      _progressAnimation = Tween<double>(
+        begin: _progressAnimation.value,
+        end: _progress,
+      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
       _controller
         ..value = 0
         ..forward();
@@ -70,7 +72,7 @@ class _CircularScoreCardState extends State<CircularScoreCard>
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFEE374D);
+    final primaryColor = Theme.of(context).primaryColor;
 
     return ClipOval(
       child: SizedBox(
@@ -89,13 +91,18 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                   return CustomPaint(
                     painter: _DashedCirclePainter(
                       progress: _progressAnimation.value,
-                      color: Colors
-                          .grey.shade300, // Darker gray for better visibility
-                      activeGradient: const LinearGradient(
-                        colors: [Color(0xFFEE374D), Color(0xFFFF8A65)],
+                      color: Theme.of(
+                        context,
+                      ).dividerColor, // Darker gray for better visibility
+                      activeGradient: LinearGradient(
+                        colors: [
+                          primaryColor,
+                          Theme.of(context).colorScheme.secondary,
+                        ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
+                      activeColor: primaryColor,
                       strokeWidth: 14, // Height of the pipe bars
                     ),
                   );
@@ -125,7 +132,7 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                 width: 160,
                 height: 160,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -139,32 +146,44 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Start',
-                        style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500)),
-                    const Text(
+                    Text(
+                      'Start',
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
                       'Logging',
                       style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    Text('to score',
-                        style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500)),
+                    Text(
+                      'to score',
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     if ((widget.metrics?.steps?.value ?? 0) > 0)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
                           '${widget.metrics!.steps!.value.toInt()}',
-                          style: const TextStyle(
-                              color: primaryColor,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                   ],
@@ -182,12 +201,14 @@ class _DashedCirclePainter extends CustomPainter {
   final double progress;
   final Color color;
   final Gradient? activeGradient;
+  final Color activeColor;
   final double strokeWidth; // Length of the pipe (radial height)
 
   _DashedCirclePainter({
     required this.progress,
     required this.color,
     this.activeGradient,
+    required this.activeColor,
     required this.strokeWidth,
   });
 
@@ -219,10 +240,11 @@ class _DashedCirclePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     if (activeGradient != null) {
-      activePaint.shader = activeGradient!
-          .createShader(Rect.fromCircle(center: center, radius: radius));
+      activePaint.shader = activeGradient!.createShader(
+        Rect.fromCircle(center: center, radius: radius),
+      );
     } else {
-      activePaint.color = const Color(0xFFEE374D);
+      activePaint.color = activeColor;
     }
 
     // Draw Loop
@@ -235,10 +257,14 @@ class _DashedCirclePainter extends CustomPainter {
       final double innerR = radius - (strokeWidth / 2);
       final double outerR = radius + (strokeWidth / 2);
 
-      final p1 = Offset(center.dx + innerR * math.cos(currentAngle),
-          center.dy + innerR * math.sin(currentAngle));
-      final p2 = Offset(center.dx + outerR * math.cos(currentAngle),
-          center.dy + outerR * math.sin(currentAngle));
+      final p1 = Offset(
+        center.dx + innerR * math.cos(currentAngle),
+        center.dy + innerR * math.sin(currentAngle),
+      );
+      final p2 = Offset(
+        center.dx + outerR * math.cos(currentAngle),
+        center.dy + outerR * math.sin(currentAngle),
+      );
 
       canvas.drawLine(p1, p2, isActive ? activePaint : backgroundPaint);
     }

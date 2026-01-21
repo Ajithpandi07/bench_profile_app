@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.dart';
-import '../../../../core/services/app_theme.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
-// import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart'; // Unused
-import '../../../../core/presentation/widgets/dashboard/dashboard_insight_card.dart';
+
+import '../../../../core/core.dart';
 import '../../domain/entities/daily_activity_summary.dart';
 import '../bloc/activity_bloc.dart';
 import '../bloc/activity_event.dart';
@@ -68,7 +64,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                     _selectedDate = DateTime.now();
                   });
                 },
-                activeColor: const Color(0xFFE93448),
+                activeColor: AppTheme.primaryColor,
               ),
               const SizedBox(height: 32),
               BlocBuilder<ActivityBloc, ActivityState>(
@@ -286,10 +282,10 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                 children: [
                   TextSpan(
                     text: averageKcal.toStringAsFixed(0),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF131313),
+                      color: AppTheme.textDark,
                     ),
                   ),
                   const TextSpan(
@@ -312,6 +308,38 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
         ),
         const SizedBox(height: 32),
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '$_selectedView Overview',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (selectedLabel.isNotEmpty)
+                  Text(
+                    selectedLabel,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                Text(
+                  '${selectedValue.toStringAsFixed(0)} Kcal', // Selected Value
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        Row(
           children: [
             Expanded(
               child: Container(
@@ -327,7 +355,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                       children: const [
                         Icon(
                           Icons.access_time_filled,
-                          color: Color(0xFFE93448),
+                          color: AppTheme.primaryColor,
                           size: 16,
                         ),
                         SizedBox(width: 8),
@@ -351,7 +379,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF131313),
+                              color: AppTheme.textDark,
                             ),
                           ),
                           TextSpan(
@@ -391,7 +419,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                       children: const [
                         Icon(
                           Icons.local_fire_department,
-                          color: Color(0xFFE93448),
+                          color: AppTheme.primaryColor,
                           size: 16,
                         ),
                         SizedBox(width: 8),
@@ -415,7 +443,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF131313),
+                              color: AppTheme.textDark,
                             ),
                           ),
                           TextSpan(
@@ -443,42 +471,11 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
           ],
         ),
         const SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '$_selectedView Overview',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF131313),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (selectedLabel.isNotEmpty)
-                  Text(
-                    selectedLabel,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                Text(
-                  '${selectedValue.toStringAsFixed(0)} Kcal', // Selected Value
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFE93448),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
         const SizedBox(height: 24),
         DashboardChart(
           items: chartItems,
           maxVal: maxVal,
-          highlightColor: const Color(0xFFE93448),
+          highlightColor: AppTheme.primaryColor,
           barBackgroundColor: const Color(
             0xFFF3F4F6,
           ), // Light grey for non-selected

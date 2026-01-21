@@ -1,12 +1,8 @@
-import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_insight_card.dart';
+import '../../../../core/core.dart';
 import '../../domain/entities/hydration_daily_summary.dart';
 import '../bloc/bloc.dart';
 
@@ -153,7 +149,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
         title: const Text(
           'Water',
           style: TextStyle(
-            color: Color(0xFFEE374D),
+            color: AppTheme.primaryColor,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
@@ -181,7 +177,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                   });
                   _loadStats();
                 },
-                activeColor: const Color(0xFFEE374D),
+                activeColor: AppTheme.primaryColor,
               ),
               const SizedBox(height: 32),
 
@@ -270,7 +266,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF131313),
+                              color: AppTheme.textDark,
                             ),
                           ),
                           Column(
@@ -280,7 +276,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                                 Text(
                                   selectedLabel,
                                   style: TextStyle(
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context).hintColor,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -289,7 +285,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFFEE374D),
+                                  color: AppTheme.primaryColor,
                                 ),
                               ),
                             ],
@@ -326,7 +322,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                       DashboardChart(
                         items: chartData,
                         maxVal: maxVal,
-                        highlightColor: const Color(0xFFEE374D),
+                        highlightColor: AppTheme.primaryColor,
                         chartHeight: 250,
                         formatValue: (val) {
                           if (val % 1 == 0) return val.toInt().toString();

@@ -95,40 +95,55 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
   }
 
   void _handlePanStart(Offset local, Offset center, double size) {
+    _updateTimeFromTouch(local, center, size, isPanStart: true);
+  }
+
+  void _handlePanUpdate(Offset local, Offset center, double size) {
+    _updateTimeFromTouch(local, center, size, isPanStart: false);
+  }
+
+  void _handleTapUp(Offset local, Offset center, double size) {
+    _updateTimeFromTouch(local, center, size, isPanStart: true);
+    setState(() {
+      _isDraggingStart = false;
+      _isDraggingEnd = false;
+    });
+  }
+
+  void _updateTimeFromTouch(
+    Offset local,
+    Offset center,
+    double size, {
+    required bool isPanStart,
+  }) {
     final dx = local.dx - center.dx;
     final dy = local.dy - center.dy;
     final touchAngle = atan2(dy, dx); // -pi to pi
 
-    double startAngle = _getAngleFromTime(widget.startTime); // 0 to 2pi
-    double endAngle = _getAngleFromTime(widget.endTime);
+    if (isPanStart) {
+      double startAngle = _getAngleFromTime(widget.startTime);
+      double endAngle = _getAngleFromTime(widget.endTime);
 
-    double diffStart = _angleDiff(touchAngle, startAngle);
-    double diffEnd = _angleDiff(touchAngle, endAngle);
+      double diffStart = _angleDiff(touchAngle, startAngle);
+      double diffEnd = _angleDiff(touchAngle, endAngle);
 
-    // Threshold to grab handle
-    if (diffStart < 0.5 && diffStart <= diffEnd) {
-      _isDraggingStart = true;
-      _isDraggingEnd = false;
-    } else if (diffEnd < 0.5) {
-      _isDraggingStart = false;
-      _isDraggingEnd = true;
-    } else {
-      _isDraggingStart = false;
-      _isDraggingEnd = false;
+      // Determine which handle to grab
+      // If we are currently not dragging, check proximity
+      // Logic: Pick closest. If tie, pick Start (Bed) unless End is visibly on top?
+      // For now, simpler: Pick closest.
+      if (diffStart <= diffEnd) {
+        _isDraggingStart = true;
+        _isDraggingEnd = false;
+      } else {
+        _isDraggingStart = false;
+        _isDraggingEnd = true;
+      }
     }
-  }
-
-  void _handlePanUpdate(Offset local, Offset center, double size) {
-    if (!_isDraggingStart && !_isDraggingEnd) return;
-
-    final dx = local.dx - center.dx;
-    final dy = local.dy - center.dy;
-    final angle = atan2(dy, dx);
 
     if (_isDraggingStart) {
-      widget.onStartTimeChanged(_getTimeFromAngle(angle, true));
-    } else {
-      widget.onEndTimeChanged(_getTimeFromAngle(angle, false));
+      widget.onStartTimeChanged(_getTimeFromAngle(touchAngle, true));
+    } else if (_isDraggingEnd) {
+      widget.onEndTimeChanged(_getTimeFromAngle(touchAngle, false));
     }
   }
 
@@ -146,6 +161,9 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
         final center = Offset(size / 2, size / 2);
 
         return GestureDetector(
+          onTapUp: (details) {
+            _handleTapUp(details.localPosition, center, size);
+          },
           onPanStart: (details) {
             _handlePanStart(details.localPosition, center, size);
           },
@@ -157,6 +175,13 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
             painter: SleepTimerPainter(
               startAngle: _getAngleFromTime(widget.startTime),
               endAngle: _getAngleFromTime(widget.endTime),
+              tickColor: Theme.of(context).disabledColor.withOpacity(0.3),
+              hourTickColor: Theme.of(context).disabledColor,
+              bgTrackColor: Theme.of(context).disabledColor.withOpacity(0.1),
+              activeArcColor: Theme.of(context).primaryColor,
+              textColor: Theme.of(context).hintColor,
+              shadowColor: Theme.of(context).shadowColor.withOpacity(0.12),
+              isDraggingStart: _isDraggingStart,
             ),
             child: SizedBox(
               width: size,
@@ -172,22 +197,25 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.bed, color: Colors.grey, size: 20),
+                          Icon(
+                            Icons.bed,
+                            color: Theme.of(context).hintColor,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             _formatTime(widget.startTime),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Colors
-                                  .black, // Changed from AppTheme.secondaryColor
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
                             _getAmPm(widget.startTime),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                         ],
@@ -205,18 +233,17 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
                           const SizedBox(width: 8),
                           Text(
                             _formatTime(widget.endTime),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Colors
-                                  .black, // Changed from AppTheme.secondaryColor
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
                             _getAmPm(widget.endTime),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                         ],
@@ -235,9 +262,9 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
                                 .difference(widget.startTime);
                           return Text(
                             _formatDuration(diff),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey,
+                              color: Theme.of(context).hintColor,
                             ),
                           );
                         },
@@ -273,31 +300,45 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
 class SleepTimerPainter extends CustomPainter {
   final double startAngle;
   final double endAngle;
+  final Color tickColor;
+  final Color hourTickColor;
+  final Color bgTrackColor;
+  final Color activeArcColor;
+  final Color textColor;
+  final Color shadowColor;
+  final bool isDraggingStart;
 
-  SleepTimerPainter({required this.startAngle, required this.endAngle});
+  SleepTimerPainter({
+    required this.startAngle,
+    required this.endAngle,
+    required this.tickColor,
+    required this.hourTickColor,
+    required this.bgTrackColor,
+    required this.activeArcColor,
+    required this.textColor,
+    required this.shadowColor,
+    required this.isDraggingStart,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    // strokeWidth is 30. radius + 15 = outer edge.
-    // To fit full width (outer edge = size.width/2), radius must be size.width/2 - 15.
+    // Radius must be smaller to fit handles (radius 18) and stroke (30/2=15)
+    // Use 20 padding from edge to be safe for handle radius.
+    final radius = size.width / 2 - 20;
     final strokeWidth = 30.0;
-    final radius = size.width / 2;
+    final tickRadius = radius - 25;
 
     // 1. Tick Marks
     final tickPaint = Paint()
-      ..color = Colors.grey.shade300
+      ..color = tickColor
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
     final hourTickPaint = Paint()
-      ..color = Colors.grey.shade400
+      ..color = hourTickColor
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
-
-    // Radius for ticks (inner than circle track)
-    // Track inner edge is at radius - 15. So ticks at radius - 25.
-    final tickRadius = radius - 25;
 
     for (int i = 0; i < 60; i++) {
       // Logic: 0 is top.
@@ -333,7 +374,7 @@ class SleepTimerPainter extends CustomPainter {
 
     // Background Track (Full Circle)
     final bgTrackPaint = Paint()
-      ..color = Colors.grey.shade200
+      ..color = bgTrackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
@@ -342,7 +383,7 @@ class SleepTimerPainter extends CustomPainter {
 
     // Active Arc
     final paintArc = Paint()
-      ..color = const Color(0xffEF5350)
+      ..color = activeArcColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
@@ -369,22 +410,44 @@ class SleepTimerPainter extends CustomPainter {
     );
 
     // 4. Handles
-    _drawIconHandle(
-      canvas,
-      center,
-      radius,
-      startAngle,
-      Icons.bed,
-      const Color(0xffEF5350),
-    );
-    _drawIconHandle(
-      canvas,
-      center,
-      radius,
-      endAngle,
-      Icons.wb_sunny,
-      Colors.amber,
-    );
+    // Draw the active one LAST so it appears on top
+    if (isDraggingStart) {
+      // Draw EndHandle first (bottom), then StartHandle (top)
+      _drawIconHandle(
+        canvas,
+        center,
+        radius,
+        endAngle,
+        Icons.wb_sunny,
+        Colors.amber,
+      );
+      _drawIconHandle(
+        canvas,
+        center,
+        radius,
+        startAngle,
+        Icons.bed,
+        activeArcColor,
+      );
+    } else {
+      // Draw StartHandle first (bottom), then EndHandle (top)
+      _drawIconHandle(
+        canvas,
+        center,
+        radius,
+        startAngle,
+        Icons.bed,
+        activeArcColor,
+      );
+      _drawIconHandle(
+        canvas,
+        center,
+        radius,
+        endAngle,
+        Icons.wb_sunny,
+        Colors.amber,
+      );
+    }
   }
 
   void _drawDottedArc(
@@ -441,8 +504,8 @@ class SleepTimerPainter extends CustomPainter {
     final textPainter = TextPainter(
       text: TextSpan(
         text: text,
-        style: const TextStyle(
-          color: Colors.grey,
+        style: TextStyle(
+          color: textColor,
           fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
@@ -479,7 +542,7 @@ class SleepTimerPainter extends CustomPainter {
       pos,
       handleRadius + 2,
       Paint()
-        ..color = Colors.black12
+        ..color = shadowColor
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
     canvas.drawCircle(pos, handleRadius, Paint()..color = Colors.white);

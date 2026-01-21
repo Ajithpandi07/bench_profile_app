@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
-
-import '../../../../core/presentation/widgets/app_date_selector.dart';
-import '../../../../core/utils/snackbar_utils.dart';
+import '../../../../core/core.dart';
 import '../bloc/bloc.dart';
 import '../../domain/entities/hydration_log.dart';
 import '../widgets/water_list_shimmer.dart';
@@ -42,7 +41,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
         title: Text(
           _isSelectionMode ? '${_selectedIds.length} selected' : 'Water',
           style: const TextStyle(
-            color: Color(0xFFEE374D),
+            color: AppTheme.primaryColor,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
@@ -222,14 +221,14 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.edit, color: Color(0xFFEE374D), size: 20),
+                const Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
                 const SizedBox(width: 8),
                 const Text(
                   'Enter water manually',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF131313),
+                    color: AppTheme.textDark,
                   ),
                 ),
               ],
@@ -382,7 +381,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF131313),
+                    color: AppTheme.textDark,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -398,18 +397,40 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
   Widget _buildLogItem(HydrationLog log) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
-      child: Dismissible(
+      child: Slidable(
         key: Key(log.id),
-        direction: _isSelectionMode
-            ? DismissDirection.none
-            : DismissDirection.endToStart,
-        background: buildSwipeBackground(),
-        confirmDismiss: (direction) => showDeleteConfirmationDialog(context),
-        onDismissed: (direction) {
-          context.read<HydrationBloc>().add(
-            DeleteHydrationLog(log.id, _selectedDate),
-          );
-        },
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          extentRatio: 0.5,
+          children: [
+            SlidableAction(
+              onPressed: (context) {
+                _navigateToTracker(logToEdit: log);
+              },
+              backgroundColor: AppTheme.lightGray,
+              foregroundColor: const Color(0xFF0064F6), // Match water color
+              icon: Icons.edit,
+              label: 'Edit',
+            ),
+            SlidableAction(
+              onPressed: (context) async {
+                final confirm = await showDeleteConfirmationDialog(context);
+                if (confirm == true && context.mounted) {
+                  context.read<HydrationBloc>().add(
+                    DeleteHydrationLog(log.id, _selectedDate),
+                  );
+                }
+              },
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              icon: Icons.delete,
+              label: 'Delete',
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(16),
+              ),
+            ),
+          ],
+        ),
         child: GestureDetector(
           onTap: () {
             if (_isSelectionMode) {
@@ -431,7 +452,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                   padding: const EdgeInsets.only(right: 12.0),
                   child: Checkbox(
                     value: _selectedIds.contains(log.id),
-                    activeColor: const Color(0xFFEE374D), // Match theme
+                    activeColor: AppTheme.primaryColor, // Match theme
                     onChanged: (val) {
                       setState(() {
                         if (val == true) {
@@ -492,7 +513,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF131313),
+                                    color: AppTheme.textDark,
                                   ),
                                 ),
                                 const TextSpan(

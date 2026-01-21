@@ -205,21 +205,75 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
 
   @override
   Future<void> updateActivity(ActivityLog activity) async {
-    // For simplicity, reusing logActivity (which overwrites)
-    // BUT we need to handle the diff in increments if we were to support editing stats strictly.
-    // For now, let's implement true update by deleting old and adding new?
-    // Or implementing a smart diff.
-    // Given the constraints and typical MVP detailed in instructions, let's assume we delete and re-add for correctness of aggregates, OR just implemented a delete then add logic in the repo if id exists.
-    // But Data Source level, let's just stick to logActivity overwriting logic if we assume ID matches.
-    // WAIT: reusing logActivity blindly will increment totals AGAIN without removing old ones.
-    // So update needs to be careful.
-    // Let's defer update logic to be "Delete then Add" in the BLoC or Repository, or implement explicit diff here.
-    // Since `logActivity` does increments, we can't just call it for update.
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
 
-    // Implementation: Fetch old, calculate diff, apply.
-    // This is getting complex for one step. Let's start with basic add/delete/get.
-    // If update is needed, I'll add it.
-    throw UnimplementedError();
+    final dateId =
+        '${activity.startTime.year}-${activity.startTime.month.toString().padLeft(2, '0')}-${activity.startTime.day.toString().padLeft(2, '0')}';
+
+    final logRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('activity_logs')
+        .doc(dateId)
+        .collection('logs')
+        .doc(activity.id);
+
+    await firestore.runTransaction((transaction) async {
+      final doc = await transaction.get(logRef);
+      if (!doc.exists) {
+        throw ServerException("Activity log not found");
+      }
+
+      final data = doc.data()!;
+      final oldCalories = (data['caloriesBurned'] as num).toDouble();
+      final oldDuration = (data['durationMinutes'] as num).toInt();
+
+      final calDiff = activity.caloriesBurned - oldCalories;
+      final durDiff = activity.durationMinutes - oldDuration;
+
+      // Update Log
+      transaction.update(logRef, {
+        'activityType': activity.activityType,
+        'startTime': Timestamp.fromDate(activity.startTime),
+        'durationMinutes': activity.durationMinutes,
+        'caloriesBurned': activity.caloriesBurned,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'notes': activity.notes,
+      });
+
+      // Update Daily
+      final dateDocRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('activity_logs')
+          .doc(dateId);
+
+      transaction.set(dateDocRef, {
+        'totalCalories': FieldValue.increment(calDiff),
+        'totalDuration': FieldValue.increment(durDiff),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Update Monthly
+      final year = activity.startTime.year;
+      final month = activity.startTime.month;
+      final day = activity.startTime.day;
+      final summaryId = '${year}_$month';
+
+      final summaryRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('activity_logs_monthly')
+          .doc(summaryId);
+
+      transaction.set(summaryRef, {
+        'totalCalories': FieldValue.increment(calDiff),
+        'totalDuration': FieldValue.increment(durDiff),
+        'dailyBreakdown': {day.toString(): FieldValue.increment(calDiff)},
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    });
   }
 
   @override

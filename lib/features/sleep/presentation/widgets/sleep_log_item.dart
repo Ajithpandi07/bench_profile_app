@@ -23,11 +23,11 @@ class SleepLogItem extends StatelessWidget {
         height: 81,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color.fromRGBO(0, 0, 0, 0.05),
+              color: Theme.of(context).shadowColor.withOpacity(0.05),
               blurRadius: 20,
               offset: const Offset(0, 4),
               spreadRadius: -2,
@@ -40,13 +40,15 @@ class SleepLogItem extends StatelessWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEF2F2), // Light red bg
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).primaryColor.withOpacity(0.1), // Light red bg
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.bedtime_rounded,
-                color: Color(0xFFEF4444), // Red
+                color: Theme.of(context).primaryColor, // Red
                 size: 20,
               ),
             ),
@@ -63,35 +65,35 @@ class SleepLogItem extends StatelessWidget {
                       children: [
                         TextSpan(
                           text: h > 0 ? '$h' : '',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF131313),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         if (h > 0)
-                          const TextSpan(
+                          TextSpan(
                             text: 'h ',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF909DAD),
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                         TextSpan(
                           text: '$m',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF131313),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        const TextSpan(
+                        TextSpan(
                           text: 'm',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF909DAD),
+                            color: Theme.of(context).hintColor,
                           ),
                         ),
                       ],
@@ -100,9 +102,9 @@ class SleepLogItem extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${DateFormat('h:mm a').format(log.startTime)} - ${DateFormat('h:mm a').format(log.endTime)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF909DAD),
+                      color: Theme.of(context).hintColor,
                     ),
                   ),
                 ],

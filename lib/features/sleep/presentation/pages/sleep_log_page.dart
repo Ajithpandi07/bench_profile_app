@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/services/app_theme.dart';
+
 import '../../../reminder/presentation/widgets/primary_button.dart';
 import '../../domain/entities/sleep_log.dart';
 import '../bloc/bloc.dart';
@@ -21,10 +21,31 @@ class _SleepLogPageState extends State<SleepLogPage> {
   late DateTime _startDateTime;
   late DateTime _endDateTime;
   late int _quality;
+  late DateTime _minAllowedDate;
+  late DateTime _maxAllowedDate;
 
   @override
   void initState() {
     super.initState();
+
+    final referenceDate = widget.initialDate;
+    final previousDay = referenceDate.subtract(const Duration(days: 1));
+
+    // Define Bounds: Day-1 12:00 PM to Day 11:59 AM
+    _minAllowedDate = DateTime(
+      previousDay.year,
+      previousDay.month,
+      previousDay.day,
+      12,
+      0,
+    );
+    _maxAllowedDate = DateTime(
+      referenceDate.year,
+      referenceDate.month,
+      referenceDate.day,
+      11,
+      59,
+    );
 
     if (widget.existingLog != null) {
       _startDateTime = widget.existingLog!.startTime;
@@ -55,6 +76,13 @@ class _SleepLogPageState extends State<SleepLogPage> {
     }
   }
 
+  // Helper to restrict date selection to the valid window
+  DateTime _clampDateTime(DateTime dt) {
+    if (dt.isBefore(_minAllowedDate)) return _minAllowedDate;
+    if (dt.isAfter(_maxAllowedDate)) return _maxAllowedDate;
+    return dt;
+  }
+
   // Helper to maintain reasonable duration logic when times change
   void _updateDuration() {
     if (_endDateTime.isBefore(_startDateTime)) {
@@ -62,6 +90,9 @@ class _SleepLogPageState extends State<SleepLogPage> {
         _endDateTime = _endDateTime.add(const Duration(days: 1));
       }
     }
+    // Ensure final times never exceed bounds
+    _startDateTime = _clampDateTime(_startDateTime);
+    _endDateTime = _clampDateTime(_endDateTime);
   }
 
   Future<void> _pickTime(bool isStart) async {
@@ -118,6 +149,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
           }
         }
 
+        // Apply Clamping
+        _startDateTime = _clampDateTime(_startDateTime);
+        _endDateTime = _clampDateTime(_endDateTime);
+
         _updateDuration();
       });
     }
@@ -143,10 +178,20 @@ class _SleepLogPageState extends State<SleepLogPage> {
         updatedTime = newTime.subtract(const Duration(days: 1));
       }
 
+      // Enforce Bounds
+      updatedTime = _clampDateTime(updatedTime);
+
       if (isStart) {
+        // Calculate original duration to attempt preservation
         final duration = _endDateTime.difference(_startDateTime);
         _startDateTime = updatedTime;
-        _endDateTime = updatedTime.add(duration);
+        // Potential new end time
+        DateTime proposedEnd = updatedTime.add(duration);
+        // Clamp end time if it exceeds bounds (prevent pushing end beyond limit)
+        if (proposedEnd.isAfter(_maxAllowedDate)) {
+          proposedEnd = _maxAllowedDate;
+        }
+        _endDateTime = proposedEnd;
       } else {
         _endDateTime = updatedTime;
       }
@@ -162,14 +207,16 @@ class _SleepLogPageState extends State<SleepLogPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Sleep'),
-        leading: const BackButton(color: Colors.black),
-        backgroundColor: Colors.white,
+        leading: BackButton(
+          color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.black,
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        titleTextStyle: const TextStyle(
-          color: AppTheme.primaryColor,
+        titleTextStyle: TextStyle(
+          color: Theme.of(context).primaryColor,
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
@@ -195,9 +242,9 @@ class _SleepLogPageState extends State<SleepLogPage> {
               // Header Date
               Text(
                 DateFormat('E, MMM d').format(widget.initialDate),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey,
+                  color: Theme.of(context).hintColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -205,15 +252,15 @@ class _SleepLogPageState extends State<SleepLogPage> {
 
               // Circular Timer
               Container(
-                height: 320,
-                width: 320,
+                height: 360,
+                width: 360,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Theme.of(context).shadowColor.withOpacity(0.1),
                       blurRadius: 20,
                       spreadRadius: 5,
                       offset: const Offset(0, 10),
@@ -267,15 +314,19 @@ class _SleepLogPageState extends State<SleepLogPage> {
                   child: TextButton(
                     onPressed: _deleteLog,
                     style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFEBEE), // Light red
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.errorContainer,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Delete Sleep Record',
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ),
                 ),
@@ -363,27 +414,50 @@ class _SleepLogPageState extends State<SleepLogPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         decoration: BoxDecoration(
-          color: const Color(0xffF7F8F8),
-          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withOpacity(0.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).shadowColor.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: isBedtime ? AppTheme.primaryColor : Colors.orange,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color:
+                        (isBedtime
+                                ? Theme.of(context).primaryColor
+                                : Colors.orange)
+                            .withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: isBedtime
+                        ? Theme.of(context).primaryColor
+                        : Colors.orange,
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 12),
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey,
-                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).hintColor.withOpacity(0.8),
+                    letterSpacing: 1.0,
                   ),
                 ),
               ],
@@ -394,19 +468,19 @@ class _SleepLogPageState extends State<SleepLogPage> {
                 children: [
                   TextSpan(
                     text: DateFormat('h:mm').format(time),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontFamily:
                           'Poppins', // Ensuring font consistency if needed
                     ),
                   ),
                   TextSpan(
                     text: DateFormat(' a').format(time).toLowerCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,
+                      color: Theme.of(context).hintColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -416,7 +490,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
             const SizedBox(height: 2),
             Text(
               _getDateLabel(time),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).hintColor.withOpacity(0.5),
+              ),
             ),
           ],
         ),

@@ -25,7 +25,18 @@ class SleepRepositoryImpl implements SleepRepository {
   Future<Either<Failure, void>> logSleep(SleepLog log) async {
     if (await networkInfo.isConnected) {
       try {
-        await remoteDataSource.logSleep(log);
+        // If ID is the draft ID, treat as new log (clear ID so RemoteDS generates one)
+        final logToSave = (log.id == 'health_connect_draft')
+            ? SleepLog(
+                id: '',
+                startTime: log.startTime,
+                endTime: log.endTime,
+                quality: log.quality,
+                notes: log.notes,
+              )
+            : log;
+
+        await remoteDataSource.logSleep(logToSave);
         return const Right(null);
       } on ServerException {
         return const Left(ServerFailure('Server Failure'));

@@ -12,7 +12,9 @@ class SleepInsightCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xffF0F6FF), // Light blue bg
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.3), // Light blue bg
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -20,13 +22,13 @@ class SleepInsightCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Colors.blue, // Icon bg
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor, // Icon bg
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.auto_awesome,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
               size: 24,
             ),
           ),
@@ -35,19 +37,24 @@ class SleepInsightCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Great job!',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text.rich(
                   TextSpan(
                     text: 'Your sleep duration has ',
-                    style: const TextStyle(color: Colors.black54, height: 1.4),
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                      height: 1.4,
+                    ),
                     children: [
                       TextSpan(
                         text: isPositive ? 'increased' : 'decreased',

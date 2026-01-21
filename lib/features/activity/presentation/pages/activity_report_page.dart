@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/presentation/widgets/app_date_selector.dart';
-import '../../../../core/services/app_theme.dart';
-import '../../../../core/utils/snackbar_utils.dart';
+import '../../../../core/core.dart';
 import '../../domain/entities/activity_log.dart';
 import '../bloc/activity_bloc.dart';
 import '../bloc/activity_event.dart';
@@ -13,6 +12,7 @@ import '../widgets/activity_type_selector.dart';
 import 'add_activity_page.dart';
 import 'activity_stats_page.dart';
 import '../widgets/activity_report_shimmer.dart';
+import '../widgets/activity_insight_card.dart';
 import '../../../health_metrics/presentation/bloc/health_metrics_bloc.dart';
 import '../../../health_metrics/presentation/bloc/health_metrics_event.dart';
 import '../../../health_metrics/presentation/bloc/health_metrics_state.dart';
@@ -263,7 +263,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 20,
                             offset: const Offset(0, 4),
                           ),
@@ -293,7 +293,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                                 ),
                                 child: const Icon(
                                   Icons.directions_run,
-                                  color: Color(0xFFE93448),
+                                  color: AppTheme.primaryColor,
                                   size: 18,
                                 ),
                               ),
@@ -306,7 +306,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                               fontSize: 48,
                               fontWeight: FontWeight.bold,
                               height: 1,
-                              color: Color(0xFF131313),
+                              color: AppTheme.textDark,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -339,7 +339,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                               minHeight: 8,
                               backgroundColor: const Color(0xFFF3F4F6),
                               valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFE93448),
+                                AppTheme.primaryColor,
                               ),
                             ),
                           ),
@@ -365,7 +365,15 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                       (activity) => _buildActivityItem(activity),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 24),
+
+                    if (activities.isNotEmpty) ...[
+                      const ActivityInsightCard(
+                        score: 40,
+                        title: 'Your activity quality was low.',
+                      ),
+                      const SizedBox(height: 40),
+                    ],
 
                     Center(
                       child: GestureDetector(
@@ -380,7 +388,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                             borderRadius: BorderRadius.circular(30),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -391,14 +399,14 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                             children: const [
                               Icon(
                                 Icons.edit,
-                                color: Color(0xFFE93448),
+                                color: AppTheme.primaryColor,
                                 size: 20,
                               ),
                               SizedBox(width: 8),
                               Text(
                                 'Enter manually',
                                 style: TextStyle(
-                                  color: Color(0xFF131313),
+                                  color: AppTheme.textDark,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -435,120 +443,149 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
       },
       child: Stack(
         children: [
-          Dismissible(
-            key: Key(activity.id),
-            direction: _isSelectionMode
-                ? DismissDirection.none
-                : DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              color: Colors.red,
-              child: const Icon(Icons.delete, color: Colors.white),
-            ),
-            onDismissed: (_) {
-              context.read<ActivityBloc>().add(
-                DeleteActivityEvent(activity.id, _selectedDate),
-              );
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Slidable(
+              key: Key(activity.id),
+              endActionPane: ActionPane(
+                motion: const ScrollMotion(),
+                extentRatio: 0.5,
+                children: [
+                  SlidableAction(
+                    onPressed: (context) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider.value(
+                            value: context.read<ActivityBloc>(),
+                            child: AddActivityPage(
+                              activityType: activity.activityType,
+                              initialDate: _selectedDate,
+                              existingActivity: activity,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    backgroundColor: AppTheme.lightGray,
+                    foregroundColor: AppTheme.primaryColor,
+                    icon: Icons.edit,
+                    label: 'Edit',
+                  ),
+                  SlidableAction(
+                    onPressed: (context) {
+                      context.read<ActivityBloc>().add(
+                        DeleteActivityEvent(activity.id, _selectedDate),
+                      );
+                    },
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    icon: Icons.delete,
+                    label: 'Delete',
+                    borderRadius: const BorderRadius.horizontal(
+                      right: Radius.circular(16),
+                    ),
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  if (_isSelectionMode)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12.0),
-                      child: Checkbox(
-                        value: isSelected,
-                        activeColor: AppTheme.primaryColor,
-                        onChanged: (val) {
-                          setState(() {
-                            if (val == true) {
-                              _selectedIds.add(activity.id);
-                            } else {
-                              _selectedIds.remove(activity.id);
-                            }
-                          });
-                        },
-                      ),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF5F5F5), // Light grey
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.directions_run,
-                      color: Color(0xFFE93448),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        activity.activityType.toUpperCase(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xFF556073),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    if (_isSelectionMode)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12.0),
+                        child: Checkbox(
+                          value: isSelected,
+                          activeColor: AppTheme.primaryColor,
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedIds.add(activity.id);
+                              } else {
+                                _selectedIds.remove(activity.id);
+                              }
+                            });
+                          },
                         ),
                       ),
-                      Text(
-                        DateFormat('hh:mm a').format(activity.startTime),
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.lightGray, // Light grey
+                        shape: BoxShape.circle,
                       ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${activity.caloriesBurned.toInt()} Kcal',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                      child: const Icon(
+                        Icons.directions_run,
+                        color: AppTheme.primaryColor,
+                        size: 20,
                       ),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.access_time,
-                            size: 12,
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          activity.activityType.toUpperCase(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Color(0xFF556073),
+                          ),
+                        ),
+                        Text(
+                          DateFormat('hh:mm a').format(activity.startTime),
+                          style: const TextStyle(
                             color: Colors.grey,
+                            fontSize: 12,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${activity.durationMinutes}:00',
-                            style: const TextStyle(
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${activity.caloriesBurned.toInt()} Kcal',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              size: 12,
                               color: Colors.grey,
-                              fontSize: 12,
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                            const SizedBox(width: 4),
+                            Text(
+                              '${activity.durationMinutes}:00',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -557,30 +594,31 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
     );
   }
 
-  void _showActivityTypeSelector() {
-    showModalBottomSheet(
+  Future<void> _showActivityTypeSelector() async {
+    final result = await showModalBottomSheet(
       context: context,
       barrierColor: Colors.black54,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) => const ActivityTypeSelector(),
-    ).then((result) async {
-      if (result != null && result is Map) {
-        final type = result['type'];
-        // Navigate to add activity
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<ActivityBloc>(),
-              child: AddActivityPage(
-                activityType: type,
-                initialDate: _selectedDate,
-              ),
+    );
+
+    if (result != null && result is Map) {
+      if (!mounted) return;
+      final type = result['type'];
+      // Navigate to add activity
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: context.read<ActivityBloc>(),
+            child: AddActivityPage(
+              activityType: type,
+              initialDate: _selectedDate,
             ),
           ),
-        );
-      }
-    });
+        ),
+      );
+    }
   }
 }

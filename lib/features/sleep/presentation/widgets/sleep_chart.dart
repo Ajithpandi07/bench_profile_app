@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../../../core/services/app_theme.dart';
+
 import '../../domain/entities/sleep_log.dart';
 
 enum SleepChartViewMode { weekly, monthly, yearly }
@@ -121,7 +120,7 @@ class SleepChart extends StatelessWidget {
                   double step = maxY / 5;
                   double val = maxY - (index * step);
                   if (index == 4) val = step; // bottom label
-                  return Text('${val.toInt()}h', style: _labelStyle());
+                  return Text('${val.toInt()}h', style: _labelStyle(context));
                 }),
               ),
               const SizedBox(width: 16),
@@ -138,7 +137,7 @@ class SleepChart extends StatelessWidget {
                             5,
                             (_) => Container(
                               height: 1,
-                              color: Colors.grey.shade100,
+                              color: Theme.of(context).dividerColor,
                               width: double.infinity,
                             ),
                           ),
@@ -176,7 +175,7 @@ class SleepChart extends StatelessWidget {
                                 highlight = true;
                             }
 
-                            return _buildBar(h, highlight, viewMode);
+                            return _buildBar(context, h, highlight, viewMode);
                           }),
                         ),
                       ],
@@ -200,7 +199,7 @@ class SleepChart extends StatelessWidget {
                 child: Text(
                   labels[index],
                   textAlign: TextAlign.center,
-                  style: _labelStyle(isColor: false),
+                  style: _labelStyle(context, isColor: false),
                 ),
               );
             }),
@@ -210,7 +209,12 @@ class SleepChart extends StatelessWidget {
     );
   }
 
-  Widget _buildBar(double height, bool isHighlight, SleepChartViewMode mode) {
+  Widget _buildBar(
+    BuildContext context,
+    double height,
+    bool isHighlight,
+    SleepChartViewMode mode,
+  ) {
     double width = 12;
     if (mode == SleepChartViewMode.weekly) width = 24;
     if (mode == SleepChartViewMode.monthly) width = 6;
@@ -221,15 +225,19 @@ class SleepChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: height == 0
             ? Colors.transparent
-            : (isHighlight ? AppTheme.primaryColor : const Color(0xffFFE5E8)),
+            : (isHighlight
+                  ? Theme.of(context).primaryColor
+                  : Theme.of(context).colorScheme.surfaceContainerHighest),
         borderRadius: BorderRadius.circular(4),
       ),
     );
   }
 
-  TextStyle _labelStyle({bool isColor = false}) {
+  TextStyle _labelStyle(BuildContext context, {bool isColor = false}) {
     return TextStyle(
-      color: isColor ? AppTheme.primaryColor : Colors.grey.shade500,
+      color: isColor
+          ? Theme.of(context).primaryColor
+          : Theme.of(context).hintColor,
       fontSize: 10,
       fontWeight: isColor ? FontWeight.bold : FontWeight.normal,
     );

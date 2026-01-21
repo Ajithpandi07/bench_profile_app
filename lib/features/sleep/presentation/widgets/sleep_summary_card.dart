@@ -31,11 +31,11 @@ class SleepSummaryCard extends StatelessWidget {
         constraints: BoxConstraints(minHeight: hasLog ? 256 : 184),
         padding: const EdgeInsets.all(24.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: const Color.fromRGBO(0, 0, 0, 0.05),
+              color: Theme.of(context).shadowColor.withOpacity(0.05),
               blurRadius: 20,
               offset: const Offset(0, 4),
               spreadRadius: -2,
@@ -50,10 +50,10 @@ class SleepSummaryCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Sleep time',
                   style: TextStyle(
-                    color: Color(0xFF6B7280), // Colors.grey[500]
+                    color: Theme.of(context).hintColor,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
@@ -61,12 +61,12 @@ class SleepSummaryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2), // Light red bg
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.bedtime_outlined, // Moon outline style
-                    color: Color(0xFFEF4444), // Red color
+                    color: Theme.of(context).primaryColor,
                     size: 20,
                   ),
                 ),
@@ -81,19 +81,19 @@ class SleepSummaryCard extends StatelessWidget {
               children: [
                 Text(
                   '$h',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 56,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF111827),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Text(
+                Text(
                   'h',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFFD1D5DB), // Light grey
+                    color: Theme.of(context).hintColor.withOpacity(0.5),
                   ),
                 ),
                 if (m > 0 || !hasLog) ...[
@@ -102,20 +102,20 @@ class SleepSummaryCard extends StatelessWidget {
                     hasLog
                         ? '$m'
                         : '', // Empty string if no log, layout wise ok
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 56,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   if (hasLog) const SizedBox(width: 4),
                   if (hasLog)
-                    const Text(
+                    Text(
                       'm',
                       style: TextStyle(
                         fontSize: 40, // Slightly bigger 'm' from screenshot
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFFD1D5DB),
+                        color: Theme.of(context).hintColor.withOpacity(0.5),
                       ),
                     ),
                 ],
@@ -136,8 +136,11 @@ class SleepSummaryCard extends StatelessWidget {
                           width: 4,
                           height: 16,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFEF4444), Color(0xFFFF8A8A)],
+                            gradient: LinearGradient(
+                              colors: [
+                                Theme.of(context).primaryColor,
+                                Theme.of(context).primaryColor.withOpacity(0.6),
+                              ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
@@ -150,7 +153,7 @@ class SleepSummaryCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF6B7280).withOpacity(0.8),
+                            color: Theme.of(context).hintColor.withOpacity(0.8),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -159,22 +162,22 @@ class SleepSummaryCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       startTimeStr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
                 ),
 
                 // Arrow
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.0),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Icon(
                     Icons.arrow_forward,
                     size: 20,
-                    color: Color(0xFF9CA3AF),
+                    color: Theme.of(context).hintColor,
                   ),
                 ),
 
@@ -187,17 +190,17 @@ class SleepSummaryCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF6B7280).withOpacity(0.8),
+                        color: Theme.of(context).hintColor.withOpacity(0.8),
                         letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       endTimeStr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],

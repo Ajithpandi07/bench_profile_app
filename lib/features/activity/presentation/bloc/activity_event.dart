@@ -26,6 +26,15 @@ class AddActivityEvent extends ActivityEvent {
   List<Object> get props => [activity];
 }
 
+class UpdateActivityEvent extends ActivityEvent {
+  final ActivityLog activity;
+
+  const UpdateActivityEvent(this.activity);
+
+  @override
+  List<Object> get props => [activity];
+}
+
 class DeleteActivityEvent extends ActivityEvent {
   final String activityId;
   final DateTime date;

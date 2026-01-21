@@ -355,32 +355,28 @@ class HealthMetricsRepositoryImpl implements HealthRepository {
       final now = DateTime.now();
 
       // 2. Iterate Past 30 Days
-      for (int i = 0; i < 30; i++) {
-        final date = now.subtract(Duration(days: i));
-        try {
-          // A. Fetch from Device
-          // catch individual day failures so one bad day doesn't stop the whole restore
-          final deviceMaybe = await dataSource.fetchFromDeviceForDate(date);
-          final deviceList = _normalizeToList(deviceMaybe)
-              .where(
-                (m) =>
-                    m.dateFrom.isBefore(now) ||
-                    m.dateFrom.isAtSameMomentAs(now),
-              )
-              .toList();
+      // 2. Optimized Batch Fetch (30 Days)
+      // Instead of looping 30 times (which hits rate limits), we use the batch range query.
+      // Passing empty list to types triggers "fetch all tiers" logic in the datasource.
+      final start = now.subtract(const Duration(days: 30));
+      debugPrint('Restore: Fetching batch from $start to $now...');
 
-          if (deviceList.isNotEmpty) {
-            // B. Save to Local
-            // We do NOT upload to remote during restore, just hydrate local cache.
-            await localDataSource.cacheHealthMetricsBatch(deviceList);
-            debugPrint(
-              'Restore: Synced ${deviceList.length} metrics for ${date.toString().split(' ')[0]}',
-            );
-          }
-        } catch (e) {
-          debugPrint('Restore: Failed to sync for date $date: $e');
-          // Start next iteration
-        }
+      final deviceMaybe = await dataSource.getHealthMetricsRange(
+        start,
+        now,
+        [],
+      );
+      final deviceList = _normalizeToList(deviceMaybe);
+
+      debugPrint('Restore: Batch fetch returned ${deviceList.length} metrics.');
+
+      if (deviceList.isNotEmpty) {
+        // B. Save to Local
+        // We do NOT upload to remote during restore, just hydrate local cache.
+        await localDataSource.cacheHealthMetricsBatch(deviceList);
+        debugPrint(
+          'Restore: Saved ${deviceList.length} metrics to local cache.',
+        );
       }
 
       debugPrint('Restore: 30-day device sync completed.');

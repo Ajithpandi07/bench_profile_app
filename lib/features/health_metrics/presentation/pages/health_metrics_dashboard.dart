@@ -148,9 +148,9 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
+                      strokeWidth: 0.1,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Color.fromARGB(255, 19, 19, 19),
+                        Color.fromARGB(255, 217, 214, 214),
                       ),
                     ),
                   ),
@@ -383,8 +383,8 @@ class _HomeTab extends StatelessWidget {
                                           top: 40,
                                         ), // Lower point (inner)
                                         child: GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
+                                          onTap: () async {
+                                            await Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) => MultiBlocProvider(
@@ -416,6 +416,11 @@ class _HomeTab extends StatelessWidget {
                                                 ),
                                               ),
                                             );
+                                            if (context.mounted) {
+                                              context
+                                                  .read<HealthMetricsBloc>()
+                                                  .add(const RefreshMetrics());
+                                            }
                                           },
                                           child: _StatItem(
                                             icon: Icons.directions_run,
@@ -431,8 +436,8 @@ class _HomeTab extends StatelessWidget {
                                           top: 0,
                                         ), // Highest point (outer)
                                         child: GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
+                                          onTap: () async {
+                                            await Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) =>
@@ -443,6 +448,11 @@ class _HomeTab extends StatelessWidget {
                                                     ),
                                               ),
                                             );
+                                            if (context.mounted) {
+                                              context
+                                                  .read<HealthMetricsBloc>()
+                                                  .add(const RefreshMetrics());
+                                            }
                                           },
                                           child: _StatItem(
                                             icon:

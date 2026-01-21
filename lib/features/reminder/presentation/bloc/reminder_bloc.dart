@@ -41,6 +41,7 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       if (_cachedAllReminders != null && !event.forceRefresh) {
         allReminders = _cachedAllReminders!;
       } else {
+        await _seedStandardReminders();
         allReminders = await _repository.getReminders();
         _cachedAllReminders = allReminders;
       }
@@ -114,6 +115,9 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
               }
               // If no day of month set, maybe fallback to start date's day?
               return selectedDate.day == start.day;
+            } else if (reminder.customFrequency == 'Hours') {
+              // Hourly reminders occur every day within the date range
+              return true;
             }
             return true;
           default:
@@ -295,44 +299,262 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
   Future<void> _scheduleNotification(Reminder reminder) async {
     if (reminder.time == null || reminder.time!.isEmpty) return;
 
-    final parts = reminder.time!.split(':');
-    if (parts.length != 2) return;
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return;
+    // Handle multiple times (comma separated)
+    final times = reminder.time!.split(',').map((e) => e.trim()).toList();
 
-    final scheduledDate = DateTime(
-      reminder.startDate.year,
-      reminder.startDate.month,
-      reminder.startDate.day,
-      hour,
-      minute,
-    );
+    for (int i = 0; i < times.length; i++) {
+      final timeStr = times[i];
+      final parts = timeStr.split(':');
+      if (parts.length != 2) continue;
+      final hour = int.tryParse(parts[0]);
+      final minute = int.tryParse(parts[1]);
+      if (hour == null || minute == null) continue;
 
-    String type = 'meal';
-    final lowerCat = reminder.category.toLowerCase();
-    final lowerName = reminder.name.toLowerCase();
-    if (lowerCat.contains('water') ||
-        lowerCat.contains('hydration') ||
-        lowerName.contains('water')) {
-      type = 'water';
-    } else {
-      type = 'meal';
+      final scheduledDate = DateTime(
+        reminder.startDate.year,
+        reminder.startDate.month,
+        reminder.startDate.day,
+        hour,
+        minute,
+      );
+
+      String type = 'meal';
+      final lowerCat = reminder.category.toLowerCase();
+      final lowerName = reminder.name.toLowerCase();
+      if (lowerCat.contains('water') ||
+          lowerCat.contains('hydration') ||
+          lowerName.contains('water')) {
+        type = 'water';
+      } else {
+        type = 'meal';
+      }
+
+      final payloadMap = {
+        'type': type,
+        'date': scheduledDate.toIso8601String(),
+        'subtype': reminder.name,
+      };
+
+      // Unique ID for each time slot: hash + index
+      final notificationId = reminder.id.hashCode + i;
+
+      // Handle 'Hours' frequency (Repeat loop)
+      // Limitation: NotificationService.scheduleReminder might only support single shot or daily.
+      // If we want "Every 2 Hours", we typically need to schedule multiple daily/weekly notifications
+      // or rely on the OS 'repeat' if supported, but here we explicitly calculate standard recurring times.
+      // But wait! User wants "Every 2 Hours" for Water.
+      // If customFrequency is 'Hours' and interval is 2, starting at 8:00.
+      // We should probably just generate the schedule times explicitly in the loop below?
+      // Actually, if 'time' is just '08:00' and 'Hours'/'2', we need to generate 8, 10, 12...
+      // BUT `_seedStandardReminders` logic below sets 'time' to '08:00'.
+      // If we want strict "Every X Hours", we should expand that here.
+
+      if (reminder.customFrequency == 'Hours' && reminder.interval != null) {
+        // Expand hourly schedule
+        // E.g. Start 8:00, Interval 2.
+        // We schedule for today (or start date) and allow 'daily' repeat?
+        // Actually, simplest mapping for "Every 2 hours" is to just schedule multiple daily notifications
+        // at 8, 10, 12, etc. which matches what we did manually before.
+        // So we will dynamically generate the times list if it's 'Hours'.
+        // But wait, the loop is already iterating 'times'.
+        // Let's rely on the Seed method to define the single start time, and here we expand it?
+        // Or better: The seed method creates the record.
+        // Here we detect 'Hours' and schedule multiple.
+      } else {
+        // Normal scheduling
+        await _notificationService.scheduleReminder(
+          id: notificationId,
+          title: 'Time to take ${reminder.name}',
+          body: '${reminder.quantity} ${reminder.unit}',
+          scheduledDate: scheduledDate,
+          scheduleType: reminder.scheduleType,
+          payload: jsonEncode(payloadMap),
+        );
+      }
     }
 
-    final payloadMap = {
-      'type': type,
-      'date': scheduledDate.toIso8601String(),
-      'subtype': reminder.name,
-    };
+    // Special handling for 'Hours' frequency expansion (Water)
+    if (reminder.customFrequency == 'Hours' &&
+        reminder.interval != null &&
+        times.isNotEmpty) {
+      final startStr = times.first; // Assume first time is start
+      final parts = startStr.split(':');
+      if (parts.length == 2) {
+        final startHour = int.tryParse(parts[0]) ?? 8;
+        final startMinute = int.tryParse(parts[1]) ?? 0;
+        final interval = reminder.interval!;
 
-    await _notificationService.scheduleReminder(
-      id: reminder.id.hashCode,
-      title: 'Time to take ${reminder.name}',
-      body: '${reminder.quantity} ${reminder.unit}',
-      scheduledDate: scheduledDate,
-      scheduleType: reminder.scheduleType,
-      payload: jsonEncode(payloadMap),
+        // Schedule from StartHour until e.g. 22:00? Or 24h?
+        // User context: "every 2 hours from 8 am". Usually until end of day (22:00?).
+        // Let's assume until 22:00 for sanity, or 24h loop.
+        // Safe bet: 8, 10, 12, 14, 16, 18, 20, 22.
+
+        int currentHour = startHour;
+        int index = 0;
+        while (currentHour <= 22) {
+          final scheduledDate = DateTime(
+            reminder.startDate.year,
+            reminder.startDate.month,
+            reminder.startDate.day,
+            currentHour,
+            startMinute,
+          );
+
+          final payloadMap = {
+            'type': 'water', // Standard water
+            'date': scheduledDate.toIso8601String(),
+            'subtype': reminder.name,
+          };
+
+          // ID offset by large number to avoid collision with normal times
+          final notificationId = reminder.id.hashCode + 1000 + index;
+
+          await _notificationService.scheduleReminder(
+            id: notificationId,
+            title: 'Time to take ${reminder.name}',
+            body: '${reminder.quantity} ${reminder.unit}',
+            scheduledDate: scheduledDate,
+            scheduleType:
+                'Daily', // They repeat daily at these calculated times
+            payload: jsonEncode(payloadMap),
+          );
+
+          currentHour += interval;
+          index++;
+        }
+      }
+    }
+  }
+
+  Future<void> _seedStandardReminders() async {
+    final existingReminders = await _repository.getReminders();
+    final existingNames = existingReminders
+        .where((r) => r.isStandard)
+        .map((r) => r.name)
+        .toSet();
+
+    final standards = <Reminder>[];
+    final now = DateTime.now();
+    final start = now;
+    final end = now.add(const Duration(days: 365 * 5));
+
+    // 1. Meal (Single Record, Multiple Times)
+    if (!existingNames.contains('Meal')) {
+      standards.add(
+        _createStandardReminder(
+          name: 'Meal',
+          category: 'Meal',
+          time: '08:00,13:00,19:00', // Breakfast, Lunch, Dinner combined
+          start: start,
+          end: end,
+        ),
+      );
+    }
+
+    // 2. Activity (Single Record)
+    if (!existingNames.contains('Activity')) {
+      standards.add(
+        _createStandardReminder(
+          name: 'Activity',
+          category: 'Activity',
+          time: '19:00',
+          start: start,
+          end: end,
+        ),
+      );
+    }
+
+    // 3. Sleep (Single Record)
+    if (!existingNames.contains('Sleep')) {
+      standards.add(
+        _createStandardReminder(
+          name: 'Sleep',
+          category: 'Sleep',
+          time: '22:30',
+          start: start,
+          end: end,
+        ),
+      );
+    }
+
+    // 4. Water (Single Record, Hourly Frequency)
+    if (!existingNames.contains('Water')) {
+      standards.add(
+        _createCustomStandardReminder(
+          name: 'Water',
+          category: 'Hydration',
+          time: '08:00', // Start time
+          quantity: '250',
+          unit: 'ml',
+          start: start,
+          end: end,
+          customFrequency: 'Hours',
+          interval: 2,
+        ),
+      );
+    }
+
+    // Batch add
+    for (final r in standards) {
+      final id = await _repository.addReminder(r);
+      await _scheduleNotification(r.copyWith(id: id));
+    }
+  }
+
+  Reminder _createCustomStandardReminder({
+    required String name,
+    required String category,
+    required String time,
+    required DateTime start,
+    required DateTime end,
+    String quantity = '1',
+    String unit = 'unit',
+    required String customFrequency,
+    required int interval,
+  }) {
+    return Reminder(
+      id: '',
+      name: name,
+      category: category,
+      quantity: quantity,
+      unit: unit,
+      scheduleType: 'Custom',
+      daysOfWeek: const [1, 2, 3, 4, 5, 6, 7],
+      time: time,
+      startDate: start,
+      endDate: end,
+      smartReminder: false,
+      isCompleted: false,
+      isStandard: true,
+      customFrequency: customFrequency,
+      interval: interval,
+    );
+  }
+
+  Reminder _createStandardReminder({
+    required String name,
+    required String category,
+    required String time,
+    required DateTime start,
+    required DateTime end,
+    String quantity = '1',
+    String unit = 'unit',
+  }) {
+    // Generate distinct ID for initial creation, though repo typically ignores it or generates new one.
+    return Reminder(
+      id: '',
+      name: name,
+      category: category,
+      quantity: quantity,
+      unit: unit,
+      scheduleType: 'Daily',
+      daysOfWeek: const [1, 2, 3, 4, 5, 6, 7], // Every day
+      time: time,
+      startDate: start,
+      endDate: end,
+      smartReminder: false,
+      isCompleted: false,
+      isStandard: true, // Mark as standard
     );
   }
 }

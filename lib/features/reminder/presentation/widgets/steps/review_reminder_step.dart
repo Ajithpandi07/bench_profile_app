@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../primary_button.dart';
-import '../../../../../core/services/app_theme.dart';
 
 class ReviewReminderStep extends StatelessWidget {
   final String name;
@@ -43,13 +42,13 @@ class ReviewReminderStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(),
+          _buildHeader(context),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildReviewCard(),
+                  _buildReviewCard(context),
                   const SizedBox(height: 24),
                   Center(
                     child: PrimaryButton(
@@ -69,7 +68,7 @@ class ReviewReminderStep extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -82,19 +81,19 @@ class ReviewReminderStep extends StatelessWidget {
             constraints: const BoxConstraints(),
           ),
         ),
-        const Text(
+        Text(
           'Review Reminder',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).primaryColor,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildReviewCard() {
+  Widget _buildReviewCard(BuildContext context) {
     return Column(
       children: [
         const SizedBox(height: 30),
@@ -103,14 +102,14 @@ class ReviewReminderStep extends StatelessWidget {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Center(
             child: Icon(
               _getIconForCategory(category),
               size: 40,
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).primaryColor,
             ),
           ),
         ),
@@ -127,7 +126,7 @@ class ReviewReminderStep extends StatelessWidget {
                   category.toLowerCase() == 'activity')
               ? '$category${time != null ? ' at $time' : ''}'
               : '$category, $quantity $unit${time != null ? ' at $time' : ''}',
-          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          style: TextStyle(fontSize: 14, color: Theme.of(context).hintColor),
         ),
         const SizedBox(height: 30),
 
@@ -135,7 +134,7 @@ class ReviewReminderStep extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: Theme.of(context).dividerColor),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -156,24 +155,34 @@ class ReviewReminderStep extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Edit',
-                        style: TextStyle(color: Colors.black),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              _buildDetailRow(Icons.repeat, 'Frequency', _getScheduleSummary()),
+              _buildDetailRow(
+                context,
+                Icons.repeat,
+                'Frequency',
+                _getScheduleSummary(),
+              ),
               if (time != null) ...[
                 const SizedBox(height: 12),
-                _buildDetailRow(Icons.access_time, 'Time', time!),
+                _buildDetailRow(context, Icons.access_time, 'Time', time!),
               ],
               _buildDetailRow(
+                context,
                 Icons.calendar_today_outlined,
                 'Start Date',
                 '${startDate.day} ${_getMonth(startDate.month)} ${startDate.year}',
@@ -186,13 +195,18 @@ class ReviewReminderStep extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String text) {
+  Widget _buildDetailRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String text,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: AppTheme.primaryColor),
+          Icon(icon, size: 20, color: Theme.of(context).primaryColor),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -200,7 +214,10 @@ class ReviewReminderStep extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(

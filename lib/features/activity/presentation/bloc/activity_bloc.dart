@@ -9,6 +9,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ActivityBloc({required this.repository}) : super(ActivityInitial()) {
     on<LoadActivitiesForDate>(_onLoadActivities);
     on<AddActivityEvent>(_onAddActivity);
+    on<UpdateActivityEvent>(_onUpdateActivity);
     on<DeleteActivityEvent>(_onDeleteActivity);
     on<DeleteMultipleActivities>(_onDeleteMultipleActivities);
     on<LoadActivityStats>(_onLoadActivityStats);
@@ -64,6 +65,20 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       _,
     ) {
       emit(const ActivityOperationSuccess('Activity added successfully'));
+      add(LoadActivitiesForDate(event.activity.startTime));
+    });
+  }
+
+  Future<void> _onUpdateActivity(
+    UpdateActivityEvent event,
+    Emitter<ActivityState> emit,
+  ) async {
+    emit(ActivityLoading());
+    final result = await repository.updateActivity(event.activity);
+    result.fold((failure) => emit(ActivityOperationFailure(failure.message)), (
+      _,
+    ) {
+      emit(const ActivityOperationSuccess('Activity updated successfully'));
       add(LoadActivitiesForDate(event.activity.startTime));
     });
   }

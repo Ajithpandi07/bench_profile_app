@@ -207,10 +207,14 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
       event.log.id,
       event.log.endTime,
     );
-    result.fold(
-      (failure) => emit(SleepError(_mapFailureToMessage(failure))),
-      (_) => emit(SleepOperationSuccess()),
-    );
+    result.fold((failure) => emit(SleepError(_mapFailureToMessage(failure))), (
+      _,
+    ) {
+      emit(
+        const SleepOperationSuccess(message: 'Sleep log deleted successfully'),
+      );
+      add(LoadSleepLogs(event.log.endTime));
+    });
   }
 
   Future<void> _onDeleteMultipleSleepLogs(

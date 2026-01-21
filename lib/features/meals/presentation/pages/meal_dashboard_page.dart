@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/services/app_theme.dart';
-
-import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_insight_card.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/core.dart';
 import '../../domain/entities/daily_meal_summary.dart';
 import '../bloc/bloc.dart';
 
@@ -74,7 +68,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
                     _selectedDate = DateTime.now();
                   });
                 },
-                activeColor: const Color(0xFFE93448),
+                activeColor: AppTheme.primaryColor,
               ),
               const SizedBox(height: 32),
 
@@ -221,7 +215,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF131313),
+                color: AppTheme.textDark,
               ),
             ),
             Column(
@@ -237,7 +231,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFE93448),
+                    color: AppTheme.primaryColor,
                   ),
                 ),
               ],
@@ -276,7 +270,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
         DashboardChart(
           items: chartItems,
           maxVal: maxVal,
-          highlightColor: const Color(0xFFE93448),
+          highlightColor: AppTheme.primaryColor,
           barBackgroundColor: const Color(0xFFFFEBEB),
           chartHeight: 250,
           formatValue: (val) =>

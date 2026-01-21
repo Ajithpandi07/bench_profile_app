@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
-import '../../../../core/presentation/widgets/app_date_selector.dart';
-import '../../../../core/services/app_theme.dart';
+import '../../../../core/core.dart';
+
 import '../bloc/bloc.dart';
 import 'sleep_log_page.dart';
 import 'sleep_stats_page.dart';
@@ -37,19 +38,24 @@ class _SleepPageState extends State<SleepPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           _isSelectionMode ? '${_selectedIds.length} selected' : 'Sleep',
-          style: const TextStyle(
-            color: AppTheme.primaryColor,
+          style: TextStyle(
+            color: Theme.of(context).primaryColor,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
         leading: _isSelectionMode
             ? IconButton(
-                icon: const Icon(Icons.close, color: Colors.black),
+                icon: Icon(
+                  Icons.close,
+                  color:
+                      Theme.of(context).appBarTheme.foregroundColor ??
+                      Colors.black,
+                ),
                 onPressed: () {
                   setState(() {
                     _isSelectionMode = false;
@@ -57,11 +63,20 @@ class _SleepPageState extends State<SleepPage> {
                   });
                 },
               )
-            : const BackButton(color: Colors.black),
+            : BackButton(
+                color:
+                    Theme.of(context).appBarTheme.foregroundColor ??
+                    Colors.black,
+              ),
         actions: _isSelectionMode
             ? [
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.black),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color:
+                        Theme.of(context).appBarTheme.foregroundColor ??
+                        Colors.black,
+                  ),
                   onPressed: _selectedIds.isEmpty
                       ? null
                       : () {
@@ -104,7 +119,12 @@ class _SleepPageState extends State<SleepPage> {
               ]
             : [
                 IconButton(
-                  icon: const Icon(Icons.bar_chart, color: Colors.black),
+                  icon: Icon(
+                    Icons.bar_chart,
+                    color:
+                        Theme.of(context).appBarTheme.foregroundColor ??
+                        Colors.black,
+                  ),
                   onPressed: () async {
                     await Navigator.push(
                       context,
@@ -119,7 +139,12 @@ class _SleepPageState extends State<SleepPage> {
                   },
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.black),
+                  icon: Icon(
+                    Icons.more_vert,
+                    color:
+                        Theme.of(context).appBarTheme.foregroundColor ??
+                        Colors.black,
+                  ),
                   onSelected: (value) {
                     if (value == 'add') {
                       _navigateToLogPage();
@@ -143,33 +168,45 @@ class _SleepPageState extends State<SleepPage> {
                       ],
                 ),
               ],
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
       ),
-      body: BlocBuilder<SleepBloc, SleepState>(
-        builder: (context, state) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Date Selector
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: AppDateSelector(
-                  selectedDate: _selectedDate,
-                  onDateSelected: (date) {
-                    setState(() {
-                      _selectedDate = date;
-                    });
-                    _loadLogs();
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              Expanded(child: _buildContent(state)),
-            ],
-          );
+      body: BlocListener<SleepBloc, SleepState>(
+        listener: (context, state) {
+          if (state is SleepOperationSuccess && state.message != null) {
+            showModernSnackbar(context, state.message!);
+          } else if (state is SleepError) {
+            // SnackbarUtils.showSnackbar(context, state.message);
+            // Error is handled by _buildContent usually, or we can handle it here and remove it from _buildContent?
+            // For now, let's keep _buildContent handling or add snackbar for error too if desired.
+            // But let's stick to the user request "Deleted successfully snackbar".
+          }
         },
+        child: BlocBuilder<SleepBloc, SleepState>(
+          builder: (context, state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Date Selector
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: AppDateSelector(
+                    selectedDate: _selectedDate,
+                    onDateSelected: (date) {
+                      setState(() {
+                        _selectedDate = date;
+                      });
+                      _loadLogs();
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                Expanded(child: _buildContent(state)),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -182,6 +219,9 @@ class _SleepPageState extends State<SleepPage> {
     } else if (state is SleepLoaded) {
       final logs = state.logs;
       if (logs.isEmpty) {
+        if (state.healthConnectDraft != null) {
+          return _buildLoggedState([state.healthConnectDraft!]);
+        }
         return _buildEmptyState();
       }
       // Assuming one main sleep per night for now, or summing them?
@@ -212,11 +252,11 @@ class _SleepPageState extends State<SleepPage> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(context).shadowColor.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -224,13 +264,17 @@ class _SleepPageState extends State<SleepPage> {
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.edit, color: Color(0xFFE93448), size: 20),
-                    SizedBox(width: 8),
+                  children: [
+                    Icon(
+                      Icons.edit,
+                      color: Theme.of(context).primaryColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       'Enter manually',
                       style: TextStyle(
-                        color: Color(0xFF131313),
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -287,17 +331,40 @@ class _SleepPageState extends State<SleepPage> {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final log = logs[index];
-              return Dismissible(
+              return Slidable(
                 key: Key(log.id),
-                direction: _isSelectionMode
-                    ? DismissDirection.none
-                    : DismissDirection.endToStart,
-                background: buildSwipeBackground(),
-                confirmDismiss: (direction) =>
-                    showDeleteConfirmationDialog(context),
-                onDismissed: (direction) {
-                  context.read<SleepBloc>().add(DeleteSleepLog(log));
-                },
+                endActionPane: ActionPane(
+                  motion: const ScrollMotion(),
+                  extentRatio: 0.5,
+                  children: [
+                    SlidableAction(
+                      onPressed: (context) {
+                        _navigateToLogPage(log: log);
+                      },
+                      backgroundColor: AppTheme.lightGray,
+                      foregroundColor: Theme.of(context).primaryColor,
+                      icon: Icons.edit,
+                      label: 'Edit',
+                    ),
+                    SlidableAction(
+                      onPressed: (context) async {
+                        final confirm = await showDeleteConfirmationDialog(
+                          context,
+                        );
+                        if (confirm == true && context.mounted) {
+                          context.read<SleepBloc>().add(DeleteSleepLog(log));
+                        }
+                      },
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      icon: Icons.delete,
+                      label: 'Delete',
+                      borderRadius: const BorderRadius.horizontal(
+                        right: Radius.circular(16),
+                      ),
+                    ),
+                  ],
+                ),
                 child: GestureDetector(
                   onTap: () {
                     if (_isSelectionMode) {
@@ -319,7 +386,7 @@ class _SleepPageState extends State<SleepPage> {
                           padding: const EdgeInsets.only(right: 12.0),
                           child: Checkbox(
                             value: _selectedIds.contains(log.id),
-                            activeColor: AppTheme.primaryColor,
+                            activeColor: Theme.of(context).primaryColor,
                             onChanged: (val) {
                               setState(() {
                                 if (val == true) {
@@ -498,11 +565,11 @@ class _SleepPageState extends State<SleepPage> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(context).shadowColor.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -510,13 +577,17 @@ class _SleepPageState extends State<SleepPage> {
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.edit, color: Color(0xFFE93448), size: 20),
-                    SizedBox(width: 8),
+                  children: [
+                    Icon(
+                      Icons.edit,
+                      color: Theme.of(context).primaryColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       'Enter manually',
                       style: TextStyle(
-                        color: Color(0xFF131313),
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

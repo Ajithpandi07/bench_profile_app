@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/services/app_theme.dart';
 
-import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_insight_card.dart';
+import '../../../../core/core.dart';
 import '../../domain/entities/sleep_log.dart';
 import '../bloc/bloc.dart';
 
@@ -56,17 +51,19 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Sleep',
           style: TextStyle(
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).primaryColor,
             fontWeight: FontWeight.bold,
           ),
         ),
-        leading: const BackButton(color: Colors.black),
-        backgroundColor: Colors.white,
+        leading: BackButton(
+          color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.black,
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
       ),
       body: BlocBuilder<SleepBloc, SleepState>(
@@ -101,19 +98,26 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                     });
                     _loadStats();
                   },
-                  activeColor: AppTheme.primaryColor,
+                  activeColor: Theme.of(context).primaryColor,
                 ),
                 const SizedBox(height: 24),
 
                 // Date Range Text
                 Text(
                   _getDateRangeText(),
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).hintColor,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
                 // Main Avg Sleep
                 _buildMainAverage(logs),
+                const SizedBox(height: 32),
+
+                // Selected Date Value Display (Overview Row)
+                _buildOverviewRow(logs),
                 const SizedBox(height: 32),
 
                 // Avg Bedtime / WakeUp
@@ -124,7 +128,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                         title: 'AVG BEDTIME',
                         value: _calculateAvgBedtime(logs),
                         icon: Icons.bedtime,
-                        iconColor: AppTheme.primaryColor,
+                        iconColor: Theme.of(context).primaryColor,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -146,12 +150,11 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                 const SizedBox(height: 32),
 
                 // Insight Card
-                const DashboardInsightCard(
+                DashboardInsightCard(
                   title: 'Great job!',
                   message:
                       'Your sleep schedule is consistent.', // Placeholder message
-                  iconBackgroundColor: AppTheme
-                      .primaryColor, // Sleep theme color often purple/indigo
+                  iconBackgroundColor: Theme.of(context).primaryColor,
                 ),
               ],
             ),
@@ -261,18 +264,106 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
               '$h',
               style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
             ),
-            const Text('h', style: TextStyle(fontSize: 24, color: Colors.grey)),
+            Text(
+              'h',
+              style: TextStyle(
+                fontSize: 24,
+                color: Theme.of(context).hintColor,
+              ),
+            ),
             const SizedBox(width: 8),
             Text(
               '$m',
               style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
             ),
-            const Text('m', style: TextStyle(fontSize: 24, color: Colors.grey)),
+            Text(
+              'm',
+              style: TextStyle(
+                fontSize: 24,
+                color: Theme.of(context).hintColor,
+              ),
+            ),
           ],
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Average Sleep',
+          style: TextStyle(color: Theme.of(context).hintColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverviewRow(List<SleepLog> logs) {
+    String selectedValue = '0h 0m';
+    String selectedLabel = '';
+
+    if (logs.isNotEmpty) {
+      if (_selectedView == 'Yearly') {
+        final monthLogs = logs.where(
+          (l) =>
+              l.endTime.year == _selectedDate.year &&
+              l.endTime.month == _selectedDate.month,
+        );
+        if (monthLogs.isNotEmpty) {
+          final totalMin = monthLogs.fold(
+            0,
+            (sum, l) => sum + l.duration.inMinutes,
+          );
+          final avg = totalMin ~/ monthLogs.length;
+          selectedValue = '${avg ~/ 60}h ${avg % 60}m';
+        }
+        selectedLabel = DateFormat('MMMM').format(_selectedDate);
+      } else {
+        final log = logs.firstWhere(
+          (l) =>
+              l.endTime.year == _selectedDate.year &&
+              l.endTime.month == _selectedDate.month &&
+              l.endTime.day == _selectedDate.day,
+          orElse: () => SleepLog(
+            id: '',
+            startTime: _selectedDate,
+            endTime: _selectedDate,
+            quality: 0,
+          ),
+        );
+        selectedValue =
+            '${log.duration.inHours}h ${log.duration.inMinutes.remainder(60)}m';
+        selectedLabel = DateFormat('d MMM').format(_selectedDate);
+      }
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
         Text(
           '$_selectedView Overview',
-          style: const TextStyle(color: Colors.grey),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (selectedLabel.isNotEmpty)
+              Text(
+                selectedLabel,
+                style: TextStyle(
+                  color: Theme.of(context).hintColor,
+                  fontSize: 12,
+                ),
+              ),
+            Text(
+              selectedValue,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -428,7 +519,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       maxVal: maxVal,
       chartHeight: 250,
       fitAll: _selectedView == 'Monthly', // Disable scrolling for monthly
-      highlightColor: AppTheme.primaryColor,
+      highlightColor: Theme.of(context).primaryColor,
       formatValue: (val) {
         if (val % 1 == 0) return val.toInt().toString();
         return val.toStringAsFixed(1);
