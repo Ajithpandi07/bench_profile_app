@@ -191,8 +191,20 @@ class _SleepLogPageState extends State<SleepLogPage> {
         if (proposedEnd.isAfter(_maxAllowedDate)) {
           proposedEnd = _maxAllowedDate;
         }
+
+        // Validation: Ensure Start != End (min 5 mins)
+        if (proposedEnd.difference(_startDateTime).inMinutes.abs() < 5) {
+          // Revert or adjust?
+          // Since we are shifting, this usually happens if hitting bounds.
+          // Let's just return and NOT update if it results in collision.
+          return;
+        }
         _endDateTime = proposedEnd;
       } else {
+        // Validation: Ensure Start != End (min 5 mins)
+        if (updatedTime.difference(_startDateTime).inMinutes.abs() < 5) {
+          return;
+        }
         _endDateTime = updatedTime;
       }
 
@@ -252,9 +264,9 @@ class _SleepLogPageState extends State<SleepLogPage> {
 
               // Circular Timer
               Container(
-                height: 360,
-                width: 360,
-                padding: const EdgeInsets.all(20),
+                height: 380,
+                width: 380,
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   shape: BoxShape.circle,

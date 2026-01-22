@@ -91,9 +91,7 @@ class _CircularScoreCardState extends State<CircularScoreCard>
                   return CustomPaint(
                     painter: _DashedCirclePainter(
                       progress: _progressAnimation.value,
-                      color: Theme.of(
-                        context,
-                      ).dividerColor, // Darker gray for better visibility
+                      color: const Color(0xFFE0E0E0), // Lighter gray for track
                       activeGradient: LinearGradient(
                         colors: [
                           primaryColor,

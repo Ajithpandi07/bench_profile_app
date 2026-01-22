@@ -1,5 +1,8 @@
 import 'dart:math';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
+import 'eager_pan_gesture_recognizer.dart';
 
 class CircularSleepTimer extends StatefulWidget {
   final DateTime startTime;
@@ -160,15 +163,30 @@ class _CircularSleepTimerState extends State<CircularSleepTimer> {
         final size = min(constraints.maxWidth, constraints.maxHeight);
         final center = Offset(size / 2, size / 2);
 
-        return GestureDetector(
-          onTapUp: (details) {
-            _handleTapUp(details.localPosition, center, size);
-          },
-          onPanStart: (details) {
-            _handlePanStart(details.localPosition, center, size);
-          },
-          onPanUpdate: (details) {
-            _handlePanUpdate(details.localPosition, center, size);
+        return RawGestureDetector(
+          behavior: HitTestBehavior.opaque,
+          gestures: {
+            EagerPanGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<EagerPanGestureRecognizer>(
+                  () => EagerPanGestureRecognizer(),
+                  (EagerPanGestureRecognizer instance) {
+                    instance.onStart = (components) {
+                      _handlePanStart(components.localPosition, center, size);
+                    };
+                    instance.onUpdate = (components) {
+                      _handlePanUpdate(components.localPosition, center, size);
+                    };
+                  },
+                ),
+            TapGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                  () => TapGestureRecognizer(),
+                  (TapGestureRecognizer instance) {
+                    instance.onTapUp = (details) {
+                      _handleTapUp(details.localPosition, center, size);
+                    };
+                  },
+                ),
           },
           child: CustomPaint(
             size: Size(size, size),
@@ -325,9 +343,10 @@ class SleepTimerPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     // Radius must be smaller to fit handles (radius 18) and stroke (30/2=15)
     // Use 20 padding from edge to be safe for handle radius.
-    final radius = size.width / 2 - 20;
-    final strokeWidth = 30.0;
-    final tickRadius = radius - 25;
+    // Use 20 padding from edge to be safe for handle radius.
+    final radius = size.width / 2 - 8;
+    final strokeWidth = 26.0; // Thinner ring for larger inner circle
+    final tickRadius = radius - 20; // Moved ticks slightly outward
 
     // 1. Tick Marks
     final tickPaint = Paint()
