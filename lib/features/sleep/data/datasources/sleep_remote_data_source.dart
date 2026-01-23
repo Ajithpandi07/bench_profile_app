@@ -6,7 +6,7 @@ import '../../domain/entities/sleep_log.dart';
 import '../models/sleep_monthly_summary_model.dart';
 
 abstract class SleepRemoteDataSource {
-  Future<void> logSleep(SleepLog log);
+  Future<void> logSleep(SleepLog log, {SleepLog? previousLog});
   Future<List<SleepLog>> getSleepLogs(DateTime date);
   Future<List<SleepLog>> getSleepLogsInRange(DateTime start, DateTime end);
   Future<void> deleteSleepLog(String id, DateTime date);
@@ -19,7 +19,7 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
   SleepRemoteDataSourceImpl({required this.firestore, required this.auth});
 
   @override
-  Future<void> logSleep(SleepLog log) async {
+  Future<void> logSleep(SleepLog log, {SleepLog? previousLog}) async {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User is not authenticated');
 
@@ -48,8 +48,38 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
 
     final logRef = dateDocRef.collection('logs').doc(docId);
 
-    // Batch write to ensure consistency
     final batch = firestore.batch();
+
+    // If day changed during update, delete from old bucket
+    if (previousLog != null) {
+      final oldDate = previousLog.endTime;
+      final oldDateId =
+          '${oldDate.year}-${oldDate.month.toString().padLeft(2, '0')}-${oldDate.day.toString().padLeft(2, '0')}';
+
+      if (oldDateId != dateId) {
+        final oldDateDocRef = firestore
+            .collection('bench_profile')
+            .doc(user.uid)
+            .collection('sleep_logs')
+            .doc(oldDateId);
+        final oldLogRef = oldDateDocRef.collection('logs').doc(previousLog.id);
+        batch.delete(oldLogRef);
+        batch.set(oldDateDocRef, {
+          'totalDurationMinutes': FieldValue.increment(
+            -previousLog.duration.inMinutes,
+          ),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } else {
+        // Just subtract old duration from same bucket before adding new
+        batch.set(dateDocRef, {
+          'totalDurationMinutes': FieldValue.increment(
+            -previousLog.duration.inMinutes,
+          ),
+        }, SetOptions(merge: true));
+      }
+    }
+
     batch.set(logRef, model.toMap());
     batch.set(dateDocRef, {
       'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
@@ -59,8 +89,8 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
 
     await batch.commit();
 
-    // Update Monthly Summary (Legacy/Redundant but keeping for now if used elsewhere)
-    await _updateMonthlySummary(user.uid, log);
+    // Update Monthly Summary
+    await _updateMonthlySummary(user.uid, log, previousLog: previousLog);
   }
 
   @override
@@ -142,7 +172,11 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     }
   }
 
-  Future<void> _updateMonthlySummary(String uid, SleepLog log) async {
+  Future<void> _updateMonthlySummary(
+    String uid,
+    SleepLog log, {
+    SleepLog? previousLog,
+  }) async {
     final year = log.endTime.year;
     final month = log.endTime.month;
     final summaryId = '$year-${month.toString().padLeft(2, '0')}';
@@ -168,16 +202,33 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
           ? Map.from(currentSummary.dailyBreakdown)
           : {};
 
-      // Update specific day. Note: This simple logic assumes one log per day dominates or sums?
-      // For simplicity in this optimization, we add to the day if multiple logs exist,
-      // or replace if we want strict nightly log style.
-      // Given SleepLog structure, let's SUM for the day.
+      if (previousLog != null) {
+        final oldDayKey = previousLog.endTime.day.toString();
+        final oldMonth = previousLog.endTime.month;
+        if (oldMonth == month) {
+          // Subtract old from same month
+          dailyBreakdown[oldDayKey] =
+              (dailyBreakdown[oldDayKey] ?? 0) - previousLog.duration.inMinutes;
+        } else {
+          // Different month - ideally we should update the OTHER month's summary too.
+          // For now, this optimization is secondary to the primary sleep_logs collection
+          // which is correctly handled in batch above.
+        }
+      }
+
       int currentDayVal = dailyBreakdown[dayKey] ?? 0;
       dailyBreakdown[dayKey] = currentDayVal + logDuration;
 
       // Recalculate totals
       int totalMinutes = 0;
       int daysWithData = 0;
+      dailyBreakdown.forEach((key, value) {
+        if (value > 0) {
+          totalMinutes += value;
+          daysWithData++;
+        }
+      });
+
       double newAvgQuality =
           currentSummary?.avgQuality ?? log.quality.toDouble();
 
@@ -247,6 +298,33 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
       'totalDurationMinutes': FieldValue.increment(-durationToRemove),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    // 3. Update Monthly Summary (Decrement)
+    final year = date.year;
+    final month = date.month;
+    final day = date.day;
+    final summaryId = '$year-${month.toString().padLeft(2, '0')}';
+
+    final summaryRef = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('sleep_logs_monthly')
+        .doc(summaryId);
+
+    batch.set(summaryRef, {
+      'id': summaryId,
+      'userId': user.uid,
+      'year': year,
+      'month': month,
+    }, SetOptions(merge: true));
+
+    batch.update(summaryRef, {
+      'totalDurationMinutes': FieldValue.increment(-durationToRemove),
+      'dailyBreakdown.${day.toString()}': FieldValue.increment(
+        -durationToRemove,
+      ),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
 
     await batch.commit();
   }

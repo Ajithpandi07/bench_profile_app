@@ -16,4 +16,8 @@ abstract class MealRepository {
     DateTime end,
   );
   Future<Either<Failure, void>> deleteMealLog(String id, DateTime date);
+  Future<Either<Failure, void>> deleteMultipleMealLogs(
+    List<String> ids,
+    DateTime date,
+  );
 }

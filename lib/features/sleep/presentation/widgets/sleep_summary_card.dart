@@ -4,15 +4,16 @@ import '../../domain/entities/sleep_log.dart';
 
 class SleepSummaryCard extends StatelessWidget {
   final SleepLog? log;
+  final Duration? totalDuration;
   final VoidCallback? onTap;
 
-  const SleepSummaryCard({super.key, this.log, this.onTap});
+  const SleepSummaryCard({super.key, this.log, this.totalDuration, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     // If no log, show "0 h" and empty times
     final hasLog = log != null;
-    final duration = hasLog ? log!.duration : Duration.zero;
+    final duration = totalDuration ?? (hasLog ? log!.duration : Duration.zero);
     final h = duration.inHours;
     final m = duration.inMinutes.remainder(60);
 

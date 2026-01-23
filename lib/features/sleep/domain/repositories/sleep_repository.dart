@@ -3,7 +3,7 @@ import '../../../../core/error/failures.dart';
 import '../entities/sleep_log.dart';
 
 abstract class SleepRepository {
-  Future<Either<Failure, void>> logSleep(SleepLog log);
+  Future<Either<Failure, void>> logSleep(SleepLog log, {SleepLog? previousLog});
   Future<Either<Failure, List<SleepLog>>> getSleepLogs(DateTime date);
   Future<Either<Failure, List<SleepLog>>> getSleepStats(
     DateTime start,

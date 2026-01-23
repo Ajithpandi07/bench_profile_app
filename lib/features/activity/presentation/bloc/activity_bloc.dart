@@ -35,10 +35,13 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     DeleteMultipleActivities event,
     Emitter<ActivityState> emit,
   ) async {
+    // Emit Loading to show progress/shimmer
     emit(ActivityLoading());
     await Future.wait(
       event.activityIds.map((id) => repository.deleteActivity(id, event.date)),
     );
+
+    emit(const ActivityOperationSuccess('Activities deleted'));
     add(LoadActivitiesForDate(event.date));
   }
 

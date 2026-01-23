@@ -41,7 +41,15 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
       // Don't auto-update time if editing an existing log
       _isManualTime = true;
     } else {
-      _selectedDate = widget.initialDate ?? DateTime.now();
+      final now = DateTime.now();
+      final initial = widget.initialDate ?? now;
+      _selectedDate = DateTime(
+        initial.year,
+        initial.month,
+        initial.day,
+        now.hour,
+        now.minute,
+      );
       _startClock();
     }
   }
@@ -440,6 +448,15 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
     final volumeLiters = _amountMl / 1000.0;
     if (volumeLiters <= 0) {
       showModernSnackbar(context, 'Please enter a valid amount', isError: true);
+      return;
+    }
+
+    if (_selectedDate.isAfter(DateTime.now())) {
+      showModernSnackbar(
+        context,
+        'You cannot log water intake for a future time.',
+        isError: true,
+      );
       return;
     }
 

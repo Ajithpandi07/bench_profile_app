@@ -473,10 +473,20 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                     label: 'Edit',
                   ),
                   SlidableAction(
-                    onPressed: (context) {
-                      context.read<ActivityBloc>().add(
-                        DeleteActivityEvent(activity.id, _selectedDate),
+                    onPressed: (_) async {
+                      final bloc = context.read<ActivityBloc>();
+                      debugPrint(
+                        'DEBUG: Slidable Delete Pressed for Activity: ${activity.id}',
                       );
+                      final confirm = await showDeleteConfirmationDialog(
+                        context,
+                      );
+                      if (confirm == true && mounted) {
+                        debugPrint('DEBUG: Adding DeleteActivityEvent to Bloc');
+                        bloc.add(
+                          DeleteActivityEvent(activity.id, _selectedDate),
+                        );
+                      }
                     },
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,

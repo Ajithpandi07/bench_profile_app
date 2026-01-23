@@ -17,6 +17,8 @@ class HydrationLoading extends HydrationState {}
 
 class HydrationSuccess extends HydrationState {}
 
+class HydrationDeletedSuccess extends HydrationState {}
+
 class HydrationLogsLoaded extends HydrationState {
   final List<HydrationLog> logs;
   final DateTime date;

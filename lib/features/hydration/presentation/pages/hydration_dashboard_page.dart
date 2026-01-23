@@ -14,6 +14,7 @@ class HydrationDashboardPage extends StatefulWidget {
 }
 
 class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
+  static const double _targetLiters = 3.0;
   String _selectedView = 'Weekly'; // 'Weekly', 'Monthly', 'Yearly'
   DateTime _selectedDate = DateTime.now();
 
@@ -190,6 +191,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
 
                   String waterGoal = '0/7';
                   String timeGoal = '0/7';
+                  String avgLiters = '0 ml';
                   List<DashboardChartItem> chartData = [];
                   double maxVal = 10.0;
 
@@ -197,9 +199,19 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     // Process Average
                     final processedItems = _processChartData(state.stats);
 
+                    // All over average for the period
+                    if (state.stats.isNotEmpty) {
+                      final totalLiters = state.stats.fold(
+                        0.0,
+                        (sum, e) => sum + e.totalLiters,
+                      );
+                      final avg = totalLiters / state.stats.length;
+                      avgLiters = '${(avg * 1000).toInt()} ml';
+                    }
+
                     // Process Goals
                     int achieved = state.stats
-                        .where((e) => e.totalLiters >= 3.0)
+                        .where((e) => e.totalLiters >= _targetLiters)
                         .length;
                     int totalDays = 7;
                     if (_selectedView == 'Monthly')
@@ -261,13 +273,25 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '$_selectedView Overview',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textDark,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$_selectedView Overview',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textDark,
+                                ),
+                              ),
+                              Text(
+                                'Avg: $avgLiters',
+                                style: TextStyle(
+                                  color: Theme.of(context).hintColor,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,

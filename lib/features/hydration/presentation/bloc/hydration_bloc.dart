@@ -1,5 +1,7 @@
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dartz/dartz.dart';
+import 'package:bench_profile_app/core/error/failures.dart';
 import '../../domain/domain.dart';
 import 'hydration_event.dart';
 import 'hydration_state.dart';
@@ -20,10 +22,15 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     DeleteMultipleHydrationLogs event,
     Emitter<HydrationState> emit,
   ) async {
-    emit(HydrationLoading());
-    final results = await Future.wait(
-      event.logIds.map((id) => repository.deleteHydrationLog(id, event.date)),
+    debugPrint(
+      'BLOC: _onDeleteMultipleHydrationLogs called for ${event.logIds.length} items',
     );
+    emit(HydrationLoading());
+    // Use sequential execution to prevent potential Firestore contention on parent docs
+    final results = <Either<Failure, void>>[];
+    for (var id in event.logIds) {
+      results.add(await repository.deleteHydrationLog(id, event.date));
+    }
 
     // Check if any failed
     final failure = results.firstWhere(
@@ -31,13 +38,21 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
       orElse: () => const Right(null),
     );
 
-    failure.fold((f) => emit(HydrationFailure(f.message)), (_) {
-      // If all succeeded (or even if some failed, we probably want to reload to show current state)
-      // But here we only add load if no failure (or handle partial failure?)
-      // Let's reload regardless to show updated list
-    });
-
-    add(LoadHydrationLogs(event.date));
+    await failure.fold(
+      (f) {
+        debugPrint('BLOC: Deletion failed: ${f.message}');
+        emit(HydrationFailure(f.message));
+        add(LoadHydrationLogs(event.date));
+      },
+      (_) async {
+        debugPrint('BLOC: Deletion success');
+        emit(HydrationDeletedSuccess());
+        // Small delay to allow UI to show snackbar and DB to propagate
+        await Future.delayed(const Duration(milliseconds: 800));
+        debugPrint('BLOC: Adding LoadHydrationLogs event after delay');
+        add(LoadHydrationLogs(event.date));
+      },
+    );
   }
 
   Future<void> _onDeleteAllHydrationForDate(
@@ -73,12 +88,13 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     LoadHydrationLogs event,
     Emitter<HydrationState> emit,
   ) async {
+    debugPrint('BLOC: _onLoadHydrationLogs called for date: ${event.date}');
     emit(HydrationLoading());
     final result = await repository.getHydrationLogsForDate(event.date);
-    result.fold(
-      (failure) => emit(HydrationFailure(failure.message)),
-      (logs) => emit(HydrationLogsLoaded(logs, event.date)),
-    );
+    result.fold((failure) => emit(HydrationFailure(failure.message)), (logs) {
+      debugPrint('BLOC: Hydration logs loaded: ${logs.length}');
+      emit(HydrationLogsLoaded(logs, event.date));
+    });
   }
 
   Future<void> _onLoadHydrationStats(
@@ -110,7 +126,7 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     // I will write the handler assuming it exists, if error I fix repository.
     final result = await repository.deleteHydrationLog(event.id, event.date);
     result.fold((failure) => emit(HydrationFailure(failure.message)), (_) {
-      // Reload logs
+      emit(HydrationDeletedSuccess());
       add(LoadHydrationLogs(event.date));
     });
   }

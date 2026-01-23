@@ -190,7 +190,10 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     }
 
     emit(SleepLoading());
-    final result = await repository.logSleep(event.log);
+    final result = await repository.logSleep(
+      event.log,
+      previousLog: event.previousLog,
+    );
     result.fold((failure) => emit(SleepError(_mapFailureToMessage(failure))), (
       _,
     ) {
@@ -222,9 +225,11 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     Emitter<SleepState> emit,
   ) async {
     emit(SleepLoading());
+    // Standardized background delete.
     for (var id in event.logIds) {
       await repository.deleteSleepLog(id, event.date);
     }
+    emit(const SleepOperationSuccess(message: 'Sleep logs deleted'));
     add(LoadSleepLogs(event.date));
   }
 

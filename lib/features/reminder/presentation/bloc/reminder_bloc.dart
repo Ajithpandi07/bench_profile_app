@@ -427,8 +427,33 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
   }
 
   Future<void> _seedStandardReminders() async {
-    final existingReminders = await _repository.getReminders();
-    final existingNames = existingReminders
+    final allReminders = await _repository.getReminders();
+    final existingReminders = allReminders.where((r) => r.isStandard).toList();
+
+    // 1. Cleanup duplicates if any
+    final categories = ['Meal', 'Activity', 'Sleep', 'Water', 'Hydration'];
+    for (final cat in categories) {
+      final matches = existingReminders.where((r) {
+        final rCat = r.category.toLowerCase();
+        final searchCat = cat.toLowerCase();
+        if (searchCat == 'water' || searchCat == 'hydration') {
+          return rCat == 'water' || rCat == 'hydration';
+        }
+        return rCat == searchCat;
+      }).toList();
+
+      if (matches.length > 1) {
+        // Keep the first one, delete others
+        for (int i = 1; i < matches.length; i++) {
+          await _repository.deleteReminder(matches[i].id);
+          await _notificationService.cancelNotification(matches[i].id.hashCode);
+        }
+      }
+    }
+
+    // Refresh after cleanup
+    final refreshedReminders = await _repository.getReminders();
+    final existingNames = refreshedReminders
         .where((r) => r.isStandard)
         .map((r) => r.name)
         .toSet();
@@ -478,7 +503,8 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     }
 
     // 4. Water (Single Record, Hourly Frequency)
-    if (!existingNames.contains('Water')) {
+    if (!existingNames.contains('Water') &&
+        !existingNames.contains('Hydration')) {
       standards.add(
         _createCustomStandardReminder(
           name: 'Water',

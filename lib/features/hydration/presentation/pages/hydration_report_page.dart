@@ -81,9 +81,11 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                                 ),
                                 TextButton(
                                   onPressed: () {
+                                    final idsToDelete = _selectedIds.toList();
+                                    Navigator.pop(context);
                                     context.read<HydrationBloc>().add(
                                       DeleteMultipleHydrationLogs(
-                                        logIds: _selectedIds.toList(),
+                                        logIds: idsToDelete,
                                         date: _selectedDate,
                                       ),
                                     );
@@ -91,7 +93,6 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                                       _isSelectionMode = false;
                                       _selectedIds.clear();
                                     });
-                                    Navigator.pop(context);
                                   },
                                   child: const Text(
                                     'Delete',
@@ -153,8 +154,12 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
       ),
       body: BlocListener<HydrationBloc, HydrationState>(
         listener: (context, state) {
+          debugPrint('UI: Hydration State matches: $state');
           if (state is HydrationFailure) {
             showModernSnackbar(context, state.message, isError: true);
+          } else if (state is HydrationDeletedSuccess) {
+            debugPrint('UI: Showing Success Snackbar');
+            showModernSnackbar(context, 'Water log deleted successfully');
           }
         },
         child: Column(
@@ -176,7 +181,8 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
             Expanded(
               child: BlocBuilder<HydrationBloc, HydrationState>(
                 builder: (context, state) {
-                  if (state is HydrationLoading) {
+                  if (state is HydrationLoading ||
+                      state is HydrationDeletedSuccess) {
                     return const WaterListShimmer();
                   } else if (state is HydrationLogsLoaded) {
                     final logs = state.logs;
@@ -259,7 +265,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
 
   Widget _buildLoggedState(List<HydrationLog> logs) {
     final totalLiters = logs.fold(0.0, (sum, log) => sum + log.amountLiters);
-    final targetLiters = 3.0;
+    const targetLiters = 3.0;
 
     // Get last added time
     String? lastAddedTime;
@@ -413,12 +419,15 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
               label: 'Edit',
             ),
             SlidableAction(
-              onPressed: (context) async {
+              onPressed: (_) async {
+                final bloc = context.read<HydrationBloc>();
+                debugPrint(
+                  'DEBUG: Slidable Delete Pressed for Hydration: ${log.id}',
+                );
                 final confirm = await showDeleteConfirmationDialog(context);
-                if (confirm == true && context.mounted) {
-                  context.read<HydrationBloc>().add(
-                    DeleteHydrationLog(log.id, _selectedDate),
-                  );
+                if (confirm == true && mounted) {
+                  debugPrint('DEBUG: Adding DeleteHydrationLog to Bloc');
+                  bloc.add(DeleteHydrationLog(log.id, _selectedDate));
                 }
               },
               backgroundColor: Colors.red,

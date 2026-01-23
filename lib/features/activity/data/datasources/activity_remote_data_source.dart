@@ -87,18 +87,22 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         .collection('activity_logs_monthly')
         .doc(summaryId);
 
+    // Use set(merge:true) to ensure doc exists, then update() for nested increments.
     batch.set(summaryRef, {
       'id': summaryId,
       'userId': user.uid,
       'year': year,
       'month': month,
+    }, SetOptions(merge: true));
+
+    batch.update(summaryRef, {
       'totalCalories': FieldValue.increment(activity.caloriesBurned),
       'totalDuration': FieldValue.increment(activity.durationMinutes),
-      'dailyBreakdown': {
-        day.toString(): FieldValue.increment(activity.caloriesBurned),
-      },
+      'dailyBreakdown.${day.toString()}': FieldValue.increment(
+        activity.caloriesBurned,
+      ),
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
 
     await batch.commit();
   }
@@ -194,11 +198,18 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         .doc(summaryId);
 
     batch.set(summaryRef, {
+      'id': summaryId,
+      'userId': user.uid,
+      'year': year,
+      'month': month,
+    }, SetOptions(merge: true));
+
+    batch.update(summaryRef, {
       'totalCalories': FieldValue.increment(-totalCalories),
       'totalDuration': FieldValue.increment(-duration),
-      'dailyBreakdown': {day.toString(): FieldValue.increment(-totalCalories)},
+      'dailyBreakdown.${day.toString()}': FieldValue.increment(-totalCalories),
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
 
     await batch.commit();
   }
@@ -268,11 +279,18 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
           .doc(summaryId);
 
       transaction.set(summaryRef, {
+        'id': summaryId,
+        'userId': user.uid,
+        'year': year,
+        'month': month,
+      }, SetOptions(merge: true));
+
+      transaction.update(summaryRef, {
         'totalCalories': FieldValue.increment(calDiff),
         'totalDuration': FieldValue.increment(durDiff),
-        'dailyBreakdown': {day.toString(): FieldValue.increment(calDiff)},
+        'dailyBreakdown.${day.toString()}': FieldValue.increment(calDiff),
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      });
     });
   }
 

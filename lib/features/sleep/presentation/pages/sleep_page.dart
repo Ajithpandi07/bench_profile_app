@@ -289,14 +289,17 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   Widget _buildLoggedState(List<SleepLog> logs) {
-    // Find the "main" sleep (longest duration) for the top summary
-    final mainLog = logs.fold(
-      logs.first,
-      (prev, curr) => curr.duration > prev.duration ? curr : prev,
+    // Calculate TOTAL duration for the day
+    final totalDurationMinutes = logs.fold(
+      0,
+      (sum, l) => sum + l.duration.inMinutes,
     );
 
     // Calculate quality percentage for insight
-    final qualityScore = mainLog.quality;
+    // Goal: 8 hours = 480 minutes
+    final qualityScore = ((totalDurationMinutes / 480) * 100)
+        .clamp(0, 100)
+        .toInt();
 
     String statusTitle;
     Color statusColor;
@@ -312,14 +315,31 @@ class _SleepPageState extends State<SleepPage> {
       statusColor = Colors.green;
     }
 
+    // Use earliest start and latest end for summary card times
+    final earliestStart = logs.fold(
+      logs.first.startTime,
+      (prev, curr) => curr.startTime.isBefore(prev) ? curr.startTime : prev,
+    );
+    final latestEnd = logs.fold(
+      logs.first.endTime,
+      (prev, curr) => curr.endTime.isAfter(prev) ? curr.endTime : prev,
+    );
+
+    final summaryLog = SleepLog(
+      id: 'summary',
+      startTime: earliestStart,
+      endTime: latestEnd,
+      quality: qualityScore,
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
       child: Column(
         children: [
-          // Summary Card (Main Sleep)
+          // Summary Card (Total Sleep)
           SleepSummaryCard(
-            log: mainLog,
-            // onTap: () => _navigateToLogPage(log: mainLog),
+            log: summaryLog,
+            totalDuration: Duration(minutes: totalDurationMinutes),
           ),
           const SizedBox(height: 24),
 
@@ -332,7 +352,7 @@ class _SleepPageState extends State<SleepPage> {
             itemBuilder: (context, index) {
               final log = logs[index];
               return Slidable(
-                key: Key(log.id),
+                key: ValueKey(log.id),
                 endActionPane: ActionPane(
                   motion: const ScrollMotion(),
                   extentRatio: 0.5,
@@ -347,12 +367,17 @@ class _SleepPageState extends State<SleepPage> {
                       label: 'Edit',
                     ),
                     SlidableAction(
-                      onPressed: (context) async {
+                      onPressed: (_) async {
+                        final bloc = context.read<SleepBloc>();
+                        debugPrint(
+                          'DEBUG: Slidable Delete Pressed for Sleep: ${log.id}',
+                        );
                         final confirm = await showDeleteConfirmationDialog(
                           context,
                         );
-                        if (confirm == true && context.mounted) {
-                          context.read<SleepBloc>().add(DeleteSleepLog(log));
+                        if (confirm == true && mounted) {
+                          debugPrint('DEBUG: Adding DeleteSleepLog to Bloc');
+                          bloc.add(DeleteSleepLog(log));
                         }
                       },
                       backgroundColor: Colors.red,

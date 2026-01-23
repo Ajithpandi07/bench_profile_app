@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 class ReminderItemCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final String scheduleType;
-  final String? time; // Added time field
+  final String? detail1; // e.g. "Every 2 Hrs" or "7:30 PM"
+  final String? detail2; // e.g. "Breakfast" or "Cycling"
   final Color? color;
   final IconData? icon;
 
   final bool isEnabled;
   final ValueChanged<bool>? onToggle;
-  final VoidCallback? onTap; // Added onTap
+  final VoidCallback? onTap;
 
   const ReminderItemCard({
     super.key,
     required this.title,
     required this.subtitle,
-    required this.scheduleType,
-    this.time,
+    this.detail1,
+    this.detail2,
     this.color,
     this.icon,
     this.isEnabled = true,
@@ -27,15 +27,19 @@ class ReminderItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeColor = color ?? Colors.blue;
+
     return Container(
+      width: 340,
+      height: 119,
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 32.6,
+            offset: const Offset(0, 19),
           ),
         ],
       ),
@@ -46,58 +50,71 @@ class ReminderItemCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Icon Container
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: (color ?? Colors.blue).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: themeColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
                     icon ?? Icons.notifications,
-                    color: color ?? Colors.blue,
-                    size: 24,
+                    color: themeColor,
+                    size: 26,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 20),
                 // Texts
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min, // Wrap content
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.8),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.6),
-                          height: 1.3,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
-                      if (time != null && time!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                      if (detail1 != null && detail1!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
                         Text(
-                          _formatTimes(time!),
+                          detail1!,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: color ?? Colors.blue,
+                            color: themeColor.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                      if (detail2 != null && detail2!.isNotEmpty) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          detail2!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.4),
                           ),
                         ),
                       ],
@@ -106,19 +123,22 @@ class ReminderItemCard extends StatelessWidget {
                 ),
                 // Toggle Switch
                 if (onToggle != null)
-                  Transform.scale(
-                    scale: 0.8,
-                    child: Switch(
-                      value: isEnabled,
-                      onChanged: onToggle,
-                      activeColor: Colors.white,
-                      activeTrackColor: Theme.of(context).primaryColor,
-                      inactiveThumbColor: Colors.white,
-                      inactiveTrackColor: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      trackOutlineColor: MaterialStateProperty.all(
-                        Colors.transparent,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Transform.scale(
+                      scale: 0.7,
+                      child: Switch(
+                        value: isEnabled,
+                        onChanged: onToggle,
+                        activeColor: Colors.white,
+                        activeTrackColor: const Color(
+                          0xFFFF5252,
+                        ), // Matching the mockup's red/pink active color
+                        inactiveThumbColor: Colors.white,
+                        inactiveTrackColor: Colors.grey.withValues(alpha: 0.2),
+                        trackOutlineColor: WidgetStateProperty.all(
+                          Colors.transparent,
+                        ),
                       ),
                     ),
                   ),
@@ -128,27 +148,5 @@ class ReminderItemCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatTimes(String rawTime) {
-    if (!rawTime.contains(',')) {
-      return _formatSingleTime(rawTime);
-    }
-    final times = rawTime.split(',').map((e) => e.trim());
-    return times.map((t) => _formatSingleTime(t)).join(', ');
-  }
-
-  String _formatSingleTime(String t) {
-    final parts = t.split(':');
-    if (parts.length != 2) return t;
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return t;
-
-    // Determine AM/PM
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final h = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    final m = minute.toString().padLeft(2, '0');
-    return '$h:$m $period';
   }
 }

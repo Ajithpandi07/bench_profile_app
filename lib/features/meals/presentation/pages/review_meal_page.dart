@@ -172,9 +172,15 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       listener: (context, state) {
         if (state is MealConsumptionLogged) {
           showModernSnackbar(context, '${widget.mealType} logged successfully');
-          Navigator.of(context)
-            ..pop()
-            ..pop();
+          // If we were editing, we pop once (Review -> Report)
+          // If we were adding new, we pop twice (Review -> Listing -> Report)
+          if (widget.existingLogIds.isNotEmpty) {
+            Navigator.of(context).pop();
+          } else {
+            Navigator.of(context)
+              ..pop()
+              ..pop();
+          }
         } else if (state is MealOperationFailure) {
           showModernSnackbar(context, state.message, isError: true);
         }

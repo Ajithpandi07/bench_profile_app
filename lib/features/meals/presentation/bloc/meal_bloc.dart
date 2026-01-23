@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:bloc/bloc.dart';
 import '../../domain/repositories/meal_repository.dart';
 import 'meal_event.dart';
@@ -26,13 +27,27 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     DeleteMultipleMeals event,
     Emitter<MealState> emit,
   ) async {
+    debugPrint(
+      'BLOC: _onDeleteMultipleMeals starting for ${event.mealLogIds.length} items',
+    );
     emit(MealLoading());
-    // Iterate and delete. Ideally, repository should support bulk delete,
-    // but we'll iterate for now as per previous pattern.
-    for (final id in event.mealLogIds) {
-      await repository.deleteMealLog(id, event.date);
-    }
-    add(LoadMealsForDate(event.date));
+    final result = await repository.deleteMultipleMealLogs(
+      event.mealLogIds,
+      event.date,
+    );
+
+    result.fold(
+      (failure) {
+        debugPrint('BLOC: Deletion FAILED: ${failure.message}');
+        emit(MealOperationFailure(failure.message));
+        add(LoadMealsForDate(event.date));
+      },
+      (success) {
+        debugPrint('BLOC: Deletion SUCCESS');
+        emit(MealDeletedSuccess());
+        add(LoadMealsForDate(event.date));
+      },
+    );
   }
 
   Future<void> _onDeleteAllMealsForDate(
@@ -232,12 +247,11 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     DeleteMealLog event,
     Emitter<MealState> emit,
   ) async {
-    // Optimistic update could be done here, but safe bet is to reload
     final result = await repository.deleteMealLog(event.mealLogId, event.date);
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      // Reload meals for the date
+      emit(MealDeletedSuccess());
       add(LoadMealsForDate(event.date));
     });
   }

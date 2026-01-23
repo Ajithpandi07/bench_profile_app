@@ -6,10 +6,12 @@ import '../../domain/entities/reminder.dart';
 import '../bloc/reminder_bloc.dart';
 import '../bloc/reminder_state.dart';
 import '../bloc/reminder_event.dart';
-import '../widgets/add_reminder_modal.dart';
 import '../../../../../core/presentation/widgets/app_date_selector.dart';
 
 import '../widgets/reminder_item_card.dart';
+import '../widgets/reminder_empty_state.dart';
+import '../widgets/add_reminder_modal.dart';
+import '../widgets/primary_button.dart';
 
 import '../../../../core/utils/snackbar_utils.dart';
 
@@ -68,17 +70,9 @@ class _ReminderPageState extends State<ReminderPage> {
             icon: Icon(
               Icons.add,
               color: Theme.of(context).primaryColor,
-              size: 28,
-            ),
-            onPressed: () => _openAddModal(context),
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.info_outline,
-              color: Theme.of(context).primaryColor,
               size: 26,
             ),
-            onPressed: () {},
+            onPressed: () => _openAddModal(context),
           ),
           const SizedBox(width: 8),
         ],
@@ -118,131 +112,29 @@ class _ReminderPageState extends State<ReminderPage> {
                     } else if (state is ReminderLoaded) {
                       final reminders = state.reminders;
 
-                      // 1. Separate Standard vs Custom
-                      final standardReminders = reminders
-                          .where((r) => r.isStandard)
-                          .toList();
-                      final customReminders = reminders
-                          .where((r) => !r.isStandard)
-                          .toList();
+                      final dispReminders = reminders.toList();
 
-                      // 2. Group Standard Reminders
-                      final meals = standardReminders
-                          .where(
-                            (r) =>
-                                r.category.toLowerCase() == 'meal' ||
-                                r.category.toLowerCase() == 'food',
-                          )
-                          .toList();
-                      meals.sort((a, b) => _compareTime(a.time, b.time));
-
-                      final activities = standardReminders
-                          .where((r) => r.category.toLowerCase() == 'activity')
-                          .toList();
-                      activities.sort((a, b) => _compareTime(a.time, b.time));
-
-                      final waters = standardReminders
-                          .where((r) => r.category.toLowerCase() == 'hydration')
-                          .toList();
-                      waters.sort((a, b) => _compareTime(a.time, b.time));
-
-                      final sleep = standardReminders
-                          .where((r) => r.category.toLowerCase() == 'sleep')
-                          .toList();
-
-                      // 3. Find Upcoming Meal
-                      final now = DateTime.now(); // Or generic 'now' logic
-                      // Note: 'reminders' are already filtered by _selectedDate in Bloc for skipped dates?
-                      // Wait, standard reminders exist every day, but Bloc filters based on 'skippedDates'.
-                      // If it's in 'state.reminders', it's active for this day.
-
-                      // We want upcoming time relative to Now for TODAY.
-                      // If seeing future date, 'upcoming' conceptually means 'first one'?
-                      // Let's stick to "Least upcoming time" meaning "Next closest time"
-                      // If selectedDate != today, maybe just show the first one?
-                      Reminder? upcomingMeal;
-                      if (_selectedDate.day == now.day &&
-                          _selectedDate.month == now.month &&
-                          _selectedDate.year == now.year) {
-                        // Find first meal after current time
-                        final currentTimeVal = now.hour * 60 + now.minute;
-                        for (final m in meals) {
-                          if (m.time == null) continue;
-                          final t = _parseTime(m.time!);
-                          if (t > currentTimeVal) {
-                            upcomingMeal = m;
-                            break;
-                          }
-                        }
-                        // If no meal left today, maybe show Breakfast for tomorrow? Or null?
-                        // Showing null is safer.
-                      } else {
-                        // Future/Past date: Show the first meal of the day
-                        if (meals.isNotEmpty) upcomingMeal = meals.first;
+                      if (dispReminders.isEmpty) {
+                        return ReminderEmptyState(
+                          onAdd: () => _openAddModal(context),
+                        );
                       }
 
                       return ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 26,
+                          vertical: 10,
+                        ),
                         children: [
-                          if (upcomingMeal != null) ...[
-                            Text(
-                              'Upcoming Meal',
-                              style: TextStyle(
-                                fontSize: 16, // Smaller than 18
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildStandardReminderCard(
-                              context,
-                              upcomingMeal,
-                              isUpcoming: true,
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Meals List
-                          _buildSectionHeader(context, 'Meals'),
-                          ...meals.map(
+                          ...dispReminders.map(
                             (r) => _buildStandardReminderCard(context, r),
                           ),
-                          const SizedBox(height: 24),
-
-                          // Activity List
-                          _buildSectionHeader(context, 'Activity'),
-                          ...activities.map(
-                            (r) => _buildStandardReminderCard(context, r),
+                          const SizedBox(height: 32),
+                          PrimaryButton(
+                            text: 'Add Reminder',
+                            onPressed: () => _openAddModal(context),
                           ),
-                          const SizedBox(height: 24),
-
-                          // Water List
-                          _buildSectionHeader(context, 'Water'),
-                          // Water might have many items. Grid or List?
-                          // User said "water reminder for every 2 hrs". List is fine but long.
-                          // Let's use a Wrap or just list items. List is standard.
-                          ...waters.map(
-                            (r) => _buildStandardReminderCard(context, r),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Sleep List
-                          if (sleep.isNotEmpty) ...[
-                            _buildSectionHeader(context, 'Sleep'),
-                            ...sleep.map(
-                              (r) => _buildStandardReminderCard(context, r),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Custom List
-                          if (customReminders.isNotEmpty) ...[
-                            _buildSectionHeader(context, 'My Reminders'),
-                            ...customReminders.map(
-                              (r) => _buildCustomReminderCard(context, r),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
+                          const SizedBox(height: 40),
                         ],
                       );
                     } else if (state is ReminderError) {
@@ -259,15 +151,122 @@ class _ReminderPageState extends State<ReminderPage> {
     );
   }
 
-  int _compareTime(String? t1, String? t2) {
-    if (t1 == null) return -1;
-    if (t2 == null) return 1;
-    return _parseTime(t1).compareTo(_parseTime(t2));
+  Widget _buildStandardReminderCard(BuildContext context, Reminder reminder) {
+    bool isSkipped = false;
+    if (reminder.skippedDates != null) {
+      isSkipped = reminder.skippedDates!.any(
+        (d) =>
+            d.year == _selectedDate.year &&
+            d.month == _selectedDate.month &&
+            d.day == _selectedDate.day,
+      );
+    }
+    final isEnabled = !isSkipped;
+
+    String title = '';
+    String subtitle = '';
+    String? detail1;
+    String? detail2;
+
+    final category = reminder.category.toLowerCase();
+    if (category == 'water' || category == 'hydration') {
+      title = 'Water Reminder';
+      subtitle = 'Drink Water';
+      detail1 = 'Every 2 Hrs';
+    } else if (category == 'meal' || category == 'food') {
+      title = 'Food Reminder';
+      subtitle = 'Take Your Food';
+      final mealInfo = _getUpcomingMealInfo(reminder.time);
+      detail1 = mealInfo['time'] ?? '';
+      detail2 = mealInfo['name'];
+    } else if (category == 'activity' || category == 'workout') {
+      title = 'Activity Reminder';
+      subtitle = 'Time to Move';
+      detail1 = _formatTime(reminder.time);
+      detail2 = 'Cycling';
+    } else if (category == 'sleep') {
+      title = 'Sleep Reminder';
+      subtitle = 'Time to Sleep';
+      detail1 = _formatTime(reminder.time);
+    } else {
+      title = reminder.name;
+      subtitle = 'Reminder';
+      detail1 = _formatTime(reminder.time);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: ReminderItemCard(
+        title: title,
+        subtitle: subtitle,
+        detail1: detail1,
+        detail2: detail2,
+        icon: _getIconForCategory(reminder.category),
+        color: _getColorForCategory(reminder.category),
+        isEnabled: isEnabled,
+        onToggle: (val) {
+          _toggleReminder(context, reminder, val);
+        },
+      ),
+    );
+  }
+
+  void _openAddModal(BuildContext context) {
+    final reminderBloc = context.read<ReminderBloc>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddReminderModal(),
+    ).then((_) {
+      // Refresh list after modal closed
+      if (mounted) {
+        reminderBloc.add(LoadReminders(selectedDate: _selectedDate));
+      }
+    });
+  }
+
+  Map<String, String> _getUpcomingMealInfo(String? rawTime) {
+    if (rawTime == null || rawTime.isEmpty) return {'time': '', 'name': 'Meal'};
+
+    final now = DateTime.now();
+    // Only use current time logic if selected date is TODAY
+    final isToday =
+        _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+
+    final times = rawTime.split(',').map((e) => e.trim()).toList();
+    times.sort((a, b) => _parseTime(a).compareTo(_parseTime(b)));
+
+    String selectedTime = times.first;
+    if (isToday) {
+      final currentTimeVal = now.hour * 60 + now.minute;
+      for (final t in times) {
+        if (_parseTime(t) > currentTimeVal) {
+          selectedTime = t;
+          break;
+        }
+      }
+    }
+
+    final formattedTime = _formatSingleTime(selectedTime);
+
+    String name = 'Meal';
+    final hour = _parseTime(selectedTime) ~/ 60;
+    if (hour < 11) {
+      name = 'Breakfast';
+    } else if (hour < 16) {
+      name = 'Lunch';
+    } else {
+      name = 'Dinner';
+    }
+
+    return {'time': formattedTime, 'name': name};
   }
 
   int _parseTime(String t) {
-    final firstTime = t.split(',').first.trim();
-    final parts = firstTime.split(':');
+    final parts = t.split(':');
     if (parts.length != 2) return 0;
     try {
       return int.parse(parts[0]) * 60 + int.parse(parts[1]);
@@ -276,126 +275,23 @@ class _ReminderPageState extends State<ReminderPage> {
     }
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).textTheme.titleMedium?.color,
-        ),
-      ),
-    );
+  String _formatSingleTime(String t) {
+    final parts = t.split(':');
+    if (parts.length != 2) return t;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return t;
+
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final h = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    final m = minute.toString().padLeft(2, '0');
+    return '$h:$m $period';
   }
 
-  void _openAddModal(
-    BuildContext context, {
-    String? category,
-    Reminder? reminder,
-  }) {
-    final reminderBloc = context.read<ReminderBloc>();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BlocProvider.value(
-        value: reminderBloc,
-        child: AddReminderModal(
-          initialCategory: category ?? reminder?.category ?? 'Custom',
-          reminderId: reminder?.id,
-          initialName: reminder?.name,
-          initialQuantity: reminder?.quantity,
-          initialUnit: reminder?.unit,
-          initialScheduleType: reminder?.scheduleType,
-          initialStartDate: reminder?.startDate,
-          initialEndDate: reminder?.endDate,
-          initialTime: reminder?.time,
-          initialSmartReminder: reminder?.smartReminder ?? false,
-          initialInterval: reminder?.interval,
-          initialCustomFrequency: reminder?.customFrequency,
-          initialRecurrenceEndType: reminder?.recurrenceEndType,
-          initialRecurrenceCount: reminder?.recurrenceCount,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStandardReminderCard(
-    BuildContext context,
-    Reminder reminder, {
-    bool isUpcoming = false,
-  }) {
-    // Check if skipped
-    // Note: 'state.reminders' returns ONLY enabled reminders if we filter inside Bloc by skipped dates?
-    // Let's check Bloc logic:
-    // Bloc filters: if (selectedDate.isBefore(start) || selectedDate.isAfter(end)) return false;
-    // Bloc logic for ToggleReminderForDate ADDS/REMOVES from 'skippedDates'.
-    // BUT the Bloc logic currently DOES NOT filter out skipped dates from the emitted list?
-    // Let's re-read Bloc: "Skipped dates handled by UI" line 60.
-    // So we MUST check skipped dates here.
-
-    bool isSkipped = false;
-    if (reminder.skippedDates != null) {
-      isSkipped = reminder.skippedDates!.any(
-        (d) =>
-            d.year == _selectedDate.year &&
-            d.month == _selectedDate.month &&
-            d.day == _selectedDate.day,
-      );
-    }
-    final isEnabled = !isSkipped;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: ReminderItemCard(
-        title: reminder.name,
-        subtitle: isUpcoming
-            ? 'Next scheduled meal'
-            : '${reminder.quantity} ${reminder.unit}',
-        scheduleType: 'Daily',
-        time: reminder.time,
-        icon: _getIconForCategory(reminder.category),
-        color: _getColorForCategory(reminder.category),
-        isEnabled: isEnabled,
-        onToggle: (val) {
-          _toggleReminder(context, reminder, val);
-        },
-      ),
-    );
-  }
-
-  Widget _buildCustomReminderCard(BuildContext context, Reminder reminder) {
-    bool isSkipped = false;
-    if (reminder.skippedDates != null) {
-      isSkipped = reminder.skippedDates!.any(
-        (d) =>
-            d.year == _selectedDate.year &&
-            d.month == _selectedDate.month &&
-            d.day == _selectedDate.day,
-      );
-    }
-    final isEnabled = !isSkipped;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: ReminderItemCard(
-        title: reminder.category.isEmpty
-            ? 'Custom Reminder'
-            : reminder.category,
-        subtitle: reminder.name,
-        scheduleType: reminder.scheduleType,
-        time: reminder.time,
-        icon: _getIconForCategory(reminder.category),
-        color: _getColorForCategory(reminder.category),
-        isEnabled: isEnabled,
-        onTap: () => _openAddModal(context, reminder: reminder),
-        onToggle: (val) {
-          _toggleReminder(context, reminder, val);
-        },
-      ),
-    );
+  String _formatTime(String? rawTime) {
+    if (rawTime == null || rawTime.isEmpty) return '';
+    final firstTime = rawTime.split(',').first.trim();
+    return _formatSingleTime(firstTime);
   }
 
   void _toggleReminder(
@@ -445,7 +341,7 @@ class _ReminderPageState extends State<ReminderPage> {
       case 'activity':
         return Colors.orange;
       case 'sleep':
-        return Colors.deepPurple; // Changed from pink to deepPurple for sleep
+        return Colors.pink;
       case 'medication':
         return Colors.red;
       default:

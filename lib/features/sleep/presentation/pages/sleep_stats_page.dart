@@ -164,6 +164,15 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
     );
   }
 
+  Map<String, List<SleepLog>> _groupLogsByDate(List<SleepLog> logs) {
+    final Map<String, List<SleepLog>> groups = {};
+    for (var log in logs) {
+      final key = DateFormat('yyyy-MM-dd').format(log.endTime);
+      groups.putIfAbsent(key, () => []).add(log);
+    }
+    return groups;
+  }
+
   String _getDateRangeText() {
     final now = DateTime.now();
     if (_selectedView == 'Weekly') {
@@ -199,40 +208,18 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
     // So we just find the log for that date.
 
     if (logs.isNotEmpty) {
-      if (_selectedView == 'Weekly') {
-        // Find log for _selectedDate
-        final log = logs.firstWhere(
-          (l) =>
-              l.endTime.year == _selectedDate.year &&
-              l.endTime.month == _selectedDate.month &&
-              l.endTime.day == _selectedDate.day,
-          orElse: () => SleepLog(
-            id: '',
-            startTime: DateTime.now(),
-            endTime: DateTime.now(),
-            quality: 0,
-          ),
-        );
-        if (log.id.isNotEmpty || log.duration != Duration.zero) {
-          h = log.duration.inHours;
-          m = log.duration.inMinutes.remainder(60);
-        }
-      } else if (_selectedView == 'Monthly') {
-        final log = logs.firstWhere(
-          (l) =>
-              l.endTime.year == _selectedDate.year &&
-              l.endTime.month == _selectedDate.month &&
-              l.endTime.day == _selectedDate.day,
-          orElse: () => SleepLog(
-            id: '',
-            startTime: DateTime.now(),
-            endTime: DateTime.now(),
-            quality: 0,
-          ),
-        );
-        if (log.id.isNotEmpty || log.duration != Duration.zero) {
-          h = log.duration.inHours;
-          m = log.duration.inMinutes.remainder(60);
+      final groupedLogs = _groupLogsByDate(logs);
+
+      if (_selectedView == 'Weekly' || _selectedView == 'Monthly') {
+        final key = DateFormat('yyyy-MM-dd').format(_selectedDate);
+        final dayLogs = groupedLogs[key] ?? [];
+        if (dayLogs.isNotEmpty) {
+          final totalMin = dayLogs.fold(
+            0,
+            (sum, l) => sum + l.duration.inMinutes,
+          );
+          h = totalMin ~/ 60;
+          m = totalMin % 60;
         }
       } else {
         // Yearly - Average for month
@@ -242,11 +229,17 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
               l.endTime.month == _selectedDate.month,
         );
         if (monthLogs.isNotEmpty) {
-          final totalMin = monthLogs.fold(
+          // Group these by actual day to get accurate nightly averages
+          final Map<int, int> daysTotal = {};
+          for (var l in monthLogs) {
+            daysTotal[l.endTime.day] =
+                (daysTotal[l.endTime.day] ?? 0) + l.duration.inMinutes;
+          }
+          final totalMinutes = daysTotal.values.fold(
             0,
-            (sum, l) => sum + l.duration.inMinutes,
+            (sum, min) => sum + min,
           );
-          final avg = totalMin ~/ monthLogs.length;
+          final avg = totalMinutes ~/ daysTotal.length;
           h = avg ~/ 60;
           m = avg % 60;
         }
@@ -306,29 +299,25 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
               l.endTime.month == _selectedDate.month,
         );
         if (monthLogs.isNotEmpty) {
-          final totalMin = monthLogs.fold(
-            0,
-            (sum, l) => sum + l.duration.inMinutes,
-          );
-          final avg = totalMin ~/ monthLogs.length;
+          final Map<int, int> daysTotal = {};
+          for (var l in monthLogs) {
+            daysTotal[l.endTime.day] =
+                (daysTotal[l.endTime.day] ?? 0) + l.duration.inMinutes;
+          }
+          final totalMin = daysTotal.values.fold(0, (sum, min) => sum + min);
+          final avg = totalMin ~/ daysTotal.length;
           selectedValue = '${avg ~/ 60}h ${avg % 60}m';
         }
         selectedLabel = DateFormat('MMMM').format(_selectedDate);
       } else {
-        final log = logs.firstWhere(
-          (l) =>
-              l.endTime.year == _selectedDate.year &&
-              l.endTime.month == _selectedDate.month &&
-              l.endTime.day == _selectedDate.day,
-          orElse: () => SleepLog(
-            id: '',
-            startTime: _selectedDate,
-            endTime: _selectedDate,
-            quality: 0,
-          ),
+        final key = DateFormat('yyyy-MM-dd').format(_selectedDate);
+        final dayLogs = _groupLogsByDate(logs)[key] ?? [];
+        final totalMin = dayLogs.fold(
+          0,
+          (sum, l) => sum + l.duration.inMinutes,
         );
-        selectedValue =
-            '${log.duration.inHours}h ${log.duration.inMinutes.remainder(60)}m';
+
+        selectedValue = '${totalMin ~/ 60}h ${totalMin % 60}m';
         selectedLabel = DateFormat('d MMM').format(_selectedDate);
       }
     }
@@ -426,17 +415,14 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
 
       for (int i = 0; i < 7; i++) {
         final date = startOfWeek.add(Duration(days: i));
-
-        final log = logs.firstWhere(
-          (l) =>
-              l.endTime.year == date.year &&
-              l.endTime.month == date.month &&
-              l.endTime.day == date.day,
-          orElse: () =>
-              SleepLog(id: '', startTime: date, endTime: date, quality: 0),
+        final key = DateFormat('yyyy-MM-dd').format(date);
+        final dayLogs = _groupLogsByDate(logs)[key] ?? [];
+        final totalMin = dayLogs.fold(
+          0,
+          (sum, l) => sum + l.duration.inMinutes,
         );
 
-        final hours = log.duration.inMinutes / 60.0;
+        final hours = totalMin / 60.0;
         if (hours > maxVal) maxVal = hours;
 
         items.add(
@@ -454,15 +440,14 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
       for (int i = 1; i <= daysInMonth; i++) {
         final date = DateTime(now.year, now.month, i);
-        final log = logs.firstWhere(
-          (l) =>
-              l.endTime.year == date.year &&
-              l.endTime.month == date.month &&
-              l.endTime.day == date.day,
-          orElse: () =>
-              SleepLog(id: '', startTime: date, endTime: date, quality: 0),
+        final key = DateFormat('yyyy-MM-dd').format(date);
+        final dayLogs = _groupLogsByDate(logs)[key] ?? [];
+        final totalMin = dayLogs.fold(
+          0,
+          (sum, l) => sum + l.duration.inMinutes,
         );
-        final hours = log.duration.inMinutes / 60.0;
+
+        final hours = totalMin / 60.0;
         if (hours > maxVal) maxVal = hours;
 
         // Sparse labels: 1, 5, 10, 15, 20, 25, 30

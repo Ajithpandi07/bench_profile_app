@@ -36,6 +36,10 @@ class _TimeGoalModalState extends State<TimeGoalModal> {
     super.initState();
     _time = widget.initialTime ?? TimeOfDay.now();
     _goalController = TextEditingController(text: widget.initialGoal ?? '');
+
+    // Ensure initial values are sent back immediately
+    widget.onTimeChanged(_time);
+
     _goalController.addListener(() {
       widget.onGoalChanged(_goalController.text);
     });

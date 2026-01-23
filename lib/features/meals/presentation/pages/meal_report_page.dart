@@ -96,17 +96,21 @@ class _MealReportPageState extends State<MealReportPage> {
                                     ),
                                     TextButton(
                                       onPressed: () {
+                                        final idsToDelete = _selectedIds
+                                            .toList();
+                                        Navigator.pop(context);
                                         context.read<MealBloc>().add(
                                           DeleteMultipleMeals(
-                                            _selectedIds.toList(),
+                                            idsToDelete,
                                             _selectedDate,
                                           ),
                                         );
                                         setState(() {
                                           _isSelectionMode = false;
                                           _selectedIds.clear();
+                                          _lastLoadedMeals =
+                                              null; // Force shimmer
                                         });
-                                        Navigator.pop(context);
                                       },
                                       child: const Text(
                                         'Delete',
@@ -169,6 +173,9 @@ class _MealReportPageState extends State<MealReportPage> {
               listener: (context, state) {
                 if (state is MealConsumptionLogged) {
                   showModernSnackbar(context, 'Meal logged successfully!');
+                } else if (state is MealDeletedSuccess) {
+                  // Final success message
+                  showModernSnackbar(context, 'Meal deleted successfully');
                 } else if (state is MealOperationFailure) {
                   showModernSnackbar(context, state.message, isError: true);
                 }
@@ -196,12 +203,8 @@ class _MealReportPageState extends State<MealReportPage> {
                         if (state is MealsLoaded) {
                           mealsToShow = state.meals;
                           _lastLoadedMeals = state.meals; // Cache meals
-                        } else if (_lastLoadedMeals != null &&
-                            (state is UserLibraryLoaded ||
-                                state is UserLibraryItemSaved ||
-                                state is MealSaving ||
-                                state is MealConsumptionLogged)) {
-                          // Retain previous state while other operations happen
+                        } else if (_lastLoadedMeals != null) {
+                          // Retain previous state while other operations happen (loading, deleting, etc.)
                           mealsToShow = _lastLoadedMeals;
                         }
 
@@ -334,7 +337,7 @@ class _MealReportPageState extends State<MealReportPage> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Slidable(
-              key: Key(type),
+              key: ValueKey('${type}_${_selectedDate.millisecondsSinceEpoch}'),
               endActionPane: ActionPane(
                 motion: const ScrollMotion(),
                 extentRatio: 0.5,
@@ -349,16 +352,38 @@ class _MealReportPageState extends State<MealReportPage> {
                     label: 'Edit',
                   ),
                   SlidableAction(
-                    onPressed: (context) async {
-                      final confirm = await showDeleteConfirmationDialog(
-                        context,
+                    onPressed: (ctx) async {
+                      debugPrint('DEBUG: Slidable Delete Pressed for $type');
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                          content: Text('Swiped & Clicked Delete for $type'),
+                        ),
                       );
-                      if (confirm == true && context.mounted) {
-                        for (var m in typeMeals) {
-                          context.read<MealBloc>().add(
-                            DeleteMealLog(m.id, _selectedDate),
-                          );
-                        }
+
+                      final bloc = ctx.read<MealBloc>();
+                      final ids = typeMeals.map((m) => m.id).toList();
+                      final date = _selectedDate;
+
+                      debugPrint('DEBUG: IDs to delete: $ids');
+
+                      final confirm = await showDeleteConfirmationDialog(ctx);
+                      debugPrint('DEBUG: Confirmation result: $confirm');
+
+                      if (confirm == true) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Confirmed! Sending to DB...'),
+                          ),
+                        );
+                        debugPrint(
+                          'DEBUG: Adding DeleteMultipleMeals event to Bloc',
+                        );
+                        bloc.add(DeleteMultipleMeals(ids, date));
+                      } else {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(content: Text('Deletion Cancelled')),
+                        );
+                        debugPrint('DEBUG: Deletion cancelled');
                       }
                     },
                     backgroundColor: Colors.red,

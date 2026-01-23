@@ -27,6 +27,8 @@ class MealSaving extends MealState {} // For spinner during save
 
 class MealConsumptionLogged extends MealState {}
 
+class MealDeletedSuccess extends MealState {}
+
 class UserLibraryItemSaved extends MealState {}
 
 class MealOperationFailure extends MealState {

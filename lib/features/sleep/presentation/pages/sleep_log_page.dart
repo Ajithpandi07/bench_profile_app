@@ -72,8 +72,14 @@ class _SleepLogPageState extends State<SleepLogPage> {
         7,
         0,
       );
-      _quality = 75;
+      _quality = _calculateQuality(_startDateTime, _endDateTime);
     }
+  }
+
+  int _calculateQuality(DateTime start, DateTime end) {
+    // 8 hours = 480 minutes
+    final duration = end.difference(start).inMinutes;
+    return ((duration / 480) * 100).clamp(0, 100).toInt();
   }
 
   // Helper to restrict date selection to the valid window
@@ -154,6 +160,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
         _endDateTime = _clampDateTime(_endDateTime);
 
         _updateDuration();
+        _quality = _calculateQuality(_startDateTime, _endDateTime);
       });
     }
   }
@@ -209,6 +216,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
       }
 
       _updateDuration();
+      _quality = _calculateQuality(_startDateTime, _endDateTime);
     });
   }
 
@@ -351,6 +359,18 @@ class _SleepLogPageState extends State<SleepLogPage> {
   }
 
   void _saveLog() {
+    if (_endDateTime.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Wait, you haven\'t woken up yet! Sleep cannot end in the future.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // 1. Check for overlapping inputs against loaded logs
     final state = context.read<SleepBloc>().state;
     if (state is SleepLoaded) {
@@ -380,13 +400,15 @@ class _SleepLogPageState extends State<SleepLogPage> {
     final log = SleepLog(
       id:
           widget.existingLog?.id ??
-          DateTime.now().millisecondsSinceEpoch
-              .toString(), // Fix: Ensure ID is generated for new logs
+          DateTime.now().millisecondsSinceEpoch.toString(),
       startTime: _startDateTime,
       endTime: _endDateTime,
-      quality: _quality, // Hardcoded for now, could add slider
+      quality: _quality,
+      notes: widget.existingLog?.notes,
     );
-    context.read<SleepBloc>().add(LogSleep(log));
+    context.read<SleepBloc>().add(
+      LogSleep(log, previousLog: widget.existingLog),
+    );
   }
 
   // ... (rest of methods: _deleteLog, _getDateLabel, _buildTimeCard)

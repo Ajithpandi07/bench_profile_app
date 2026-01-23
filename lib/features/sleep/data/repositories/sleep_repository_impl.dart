@@ -22,7 +22,10 @@ class SleepRepositoryImpl implements SleepRepository {
   });
 
   @override
-  Future<Either<Failure, void>> logSleep(SleepLog log) async {
+  Future<Either<Failure, void>> logSleep(
+    SleepLog log, {
+    SleepLog? previousLog,
+  }) async {
     if (await networkInfo.isConnected) {
       try {
         // If ID is the draft ID, treat as new log (clear ID so RemoteDS generates one)
@@ -36,7 +39,7 @@ class SleepRepositoryImpl implements SleepRepository {
               )
             : log;
 
-        await remoteDataSource.logSleep(logToSave);
+        await remoteDataSource.logSleep(logToSave, previousLog: previousLog);
         return const Right(null);
       } on ServerException {
         return const Left(ServerFailure('Server Failure'));

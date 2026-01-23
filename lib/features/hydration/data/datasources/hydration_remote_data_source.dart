@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bench_profile_app/core/core.dart';
 import 'package:bench_profile_app/features/hydration/domain/entities/hydration_log.dart';
@@ -133,6 +134,10 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
       final dateId =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
+      debugPrint(
+        'DATASOURCE: Delete requested for dateId: $dateId, logId: $id',
+      );
+
       final dateDocRef = firestore
           .collection('bench_profile')
           .doc(user.uid)
@@ -143,7 +148,11 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
 
       // Fetch log to get amount for stats decrement
       final snapshot = await logRef.get();
-      if (!snapshot.exists) return;
+      if (!snapshot.exists) {
+        debugPrint('DATASOURCE: Log document not found!');
+        return;
+      }
+      debugPrint('DATASOURCE: Log found, proceeding with delete batch');
 
       final data = snapshot.data();
       final amountLiters = (data?['amountLiters'] as num?)?.toDouble() ?? 0.0;
@@ -170,12 +179,32 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
           .doc(summaryId);
 
       batch.set(summaryRef, {
-        'totalLiters': FieldValue.increment(-amountLiters),
-        'dailyBreakdown': {day.toString(): FieldValue.increment(-amountLiters)},
-        'updatedAt': FieldValue.serverTimestamp(),
+        'id': summaryId,
+        'userId': user.uid,
+        'year': year,
+        'month': month,
       }, SetOptions(merge: true));
 
+      batch.update(summaryRef, {
+        'totalLiters': FieldValue.increment(-amountLiters),
+        'dailyBreakdown.${day.toString()}': FieldValue.increment(-amountLiters),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
       await batch.commit();
+      debugPrint('DATASOURCE: Batch delete committed successfully');
+
+      // Verify deletion
+      final checkSnapshot = await logRef.get(
+        const GetOptions(source: Source.server),
+      );
+      if (checkSnapshot.exists) {
+        debugPrint(
+          'DATASOURCE: CRITICAL - Document still exists after delete commit!',
+        );
+      } else {
+        debugPrint('DATASOURCE: Verification - Document is gone.');
+      }
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -200,7 +229,7 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
           .doc(dateId)
           .collection('logs')
           .orderBy('timestamp', descending: true)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
