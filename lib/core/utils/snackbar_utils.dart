@@ -5,6 +5,7 @@ void showModernSnackbar(
   String message, {
   bool isError = false,
 }) {
+  ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Row(

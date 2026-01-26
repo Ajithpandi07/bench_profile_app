@@ -225,6 +225,8 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     Emitter<SleepState> emit,
   ) async {
     emit(SleepLoading());
+    await Future.delayed(const Duration(milliseconds: 300));
+
     // Standardized background delete.
     for (var id in event.logIds) {
       await repository.deleteSleepLog(id, event.date);

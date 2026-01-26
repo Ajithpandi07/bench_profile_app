@@ -5,6 +5,8 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/entities.dart';
 import '../bloc/bloc.dart';
 import '../../../../core/utils/snackbar_utils.dart';
+import 'meal_listing_page.dart';
+import 'meal_report_page.dart';
 
 class ReviewMealPage extends StatefulWidget {
   final String mealType;
@@ -32,6 +34,8 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
   late String _selectedMealType;
   late double _calories;
   late List<FoodItem> _currentFoods;
+  late TimeOfDay _selectedTime;
+  bool _isCustomMealSaved = false;
 
   final List<String> _mealTypes = [
     'Breakfast',
@@ -47,6 +51,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     super.initState();
     _selectedMealType = widget.mealType;
     _currentFoods = List.from(widget.selectedFoods);
+    _selectedTime = TimeOfDay.now();
 
     // Flatten selected meals into individual food items
     for (var meal in widget.selectedMeals) {
@@ -80,6 +85,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     setState(() {
       _currentFoods.remove(food);
       _calculateTotalCalories();
+      _isCustomMealSaved = false;
     });
   }
 
@@ -90,10 +96,24 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       if (newQuantity > 0) {
         _currentFoods[index] = item.copyWith(quantity: newQuantity);
         _calculateTotalCalories();
+        _isCustomMealSaved = false;
       } else if (newQuantity == 0) {
         _removeFood(item);
       }
     });
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+    );
+
+    if (time != null) {
+      setState(() {
+        _selectedTime = time;
+      });
+    }
   }
 
   void _logMeal() {
@@ -109,14 +129,25 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     // Use selected date but current time
     final now = DateTime.now();
     final date = widget.logDate ?? now;
+
     final timestamp = DateTime(
       date.year,
       date.month,
       date.day,
-      now.hour,
-      now.minute,
+      _selectedTime.hour,
+      _selectedTime.minute,
       now.second,
     );
+
+    // Prevent logging for future dates/times
+    if (timestamp.isAfter(now)) {
+      showModernSnackbar(
+        context,
+        'You cannot log meals for a future time.',
+        isError: true,
+      );
+      return;
+    }
 
     // Capture the final list of foods with updated quantities
     final log = MealLog(
@@ -146,41 +177,118 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
   void _saveCustomMeal() {
     if (_currentFoods.isEmpty) return;
 
-    final userMeal = UserMeal(
-      id: const Uuid().v4(),
-      name: 'Custom Meal',
-      foods: _currentFoods,
-      totalCalories: _currentFoods.fold(
-        0,
-        (sum, item) => sum + (item.calories * item.quantity),
-      ),
-      createdAt: DateTime.now(),
-      creatorId: '', // Handled by repository/bloc
-    );
+    final nameController = TextEditingController();
 
-    context.read<MealBloc>().add(AddUserMeal(userMeal));
-    showModernSnackbar(context, 'Custom meal saved!');
+    showDialog(
+      context: context,
+      builder: (context) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Save as Custom Meal'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter a name for this meal to save it to your library.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Meal Name',
+                      border: const OutlineInputBorder(),
+                      hintText: 'e.g. My Breakfast',
+                      errorText: errorText,
+                    ),
+                    autofocus: true,
+                    onChanged: (val) {
+                      if (errorText != null) {
+                        setState(() => errorText = null);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final name = nameController.text.trim();
+                    if (name.isEmpty) {
+                      setState(() => errorText = 'Please enter a name');
+                      return;
+                    }
+
+                    // Duplicate Check
+                    final state = context.read<MealBloc>().state;
+                    if (state is UserLibraryLoaded) {
+                      final duplicate = state.meals.any(
+                        (m) => m.name.toLowerCase() == name.toLowerCase(),
+                      );
+                      if (duplicate) {
+                        setState(
+                          () => errorText =
+                              'A meal with this name already exists',
+                        );
+                        return;
+                      }
+                    }
+
+                    final userMeal = UserMeal(
+                      id: const Uuid().v4(),
+                      name: name,
+                      foods: _currentFoods,
+                      totalCalories: _currentFoods.fold(
+                        0,
+                        (sum, item) => sum + (item.calories * item.quantity),
+                      ),
+                      createdAt: DateTime.now(),
+                      creatorId: '',
+                    );
+
+                    context.read<MealBloc>().add(AddUserMeal(userMeal));
+                    setState(() => _isCustomMealSaved = true);
+                    Navigator.pop(context); // Close dialog
+                    showModernSnackbar(context, 'Custom meal saved!');
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final timeString = DateFormat(
-      'h:mm a',
-    ).format(widget.logDate ?? DateTime.now());
+    // Determine the display time.
+    // We combine the date from widget.logDate (or now) with _selectedTime.
+    final displayDate = widget.logDate ?? DateTime.now();
+    final displayTimeDateTime = DateTime(
+      displayDate.year,
+      displayDate.month,
+      displayDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+
+    final timeString = DateFormat('h:mm a').format(displayTimeDateTime);
 
     return BlocListener<MealBloc, MealState>(
       listener: (context, state) {
         if (state is MealConsumptionLogged) {
-          showModernSnackbar(context, '${widget.mealType} logged successfully');
-          // If we were editing, we pop once (Review -> Report)
-          // If we were adding new, we pop twice (Review -> Listing -> Report)
-          if (widget.existingLogIds.isNotEmpty) {
-            Navigator.of(context).pop();
-          } else {
-            Navigator.of(context)
-              ..pop()
-              ..pop();
-          }
+          Navigator.of(context).popUntil(
+            (route) =>
+                route.settings.name == MealReportPage.routeName ||
+                route.isFirst,
+          );
         } else if (state is MealOperationFailure) {
           showModernSnackbar(context, state.message, isError: true);
         }
@@ -189,10 +297,10 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
         backgroundColor: Colors.white,
         appBar: AppBar(
           leading: const BackButton(color: Colors.black),
-          title: const Text(
+          title: Text(
             'Review Meal',
             style: TextStyle(
-              color: Color(0xFFE93448),
+              color: Theme.of(context).primaryColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -214,11 +322,11 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                 height: 50,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE93448),
+                  color: Theme.of(context).primaryColor,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFE93448).withOpacity(0.3),
+                      color: Theme.of(context).primaryColor.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -237,7 +345,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                         fontFamily: 'Outfit',
                       ),
                     ),
-                    dropdownColor: const Color(0xFFE93448),
+                    dropdownColor: Theme.of(context).primaryColor,
                     icon: const Icon(
                       Icons.keyboard_arrow_down,
                       color: Colors.white,
@@ -269,33 +377,36 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
 
               const SizedBox(height: 16),
 
-              // Time Badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      timeString,
-                      style: TextStyle(
+              // Time Badge - Now Tappable
+              GestureDetector(
+                onTap: _pickTime,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
                         color: Colors.grey.shade600,
-                        fontSize: 12,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        timeString,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -395,7 +506,9 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                                 Expanded(
                                   child: SliderTheme(
                                     data: SliderTheme.of(context).copyWith(
-                                      activeTrackColor: const Color(0xFFE93448),
+                                      activeTrackColor: Theme.of(
+                                        context,
+                                      ).primaryColor,
                                       inactiveTrackColor: Colors.grey.shade200,
                                       thumbColor: Colors.white,
                                       trackHeight: 6,
@@ -483,20 +596,26 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                       }),
 
                       const SizedBox(height: 16),
-                      // Add Food Button (Placeholder for now, just text/icon button as per design?
-                      // The user request screenshot shows "+ Add food".
-                      // Since we don't have a direct "add food" flow here easily without navigation,
-                      // I'll add the button UI but maybe it just pops or shows a message for now?
-                      // Or I can possibly try to open the search?
-                      // For now, let's make it look right.
+                      // Add Food Button
                       GestureDetector(
                         onTap: () {
-                          // Ideally open search. For now, we go back? Or show snackbar?
-                          // Let's pop with a result saying "add_more"?
-                          // Or just navigate to MealListingPage?
-                          // Current flow: MealListing -> Review.
-                          // If we pop, we lose state unless we return data.
-                          Navigator.pop(context);
+                          // Go to selection page to add more
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<MealBloc>(),
+                                child: MealListingPage(
+                                  mealType: _selectedMealType,
+                                  initialDate: widget.logDate,
+                                  initialFoods: _currentFoods,
+                                  // We pass empty initialMeals because they are flattened in _currentFoods
+                                  initialMeals: const [],
+                                  existingLogIds: widget.existingLogIds,
+                                ),
+                              ),
+                            ),
+                          );
                         },
                         child: Row(
                           children: [
@@ -506,9 +625,9 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                                 color: const Color(0xFFFFF0F1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.add,
-                                color: Color(0xFFE93448),
+                                color: Theme.of(context).primaryColor,
                                 size: 20,
                               ),
                             ),
@@ -530,55 +649,79 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
 
               const SizedBox(height: 24),
 
-              // Save as Custom Meal Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton(
-                  onPressed: _saveCustomMeal,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(
-                      color: Colors.grey,
-                    ), // Light grey border
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              if (_currentFoods.isNotEmpty) ...[
+                if (!_isCustomMealSaved) ...[
+                  // Save as Custom Meal Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton(
+                      onPressed: _saveCustomMeal,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: Colors.grey,
+                        ), // Light grey border
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Save as Custom Meal',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    'Save as Custom Meal',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                  const SizedBox(height: 16),
+                ],
+
+                // Done Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _logMeal,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Done Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _logMeal,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE93448),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              ] else
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                    child: const Text(
+                      'Go Back to add Food',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
-              ),
               const SizedBox(height: 24),
             ],
           ),

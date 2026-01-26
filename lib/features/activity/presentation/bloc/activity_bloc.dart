@@ -37,6 +37,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ) async {
     // Emit Loading to show progress/shimmer
     emit(ActivityLoading());
+    await Future.delayed(const Duration(milliseconds: 300));
+
     await Future.wait(
       event.activityIds.map((id) => repository.deleteActivity(id, event.date)),
     );

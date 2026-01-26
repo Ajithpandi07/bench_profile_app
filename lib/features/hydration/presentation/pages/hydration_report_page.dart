@@ -12,6 +12,7 @@ import '../widgets/hydration_summary_card.dart';
 import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
 
 class HydrationReportPage extends StatefulWidget {
+  static const String routeName = '/hydration-report';
   const HydrationReportPage({super.key});
 
   @override
@@ -67,6 +68,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                   onPressed: _selectedIds.isEmpty
                       ? null
                       : () {
+                          final bloc = context.read<HydrationBloc>();
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
@@ -82,8 +84,11 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                                 TextButton(
                                   onPressed: () {
                                     final idsToDelete = _selectedIds.toList();
+                                    debugPrint(
+                                      'UI: DELETE PRESSED for IDs: $idsToDelete',
+                                    );
                                     Navigator.pop(context);
-                                    context.read<HydrationBloc>().add(
+                                    bloc.add(
                                       DeleteMultipleHydrationLogs(
                                         logIds: idsToDelete,
                                         date: _selectedDate,
@@ -154,11 +159,17 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
       ),
       body: BlocListener<HydrationBloc, HydrationState>(
         listener: (context, state) {
-          debugPrint('UI: Hydration State matches: $state');
+          debugPrint('UI: Listener received state: $state');
           if (state is HydrationFailure) {
             showModernSnackbar(context, state.message, isError: true);
+          } else if (state is HydrationLogsLoaded &&
+              state.snackbarMessage != null) {
+            debugPrint('UI: Showing Snackbar from Loaded state');
+            showModernSnackbar(context, state.snackbarMessage!);
           } else if (state is HydrationDeletedSuccess) {
-            debugPrint('UI: Showing Success Snackbar');
+            debugPrint('UI: Showing Success Snackbar (Legacy)');
+            // Keep strictly for single delete if that still uses it,
+            // otherwise this branch might be dead code for bulk delete now.
             showModernSnackbar(context, 'Water log deleted successfully');
           }
         },
@@ -181,6 +192,9 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
             Expanded(
               child: BlocBuilder<HydrationBloc, HydrationState>(
                 builder: (context, state) {
+                  debugPrint(
+                    'UI: BlocBuilder Rebuild with state: $state. Bloc Hash: ${context.read<HydrationBloc>().hashCode}',
+                  );
                   if (state is HydrationLoading ||
                       state is HydrationDeletedSuccess) {
                     return const WaterListShimmer();
@@ -302,7 +316,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
     // Calculate percentage and prevent overflow/infinity
     double percentage = 0;
     if (targetLiters > 0) {
-      percentage = ((totalLiters / targetLiters) * 100);
+      percentage = ((totalLiters / targetLiters) * 100).clamp(0, 100);
     }
 
     String statusTitle;
@@ -441,11 +455,22 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
           ],
         ),
         child: GestureDetector(
+          onLongPress: () {
+            if (!_isSelectionMode) {
+              setState(() {
+                _isSelectionMode = true;
+                _selectedIds.add(log.id);
+              });
+            }
+          },
           onTap: () {
             if (_isSelectionMode) {
               setState(() {
                 if (_selectedIds.contains(log.id)) {
                   _selectedIds.remove(log.id);
+                  if (_selectedIds.isEmpty) {
+                    _isSelectionMode = false;
+                  }
                 } else {
                   _selectedIds.add(log.id);
                 }

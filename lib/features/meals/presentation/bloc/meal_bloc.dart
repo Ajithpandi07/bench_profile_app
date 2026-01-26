@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:bloc/bloc.dart';
 import '../../domain/repositories/meal_repository.dart';
 import 'meal_event.dart';
@@ -27,10 +26,10 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     DeleteMultipleMeals event,
     Emitter<MealState> emit,
   ) async {
-    debugPrint(
-      'BLOC: _onDeleteMultipleMeals starting for ${event.mealLogIds.length} items',
-    );
     emit(MealLoading());
+    // debugPrint('BLOC: Starting DeleteMultipleMeals for ${event.mealLogIds.length} items');
+    await Future.delayed(const Duration(milliseconds: 300));
+
     final result = await repository.deleteMultipleMealLogs(
       event.mealLogIds,
       event.date,
@@ -38,12 +37,12 @@ class MealBloc extends Bloc<MealEvent, MealState> {
 
     result.fold(
       (failure) {
-        debugPrint('BLOC: Deletion FAILED: ${failure.message}');
+        // debugPrint('BLOC: Deletion FAILED: ${failure.message}');
         emit(MealOperationFailure(failure.message));
         add(LoadMealsForDate(event.date));
       },
       (success) {
-        debugPrint('BLOC: Deletion SUCCESS');
+        // debugPrint('BLOC: Deletion SUCCESS, reloading logs');
         emit(MealDeletedSuccess());
         add(LoadMealsForDate(event.date));
       },
@@ -107,10 +106,11 @@ class MealBloc extends Bloc<MealEvent, MealState> {
   ) async {
     emit(MealLoading());
     final result = await repository.getMealsForDate(event.date);
-    result.fold(
-      (failure) => emit(MealOperationFailure(failure.message)),
-      (meals) => emit(MealsLoaded(meals, event.date)),
-    );
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      meals,
+    ) {
+      emit(MealsLoaded(meals, event.date));
+    });
   }
 
   Future<void> _onLogMeal(LogMealEvent event, Emitter<MealState> emit) async {
@@ -119,7 +119,11 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(MealConsumptionLogged());
+      emit(
+        MealConsumptionLogged(
+          message: '${event.log.mealType} added successfully',
+        ),
+      );
       // Optionally reload the day's meals
       add(LoadMealsForDate(event.log.timestamp));
     });
@@ -238,7 +242,11 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(MealConsumptionLogged());
+      emit(
+        MealConsumptionLogged(
+          message: '${event.newLog.mealType} updated successfully',
+        ),
+      );
       add(LoadMealsForDate(event.newLog.timestamp));
     });
   }

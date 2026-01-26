@@ -199,28 +199,78 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     // Process Average
                     final processedItems = _processChartData(state.stats);
 
-                    // All over average for the period
+                    // All over average for the period (only considering active entries)
                     if (state.stats.isNotEmpty) {
-                      final totalLiters = state.stats.fold(
+                      final totalValue = state.stats.fold(
                         0.0,
                         (sum, e) => sum + e.totalLiters,
                       );
-                      final avg = totalLiters / state.stats.length;
+                      final avg = totalValue / state.stats.length;
                       avgLiters = '${(avg * 1000).toInt()} ml';
                     }
 
                     // Process Goals
-                    int achieved = state.stats
-                        .where((e) => e.totalLiters >= _targetLiters)
-                        .length;
-                    int totalDays = 7;
-                    if (_selectedView == 'Monthly')
-                      totalDays = 30;
-                    else if (_selectedView == 'Yearly')
-                      totalDays = 12;
+                    int timeAchieved = 0;
+                    int waterAchieved = 0;
+                    int totalDaysCount = 0;
 
-                    waterGoal = '$achieved/$totalDays';
-                    timeGoal = '$achieved/$totalDays';
+                    if (_selectedView == 'Yearly') {
+                      totalDaysCount = 12;
+                      // Calculate met months
+                      for (int i = 1; i <= 12; i++) {
+                        final monthStats = state.stats.where(
+                          (e) =>
+                              e.date.month == i &&
+                              e.date.year == DateTime.now().year,
+                        );
+                        if (monthStats.isNotEmpty) {
+                          // Time Goal: Month has ANY activity
+                          final hasActivity = monthStats.any(
+                            (e) => e.totalLiters > 0,
+                          );
+                          if (hasActivity) timeAchieved++;
+
+                          final totalLiters = monthStats.fold(
+                            0.0,
+                            (sum, e) => sum + e.totalLiters,
+                          );
+                          // Calculate average based on active days (entries > 0)
+                          final activeDays = monthStats
+                              .where((e) => e.totalLiters > 0)
+                              .length;
+                          final avg = activeDays > 0
+                              ? totalLiters / activeDays
+                              : 0.0;
+
+                          if (avg >= _targetLiters) {
+                            waterAchieved++;
+                          }
+                        }
+                      }
+                    } else {
+                      // Weekly or Monthly - Count Days
+                      // Time Goal: Any intake > 0
+                      timeAchieved = state.stats
+                          .where((e) => e.totalLiters > 0)
+                          .length;
+
+                      // Water Goal: Intake >= Target
+                      waterAchieved = state.stats
+                          .where((e) => e.totalLiters >= _targetLiters)
+                          .length;
+
+                      if (_selectedView == 'Monthly') {
+                        totalDaysCount = DateUtils.getDaysInMonth(
+                          DateTime.now().year,
+                          DateTime.now().month,
+                        );
+                      } else {
+                        totalDaysCount = 7;
+                      }
+                    }
+
+                    waterGoal = '$waterAchieved/$totalDaysCount';
+                    timeGoal = '$timeAchieved/$totalDaysCount';
 
                     // Process Chart
                     chartData = processedItems;
@@ -231,9 +281,11 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     // Ensure sensible minimum and nice rounding for grid lines
                     // Round up to nearest integer for clean quarters (0.25, 0.5, 0.75 steps)
                     if (calculatedMax < 2.0) calculatedMax = 2.0;
+                    // Add buffer
+                    calculatedMax = calculatedMax * 1.2;
                     maxVal = calculatedMax.ceilToDouble();
                     // Add buffer if close to top
-                    if (maxVal - calculatedMax < 0.2) maxVal += 1.0;
+                    // if (maxVal - calculatedMax < 0.2) maxVal += 1.0;
                   }
 
                   // Calculate selected value
@@ -268,51 +320,60 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     }
                   }
 
+                  final now = DateTime.now();
+                  String dateRangeText = '';
+                  if (_selectedView == 'Weekly') {
+                    final monday = now.subtract(
+                      Duration(days: now.weekday - 1),
+                    );
+                    final sunday = monday.add(const Duration(days: 6));
+                    dateRangeText =
+                        '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
+                  } else if (_selectedView == 'Monthly') {
+                    dateRangeText = DateFormat('MMMM yyyy').format(now);
+                  } else {
+                    dateRangeText = DateFormat('yyyy').format(now);
+                  }
+
                   return Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Average Section (New)
+                      Column(
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$_selectedView Overview',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                              Text(
-                                'Avg: $avgLiters',
-                                style: TextStyle(
-                                  color: Theme.of(context).hintColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            dateRangeText,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                            ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              if (selectedLabel.isNotEmpty)
-                                Text(
-                                  selectedLabel,
-                                  style: TextStyle(
-                                    color: Theme.of(context).hintColor,
-                                    fontSize: 12,
+                          const SizedBox(height: 12),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: (avgLiters.split(' ')[0]),
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textDark,
                                   ),
                                 ),
-                              Text(
-                                '${(selectedValue * 1000).toInt()} ml',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
+                                const TextSpan(
+                                  text: ' ml',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Average Hydration',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
                           ),
                         ],
                       ),
@@ -337,6 +398,46 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                               icon: Icons.water_drop,
                               iconColor: Colors.blue,
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_selectedView == 'Yearly'
+                                ? 'Yearly'
+                                : _selectedView == 'Monthly'
+                                ? 'Monthly'
+                                : 'Weekly'} Overview',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (selectedLabel.isNotEmpty)
+                                Text(
+                                  selectedLabel,
+                                  style: TextStyle(
+                                    color: Theme.of(context).hintColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              Text(
+                                '${(selectedValue * 1000).toInt()} ml',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

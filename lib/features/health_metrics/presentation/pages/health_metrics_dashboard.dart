@@ -323,6 +323,10 @@ class _HomeTab extends StatelessWidget {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
+                                                settings: const RouteSettings(
+                                                  name:
+                                                      MealReportPage.routeName,
+                                                ),
                                                 builder: (context) =>
                                                     BlocProvider.value(
                                                       value: sl<MealBloc>(),
@@ -354,6 +358,10 @@ class _HomeTab extends StatelessWidget {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
+                                                settings: const RouteSettings(
+                                                  name: HydrationReportPage
+                                                      .routeName,
+                                                ),
                                                 builder: (context) =>
                                                     BlocProvider.value(
                                                       value:
@@ -387,6 +395,10 @@ class _HomeTab extends StatelessWidget {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
+                                                settings: const RouteSettings(
+                                                  name: ActivityReportPage
+                                                      .routeName,
+                                                ),
                                                 builder: (context) => MultiBlocProvider(
                                                   providers: [
                                                     BlocProvider<ActivityBloc>(
@@ -440,6 +452,9 @@ class _HomeTab extends StatelessWidget {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
+                                                settings: const RouteSettings(
+                                                  name: SleepPage.routeName,
+                                                ),
                                                 builder: (context) =>
                                                     BlocProvider<SleepBloc>(
                                                       create: (context) =>

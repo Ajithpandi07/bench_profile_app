@@ -25,6 +25,7 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
   int _selectedPresetIndex = -1;
   async.Timer? _timer;
   bool _isManualTime = false;
+  bool _isProcessing = false;
 
   final List<int> _presets = [50, 100, 250, 500];
 
@@ -137,9 +138,10 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
       body: BlocListener<HydrationBloc, HydrationState>(
         listener: (context, state) {
           if (state is HydrationSuccess) {
-            showModernSnackbar(context, 'Hydration logged remotely!');
+            showModernSnackbar(context, 'Hydration logged Successfully!');
             Navigator.pop(context, true);
           } else if (state is HydrationFailure) {
+            setState(() => _isProcessing = false);
             showModernSnackbar(context, state.message, isError: true);
           }
         },
@@ -271,13 +273,32 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
                       const SizedBox(height: 16),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: Text(
-                          '$_amountMl ml',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF131313),
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '$_amountMl ml',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _amountMl > 800
+                                    ? Colors.orange.shade800
+                                    : const Color(0xFF131313),
+                              ),
+                            ),
+                            if (_amountMl > 800)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'High intake warning',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -362,7 +383,9 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: isLoading ? null : _saveData,
+                          onPressed: (isLoading || _isProcessing)
+                              ? null
+                              : _saveData,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -444,7 +467,9 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
     }
   }
 
-  void _saveData() {
+  Future<void> _saveData() async {
+    if (_isProcessing) return;
+
     final volumeLiters = _amountMl / 1000.0;
     if (volumeLiters <= 0) {
       showModernSnackbar(context, 'Please enter a valid amount', isError: true);
@@ -460,6 +485,53 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
       return;
     }
 
+    setState(() => _isProcessing = true);
+
+    // High intake alert behavior
+    if (volumeLiters > 0.8) {
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('High Water Intake'),
+            ],
+          ),
+          content: Text(
+            'You are about to log ${volumeLiters.toStringAsFixed(2)}L of water at once. This is higher than common single servings. Do you want to continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Confirm',
+                style: TextStyle(
+                  color: Color(0xFFEE374D),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) {
+        if (mounted) {
+          setState(() => _isProcessing = false);
+        }
+        return;
+      }
+    }
+
     final log = HydrationLog(
       id:
           widget.logToEdit?.id ??
@@ -467,11 +539,14 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
       amountLiters: volumeLiters,
       timestamp: _selectedDate,
       beverageType: 'Water',
-      userId:
-          widget.logToEdit?.userId ??
-          '', // Preserve original user ID or let empty be handled (auth usually overrides)
+      userId: widget.logToEdit?.userId ?? '', // Preserve original user ID
     );
 
-    context.read<HydrationBloc>().add(LogHydration(log));
+    if (mounted) {
+      context.read<HydrationBloc>().add(LogHydration(log));
+      // No need to reset _isProcessing here as HydrationSaving state will take over
+      // and eventually HydrationSuccess will pop the page.
+      // If failure happens, BlocListener will show error and button will re-enable.
+    }
   }
 }

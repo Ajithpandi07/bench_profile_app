@@ -168,13 +168,29 @@ class _QuickLogPageState extends State<QuickLogPage> {
   }
 
   void _logMeal() {
+    // Check future date
+    final date = widget.initialDate ?? DateTime.now();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDate = DateTime(date.year, date.month, date.day);
+
+    if (selectedDate.isAfter(today)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot log meals for future date or time.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Logic: calculate total from foods.
     // For now, let's treat it as: Items are specific, and total calories is the slider value (user can override).
 
     final log = MealLog(
       id: const Uuid().v4(),
       userId: '',
-      timestamp: widget.initialDate ?? DateTime.now(),
+      timestamp: date,
       mealType: _selectedMealType,
       items: _addedFoods,
       userMeals: const [],

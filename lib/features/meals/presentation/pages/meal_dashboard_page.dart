@@ -38,7 +38,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
         backgroundColor: Colors.white,
         appBar: AppBar(
           title: const Text(
-            'Food',
+            'Meal',
             style: TextStyle(
               color: AppTheme.primaryColor,
               fontWeight: FontWeight.bold,
@@ -91,8 +91,6 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
   Widget _buildStatsContent() {
     final now = DateTime.now();
     List<DashboardChartItem> chartItems = [];
-    double totalCaloriesInView = 0;
-    int daysWithData = 0;
     double maxVal = 100; // Minimum scale
 
     // Prepare data based on view
@@ -103,10 +101,6 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
         final summary = _findSummaryForDate(date);
         final val = summary?.totalCalories ?? 0.0;
 
-        if (val > 0) {
-          totalCaloriesInView += val;
-          daysWithData++;
-        }
         if (val > maxVal) maxVal = val;
 
         chartItems.add(
@@ -127,15 +121,11 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
         final summary = _findSummaryForDate(date);
         final val = summary?.totalCalories ?? 0.0;
 
-        if (val > 0) {
-          totalCaloriesInView += val;
-          daysWithData++;
-        }
         if (val > maxVal) maxVal = val;
 
         chartItems.add(
           DashboardChartItem(
-            label: i.toString(),
+            label: (i == 1 || i % 5 == 0) ? i.toString() : '',
             value: val,
             isHighlight:
                 date.year == _selectedDate.year &&
@@ -145,32 +135,21 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
         );
       }
     } else {
-      // 12 months
+      // 12 months - Display Total for month but calculate average separately
       for (int i = 1; i <= 12; i++) {
-        // Aggregate for month
         double monthTotal = 0;
-        // Inefficient but simple: filter list
         for (var s in _allSummaries) {
           if (s.date.year == now.year && s.date.month == i) {
             monthTotal += s.totalCalories;
           }
         }
 
-        // Calculate average daily calories for that month
-        int days = DateUtils.getDaysInMonth(now.year, i);
-        double monthAvg = monthTotal / days;
-
-        if (monthTotal > 0) {
-          totalCaloriesInView += monthTotal;
-          daysWithData += days;
-        }
-
-        if (monthAvg > maxVal) maxVal = monthAvg;
+        if (monthTotal > maxVal) maxVal = monthTotal;
 
         chartItems.add(
           DashboardChartItem(
             label: DateFormat('MMM').format(DateTime(now.year, i))[0],
-            value: monthAvg,
+            value: monthTotal,
             isHighlight:
                 i == _selectedDate.month && now.year == _selectedDate.year,
           ),
@@ -178,13 +157,89 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
       }
     }
 
-    // Dynamic max scale rounding
+    // Dynamic max scale rounding: Add 20% buffer then round to nearest 500
+    // This ensures labels don't get cut off at the top
+    maxVal = maxVal * 1.2;
     maxVal = ((maxVal + 499) ~/ 500) * 500.0;
 
-    // Average Kcal moved to selection logic below
-    double averageKcal = daysWithData > 0
-        ? totalCaloriesInView / daysWithData
-        : 0;
+    // Calculate goals
+    int activeDays = 0;
+    int goalMetDays = 0;
+    int totalDaysInPeriod = 0;
+    const double targetDailyKcal = 2000.0;
+    double averageKcal = 0;
+
+    if (_allSummaries.isNotEmpty) {
+      DateTime rangeStart;
+      DateTime rangeEnd;
+      if (_selectedView == '7 days') {
+        rangeStart = DateUtils.dateOnly(
+          now.subtract(Duration(days: now.weekday - 1)),
+        );
+        rangeEnd = rangeStart.add(const Duration(days: 6));
+        totalDaysInPeriod = 7;
+      } else if (_selectedView == 'Monthly') {
+        rangeStart = DateTime(now.year, now.month, 1);
+        rangeEnd = DateTime(
+          now.year,
+          now.month,
+          DateUtils.getDaysInMonth(now.year, now.month),
+        );
+        totalDaysInPeriod = rangeEnd.day;
+      } else {
+        rangeStart = DateTime(now.year, 1, 1);
+        rangeEnd = DateTime(now.year, 12, 31);
+        totalDaysInPeriod = 12; // months reached for yearly
+      }
+
+      final periodSummaries = _allSummaries.where((s) {
+        final d = DateUtils.dateOnly(s.date);
+        return (d.isAtSameMomentAs(rangeStart) || d.isAfter(rangeStart)) &&
+            (d.isAtSameMomentAs(rangeEnd) || d.isBefore(rangeEnd));
+      }).toList();
+
+      if (_selectedView == 'Yearly') {
+        // For yearly, we count months that had any activity
+        final activeMonths = <int>{};
+        for (var s in periodSummaries) {
+          if (s.totalCalories > 0) {
+            activeMonths.add(s.date.month);
+          }
+        }
+        activeDays = activeMonths.length;
+
+        // Count months where monthly total met (days * 2000)
+        int metMonths = 0;
+        for (int m = 1; m <= 12; m++) {
+          final mTotal = periodSummaries
+              .where((s) => s.date.month == m)
+              .fold(0.0, (sum, s) => sum + s.totalCalories);
+          if (mTotal >=
+              (DateUtils.getDaysInMonth(now.year, m) * targetDailyKcal))
+            metMonths++;
+        }
+        goalMetDays = metMonths;
+      } else {
+        activeDays = periodSummaries.where((s) => s.totalCalories > 0).length;
+        goalMetDays = periodSummaries
+            .where((s) => s.totalCalories >= targetDailyKcal)
+            .length;
+      }
+
+      if (periodSummaries.isNotEmpty) {
+        // Filter for active days to avoid dragging down average with 0s if they exist in summaries
+        final activeSummaries = periodSummaries.where(
+          (s) => s.totalCalories > 0,
+        );
+        if (activeSummaries.isNotEmpty) {
+          final total = activeSummaries.fold(
+            0.0,
+            (sum, s) => sum + s.totalCalories,
+          );
+          averageKcal = total / activeSummaries.length;
+        }
+      }
+    }
 
     // Calculate selected value
     double selectedValue = 0;
@@ -205,13 +260,93 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
       selectedLabel = DateFormat('d MMM').format(_selectedDate);
     }
 
+    String dateRangeText = '';
+    if (_selectedView == 'Weekly') {
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final sunday = monday.add(const Duration(days: 6));
+      dateRangeText =
+          '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
+    } else if (_selectedView == 'Monthly') {
+      dateRangeText = DateFormat('MMMM yyyy').format(now);
+    } else {
+      dateRangeText = DateFormat('yyyy').format(now);
+    }
+
     return Column(
       children: [
+        // Average Section (New)
+        Column(
+          children: [
+            Text(
+              dateRangeText,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: averageKcal.toStringAsFixed(0),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const TextSpan(
+                    text: ' kcal',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Average Kcal',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+
+        // Goal Cards
+        Row(
+          children: [
+            Expanded(
+              child: DashboardGoalCard(
+                title: 'TIME GOAL',
+                value: '$activeDays/$totalDaysInPeriod',
+                icon: Icons.access_time_filled,
+                iconColor: Colors.pinkAccent,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: DashboardGoalCard(
+                title: 'KCAL GOAL',
+                value: '$goalMetDays/$totalDaysInPeriod',
+                icon: Icons.restaurant,
+                iconColor: Colors.orange,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 32),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '$_selectedView Overview',
+              '${_selectedView == 'Yearly'
+                  ? 'Yearly'
+                  : _selectedView == 'Monthly'
+                  ? 'Monthly'
+                  : 'Weekly'} Overview',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -235,31 +370,6 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 32),
-
-        // Goal Cards
-        Row(
-          children: [
-            Expanded(
-              child: DashboardGoalCard(
-                title: 'TIME GOAL',
-                value: '5/7',
-                icon: Icons.access_time_filled,
-                iconColor: Colors.pinkAccent,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: DashboardGoalCard(
-                title: 'KCAL GOAL',
-                value: '${(averageKcal / 2000 * 100).toStringAsFixed(0)}%',
-                icon: Icons.restaurant,
-                iconColor: Colors.orange,
-              ),
             ),
           ],
         ),

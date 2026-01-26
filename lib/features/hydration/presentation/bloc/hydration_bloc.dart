@@ -1,7 +1,5 @@
 import 'package:bloc/bloc.dart';
-import 'package:flutter/foundation.dart';
-import 'package:dartz/dartz.dart';
-import 'package:bench_profile_app/core/error/failures.dart';
+
 import '../../domain/domain.dart';
 import 'hydration_event.dart';
 import 'hydration_state.dart';
@@ -22,37 +20,19 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     DeleteMultipleHydrationLogs event,
     Emitter<HydrationState> emit,
   ) async {
-    debugPrint(
-      'BLOC: _onDeleteMultipleHydrationLogs called for ${event.logIds.length} items',
-    );
+    // Always emit loading to ensure UI feedback
     emit(HydrationLoading());
-    // Use sequential execution to prevent potential Firestore contention on parent docs
-    final results = <Either<Failure, void>>[];
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Perform deletion
     for (var id in event.logIds) {
-      results.add(await repository.deleteHydrationLog(id, event.date));
+      await repository.deleteHydrationLog(id, event.date);
     }
 
-    // Check if any failed
-    final failure = results.firstWhere(
-      (element) => element.isLeft(),
-      orElse: () => const Right(null),
-    );
+    emit(HydrationDeletedSuccess());
 
-    await failure.fold(
-      (f) {
-        debugPrint('BLOC: Deletion failed: ${f.message}');
-        emit(HydrationFailure(f.message));
-        add(LoadHydrationLogs(event.date));
-      },
-      (_) async {
-        debugPrint('BLOC: Deletion success');
-        emit(HydrationDeletedSuccess());
-        // Small delay to allow UI to show snackbar and DB to propagate
-        await Future.delayed(const Duration(milliseconds: 800));
-        debugPrint('BLOC: Adding LoadHydrationLogs event after delay');
-        add(LoadHydrationLogs(event.date));
-      },
-    );
+    // Reload logs
+    add(LoadHydrationLogs(event.date));
   }
 
   Future<void> _onDeleteAllHydrationForDate(
@@ -88,11 +68,9 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     LoadHydrationLogs event,
     Emitter<HydrationState> emit,
   ) async {
-    debugPrint('BLOC: _onLoadHydrationLogs called for date: ${event.date}');
     emit(HydrationLoading());
     final result = await repository.getHydrationLogsForDate(event.date);
     result.fold((failure) => emit(HydrationFailure(failure.message)), (logs) {
-      debugPrint('BLOC: Hydration logs loaded: ${logs.length}');
       emit(HydrationLogsLoaded(logs, event.date));
     });
   }

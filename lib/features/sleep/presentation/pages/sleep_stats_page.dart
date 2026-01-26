@@ -91,9 +91,6 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                   onSelected: (view) {
                     setState(() {
                       _selectedView = view;
-                      // Reset selected date to today when view changes,
-                      // or keep it if it falls within range?
-                      // Simplest UX: Reset to today or nearest valid date.
                       _selectedDate = DateTime.now();
                     });
                     _loadStats();
@@ -107,17 +104,13 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                   _getDateRangeText(),
                   style: TextStyle(
                     color: Theme.of(context).hintColor,
-                    fontSize: 12,
+                    fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
                 // Main Avg Sleep
                 _buildMainAverage(logs),
-                const SizedBox(height: 32),
-
-                // Selected Date Value Display (Overview Row)
-                _buildOverviewRow(logs),
                 const SizedBox(height: 32),
 
                 // Avg Bedtime / WakeUp
@@ -142,6 +135,10 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 32),
+
+                // Selected Date Value Display (Overview Row)
+                _buildOverviewRow(logs),
                 const SizedBox(height: 32),
 
                 // Chart
@@ -196,52 +193,60 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
   }
 
   Widget _buildMainAverage(List<SleepLog> logs) {
-    // Determine which date's log is currently selected
-    // If weekly, _selectedDate might be one specific day.
-
-    // Default value
     int h = 0;
     int m = 0;
 
-    // Logic to find log for _selectedDate
-    // This depends on how _selectedDate works. In chart onBarTap, we set _selectedDate.
-    // So we just find the log for that date.
-
     if (logs.isNotEmpty) {
-      final groupedLogs = _groupLogsByDate(logs);
+      // 1. Filter logs to current view range
+      final now = DateTime.now();
+      DateTime start;
+      DateTime end;
 
-      if (_selectedView == 'Weekly' || _selectedView == 'Monthly') {
-        final key = DateFormat('yyyy-MM-dd').format(_selectedDate);
-        final dayLogs = groupedLogs[key] ?? [];
-        if (dayLogs.isNotEmpty) {
-          final totalMin = dayLogs.fold(
-            0,
-            (sum, l) => sum + l.duration.inMinutes,
-          );
-          h = totalMin ~/ 60;
-          m = totalMin % 60;
-        }
-      } else {
-        // Yearly - Average for month
-        final monthLogs = logs.where(
-          (l) =>
-              l.endTime.year == _selectedDate.year &&
-              l.endTime.month == _selectedDate.month,
+      if (_selectedView == 'Weekly') {
+        int daysToSubtract = now.weekday - 1;
+        start = DateUtils.dateOnly(
+          now.subtract(Duration(days: daysToSubtract)),
         );
-        if (monthLogs.isNotEmpty) {
-          // Group these by actual day to get accurate nightly averages
-          final Map<int, int> daysTotal = {};
-          for (var l in monthLogs) {
-            daysTotal[l.endTime.day] =
-                (daysTotal[l.endTime.day] ?? 0) + l.duration.inMinutes;
-          }
-          final totalMinutes = daysTotal.values.fold(
-            0,
-            (sum, min) => sum + min,
-          );
-          final avg = totalMinutes ~/ daysTotal.length;
-          h = avg ~/ 60;
-          m = avg % 60;
+        end = start.add(
+          const Duration(days: 7),
+        ); // Exclusive end for comparison??
+        // Let's use inclusive logic or DateUtils
+        end = DateTime(start.year, start.month, start.day + 7);
+      } else if (_selectedView == 'Monthly') {
+        start = DateTime(now.year, now.month, 1);
+        end = DateTime(now.year, now.month + 1, 1); // Start of next month
+      } else {
+        start = DateTime(now.year, 1, 1);
+        end = DateTime(now.year + 1, 1, 1);
+      }
+
+      final periodLogs = logs
+          .where(
+            (l) =>
+                l.endTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+                l.endTime.isBefore(end),
+          )
+          .toList();
+
+      if (periodLogs.isNotEmpty) {
+        // 2. Group by day to get daily totals
+        final Map<String, int> dailyTotals = {};
+        for (var log in periodLogs) {
+          final key = DateFormat('yyyy-MM-dd').format(log.endTime);
+          dailyTotals[key] = (dailyTotals[key] ?? 0) + log.duration.inMinutes;
+        }
+
+        // 3. Filter active days (already implied since we only have logs)
+        // If dailyTotal is 0 (impossible from logs), we'd filter.
+        final activeDailyTotals = dailyTotals.values
+            .where((v) => v > 0)
+            .toList();
+
+        if (activeDailyTotals.isNotEmpty) {
+          final grandTotal = activeDailyTotals.fold(0, (sum, val) => sum + val);
+          final avgMinutes = grandTotal ~/ activeDailyTotals.length;
+          h = avgMinutes ~/ 60;
+          m = avgMinutes % 60;
         }
       }
     }
@@ -496,6 +501,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
     }
 
     // Round maxVal up to even reasonable number
+    maxVal = maxVal * 1.2;
     maxVal = (maxVal.ceil() + 1).toDouble();
     if (maxVal < 8) maxVal = 8;
 

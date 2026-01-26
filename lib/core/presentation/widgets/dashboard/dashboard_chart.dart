@@ -37,6 +37,10 @@ class DashboardChart extends StatelessWidget {
 
   final bool fitAll;
 
+  // Reserved space for labels and highlights
+  static const double _topPadding = 24.0;
+  static const double _bottomPadding = 32.0;
+
   @override
   Widget build(BuildContext context) {
     // Safety check for empty items
@@ -56,23 +60,29 @@ class DashboardChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Y-Axis
-          Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(gridLines, (index) {
-              final value = safeMaxVal - (step * index);
-              final label = formatValue != null
-                  ? formatValue!(value)
-                  : value.toInt().toString();
-              return Text(
-                label,
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              );
-            }),
+          Padding(
+            padding: const EdgeInsets.only(
+              top: _topPadding,
+              bottom: _bottomPadding,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(gridLines, (index) {
+                final value = safeMaxVal - (step * index);
+                final label = formatValue != null
+                    ? formatValue!(value)
+                    : value.toInt().toString();
+                return Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              }),
+            ),
           ),
           const SizedBox(width: 12),
           // Chart Area
@@ -80,23 +90,29 @@ class DashboardChart extends StatelessWidget {
             child: Stack(
               children: [
                 // Grid Background
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(gridLines, (index) {
-                    return Row(
-                      children: List.generate(
-                        40, // Number of dashed lines
-                        (i) => Expanded(
-                          child: Container(
-                            color: i % 2 == 0
-                                ? Colors.grey.shade300
-                                : Colors.transparent,
-                            height: 1,
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: _topPadding,
+                    bottom: _bottomPadding,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(gridLines, (index) {
+                      return Row(
+                        children: List.generate(
+                          40, // Number of dashed lines
+                          (i) => Expanded(
+                            child: Container(
+                              color: i % 2 == 0
+                                  ? Colors.grey.shade300
+                                  : Colors.transparent,
+                              height: 1,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    }),
+                  ),
                 ),
                 // Bars
                 Positioned.fill(
@@ -171,6 +187,8 @@ class DashboardChart extends StatelessWidget {
     double safeMaxVal, {
     bool isScrollable = false,
   }) {
+    // Calculate available height for bars
+    final plottingHeight = chartHeight - _topPadding - _bottomPadding;
     final heightFactor = (item.value / safeMaxVal).clamp(0.0, 1.0);
 
     // Dynamic width
@@ -181,9 +199,8 @@ class DashboardChart extends StatelessWidget {
       else
         barWidth = 20;
     } else {
-      // Expanded view, let width be flexible but cap it visually
-      // if fewer items (e.g. 7), bar looks thick. ok.
-      if (items.length > 10) barWidth = 12; // Yearly view
+      // Expanded view
+      if (items.length > 10) barWidth = 12;
     }
 
     final displayValue = formatValue != null
@@ -213,39 +230,45 @@ class DashboardChart extends StatelessWidget {
             ),
           )
         else
-          const SizedBox(height: 20), // Placeholder space
+          // If not highlight, we don't necessarily need to reserve the full top padding space
+          // ABOVE the bar stack, because the bar stack grows from bottom.
+          // But if we want the bar to be clickable or consistent...
+          // Actually, MainAxisAlignment.end pushes everything down.
+          // We just need to make sure we don't exceed the chart area.
+          const SizedBox.shrink(),
 
         Container(
           width: barWidth,
-          height:
-              (chartHeight * 0.7) *
-              heightFactor, // Use % of total chart height for bars
-          // Note: The original had fixed height 180. Here we use prop of chartHeight
-          // Let's settle on a max bar height logic.
-          // IF chartHeight is 250, - labels etc. relative.
-          // Let's use simple flexible container or fixed height calculation.
-          // Best is to use height factor on a constrained container.
-          constraints: BoxConstraints(
-            maxHeight: chartHeight * 0.75, // Leave room for labels
-            minHeight: 0,
-          ),
+          height: plottingHeight * heightFactor,
           decoration: BoxDecoration(
             color: item.isHighlight ? highlightColor : barBackgroundColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
           ),
         ),
-        const SizedBox(height: 8),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            item.label,
-            style: TextStyle(
-              color: item.isHighlight ? highlightColor : Colors.grey.shade400,
-              fontSize: 10,
-              fontWeight: item.isHighlight
-                  ? FontWeight.bold
-                  : FontWeight.normal,
-            ),
+
+        // Fixed height for Label area to align with Grid Bottom
+        SizedBox(
+          height: _bottomPadding,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  item.label,
+                  style: TextStyle(
+                    color: item.isHighlight
+                        ? highlightColor
+                        : Colors.grey.shade400,
+                    fontSize: 10,
+                    fontWeight: item.isHighlight
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

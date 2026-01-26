@@ -18,6 +18,7 @@ import '../../../health_metrics/presentation/bloc/health_metrics_event.dart';
 import '../../../health_metrics/presentation/bloc/health_metrics_state.dart';
 
 class ActivityReportPage extends StatefulWidget {
+  static const String routeName = '/activity-report';
   const ActivityReportPage({super.key});
 
   @override
@@ -430,6 +431,14 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
     final isSelected = _selectedIds.contains(activity.id);
 
     return GestureDetector(
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedIds.add(activity.id);
+          });
+        }
+      },
       onTap: () {
         if (_isSelectionMode) {
           setState(() {

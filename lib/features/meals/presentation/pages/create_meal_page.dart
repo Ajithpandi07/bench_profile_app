@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/utils/snackbar_utils.dart';
 import '../../domain/entities/entities.dart';
 import '../bloc/bloc.dart';
 import '../bloc/meal_event.dart'; // Import events
@@ -132,17 +133,34 @@ class _CreateMealPageState extends State<CreateMealPage> {
 
   void _saveMeal() {
     if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a meal name')));
+      showModernSnackbar(context, 'Please enter a meal name', isError: true);
       return;
     }
 
     if (_addedFoods.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one food')),
+      showModernSnackbar(
+        context,
+        'Please add at least one food',
+        isError: true,
       );
       return;
+    }
+
+    // Check for duplicate name
+    final state = context.read<MealBloc>().state;
+    if (state is UserLibraryLoaded) {
+      final duplicate = state.meals.any(
+        (m) =>
+            m.name.toLowerCase() == _nameController.text.trim().toLowerCase(),
+      );
+      if (duplicate) {
+        showModernSnackbar(
+          context,
+          'A meal with this name already exists. Please choose another name.',
+          isError: true,
+        );
+        return;
+      }
     }
 
     // Recalculate total calories based on quantities

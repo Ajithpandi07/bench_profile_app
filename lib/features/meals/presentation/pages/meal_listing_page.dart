@@ -22,7 +22,10 @@ class MealListingPage extends StatefulWidget {
     this.initialDate,
     this.initialFoods,
     this.initialMeals,
+    this.existingLogIds = const [],
   });
+
+  final List<String> existingLogIds;
 
   @override
   State<MealListingPage> createState() => _MealListingPageState();
@@ -93,6 +96,7 @@ class _MealListingPageState extends State<MealListingPage>
                 ? (context.read<MealBloc>().state as UserLibraryLoaded).foods
                 : [],
             logDate: widget.initialDate,
+            existingLogIds: widget.existingLogIds,
           ),
         ),
       ),
@@ -386,13 +390,11 @@ class _MealListingPageState extends State<MealListingPage>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: isSelected
-            ? const Color(0xFFFFF0F1)
-            : Colors.grey.shade50, // Light red tint if selected
+        color: isSelected ? const Color(0xFFFFF0F1) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: isSelected
             ? Border.all(color: const Color(0xFFE93448), width: 1.5)
-            : Border.all(color: Colors.transparent),
+            : Border.all(color: Colors.grey.shade200, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

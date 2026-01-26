@@ -134,7 +134,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .doc(dateId)
         .collection('logs')
         .orderBy('timestamp')
-        .get();
+        .get(const GetOptions(source: Source.server));
 
     if (query.docs.isEmpty) return [];
 

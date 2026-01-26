@@ -14,6 +14,7 @@ import '../widgets/sleep_log_item.dart';
 import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
 
 class SleepPage extends StatefulWidget {
+  static const String routeName = '/sleep-report';
   const SleepPage({super.key});
 
   @override
@@ -391,6 +392,14 @@ class _SleepPageState extends State<SleepPage> {
                   ],
                 ),
                 child: GestureDetector(
+                  onLongPress: () {
+                    if (!_isSelectionMode) {
+                      setState(() {
+                        _isSelectionMode = true;
+                        _selectedIds.add(log.id);
+                      });
+                    }
+                  },
                   onTap: () {
                     if (_isSelectionMode) {
                       setState(() {

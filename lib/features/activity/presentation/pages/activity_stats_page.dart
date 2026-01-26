@@ -223,6 +223,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
       }
     }
 
+    maxVal = maxVal * 1.2;
     maxVal = ((maxVal + 499) ~/ 500) * 500.0;
 
     // double selectedValue = 0; // Unused
@@ -303,38 +304,6 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
             const Text(
               'Average Kcal',
               style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '$_selectedView Overview',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (selectedLabel.isNotEmpty)
-                  Text(
-                    selectedLabel,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                Text(
-                  '${selectedValue.toStringAsFixed(0)} Kcal', // Selected Value
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -467,6 +436,42 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${_selectedView == 'Yearly'
+                  ? 'Yearly'
+                  : _selectedView == 'Monthly'
+                  ? 'Monthly'
+                  : 'Weekly'} Overview',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (selectedLabel.isNotEmpty)
+                  Text(
+                    selectedLabel,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                Text(
+                  '${selectedValue.toStringAsFixed(0)} Kcal', // Selected Value
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

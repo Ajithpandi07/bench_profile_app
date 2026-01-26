@@ -19,6 +19,7 @@ import '../widgets/meal_summary_card.dart';
 import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
 
 class MealReportPage extends StatefulWidget {
+  static const String routeName = '/meal-report';
   const MealReportPage({super.key});
 
   @override
@@ -30,7 +31,6 @@ class _MealReportPageState extends State<MealReportPage> {
   bool _isBlurActive = false;
   bool _isSelectionMode = false;
   final Set<String> _selectedIds = {};
-  List<MealLog>? _lastLoadedMeals;
 
   @override
   void initState() {
@@ -82,6 +82,7 @@ class _MealReportPageState extends State<MealReportPage> {
                       onPressed: _selectedIds.isEmpty
                           ? null
                           : () {
+                              final bloc = context.read<MealBloc>();
                               showDialog(
                                 context: context,
                                 builder: (context) => AlertDialog(
@@ -99,7 +100,7 @@ class _MealReportPageState extends State<MealReportPage> {
                                         final idsToDelete = _selectedIds
                                             .toList();
                                         Navigator.pop(context);
-                                        context.read<MealBloc>().add(
+                                        bloc.add(
                                           DeleteMultipleMeals(
                                             idsToDelete,
                                             _selectedDate,
@@ -108,8 +109,6 @@ class _MealReportPageState extends State<MealReportPage> {
                                         setState(() {
                                           _isSelectionMode = false;
                                           _selectedIds.clear();
-                                          _lastLoadedMeals =
-                                              null; // Force shimmer
                                         });
                                       },
                                       child: const Text(
@@ -172,7 +171,10 @@ class _MealReportPageState extends State<MealReportPage> {
             child: BlocListener<MealBloc, MealState>(
               listener: (context, state) {
                 if (state is MealConsumptionLogged) {
-                  showModernSnackbar(context, 'Meal logged successfully!');
+                  showModernSnackbar(
+                    context,
+                    state.message ?? 'Meal logged successfully!',
+                  );
                 } else if (state is MealDeletedSuccess) {
                   // Final success message
                   showModernSnackbar(context, 'Meal deleted successfully');
@@ -198,28 +200,19 @@ class _MealReportPageState extends State<MealReportPage> {
                   Expanded(
                     child: BlocBuilder<MealBloc, MealState>(
                       builder: (context, state) {
-                        List<MealLog>? mealsToShow;
-
-                        if (state is MealsLoaded) {
-                          mealsToShow = state.meals;
-                          _lastLoadedMeals = state.meals; // Cache meals
-                        } else if (_lastLoadedMeals != null) {
-                          // Retain previous state while other operations happen (loading, deleting, etc.)
-                          mealsToShow = _lastLoadedMeals;
-                        }
-
-                        if (state is MealLoading && mealsToShow == null) {
+                        if (state is MealLoading ||
+                            state is MealDeletedSuccess) {
                           return const MealReportShimmer();
-                        } else if (mealsToShow != null) {
-                          if (mealsToShow.isEmpty) {
+                        } else if (state is MealsLoaded) {
+                          final meals = state.meals;
+                          // Optional: verify date match, but usually Bloc is trustworthy if we cleared cache logic
+                          if (meals.isEmpty) {
                             return _buildEmptyState();
                           } else {
-                            return _buildLoggedState(mealsToShow);
+                            return _buildLoggedState(meals);
                           }
                         } else if (state is MealOperationFailure) {
-                          // Allow retry or show empty to prevent stuck state?
-                          // For now center text is fine.
-                          return const Center(
+                          return Center(
                             child: Text(
                               'Failed to load logs',
                               style: TextStyle(color: Colors.grey),
@@ -351,52 +344,47 @@ class _MealReportPageState extends State<MealReportPage> {
                     icon: Icons.edit,
                     label: 'Edit',
                   ),
-                  SlidableAction(
-                    onPressed: (ctx) async {
-                      debugPrint('DEBUG: Slidable Delete Pressed for $type');
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(
-                          content: Text('Swiped & Clicked Delete for $type'),
+                  Builder(
+                    builder: (ctx) {
+                      return SlidableAction(
+                        onPressed: (ctx) async {
+                          final bloc = context
+                              .read<
+                                MealBloc
+                              >(); // Use parent context for safety
+                          final ids = typeMeals.map((m) => m.id).toList();
+                          final date = _selectedDate;
+
+                          final confirm = await showDeleteConfirmationDialog(
+                            context,
+                          );
+                          if (confirm == true) {
+                            bloc.add(DeleteMultipleMeals(ids, date));
+                          }
+                        },
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        icon: Icons.delete,
+                        label: 'Delete',
+                        borderRadius: const BorderRadius.horizontal(
+                          right: Radius.circular(16),
                         ),
                       );
-
-                      final bloc = ctx.read<MealBloc>();
-                      final ids = typeMeals.map((m) => m.id).toList();
-                      final date = _selectedDate;
-
-                      debugPrint('DEBUG: IDs to delete: $ids');
-
-                      final confirm = await showDeleteConfirmationDialog(ctx);
-                      debugPrint('DEBUG: Confirmation result: $confirm');
-
-                      if (confirm == true) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text('Confirmed! Sending to DB...'),
-                          ),
-                        );
-                        debugPrint(
-                          'DEBUG: Adding DeleteMultipleMeals event to Bloc',
-                        );
-                        bloc.add(DeleteMultipleMeals(ids, date));
-                      } else {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Deletion Cancelled')),
-                        );
-                        debugPrint('DEBUG: Deletion cancelled');
-                      }
                     },
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    icon: Icons.delete,
-                    label: 'Delete',
-                    borderRadius: const BorderRadius.horizontal(
-                      right: Radius.circular(16),
-                    ),
                   ),
                 ],
               ),
               child: GestureDetector(
+                onLongPress: () {
+                  if (!_isSelectionMode) {
+                    setState(() {
+                      _isSelectionMode = true;
+                      for (var m in typeMeals) {
+                        _selectedIds.add(m.id);
+                      }
+                    });
+                  }
+                },
                 onTap: () {
                   if (_isSelectionMode) {
                     setState(() {
@@ -408,6 +396,7 @@ class _MealReportPageState extends State<MealReportPage> {
                         for (var m in typeMeals) {
                           _selectedIds.remove(m.id);
                         }
+                        if (_selectedIds.isEmpty) _isSelectionMode = false;
                       } else {
                         for (var m in typeMeals) {
                           _selectedIds.add(m.id);
@@ -746,7 +735,7 @@ class _MealReportPageState extends State<MealReportPage> {
               ),
             ),
           );
-          // Removed manual _loadLogs() to rely on Bloc's internal reload after saving
+          _loadLogs(); // Reload logs to restore state
         } else if (type != null) {
           await Navigator.push(
             context,
@@ -760,7 +749,7 @@ class _MealReportPageState extends State<MealReportPage> {
               ),
             ),
           );
-          // Removed manual _loadLogs()
+          _loadLogs(); // Reload logs to restore state
         }
       }
     });
