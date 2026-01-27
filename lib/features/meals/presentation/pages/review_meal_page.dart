@@ -89,7 +89,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     });
   }
 
-  void _updateFoodQuantity(int index, int delta) {
+  void _updateFoodQuantity(int index, double delta) {
     setState(() {
       final item = _currentFoods[index];
       final newQuantity = item.quantity + delta;
@@ -439,11 +439,95 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          '${_calories.toInt()} kcal',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                final controller = TextEditingController();
+                                String? errorText;
+
+                                return StatefulBuilder(
+                                  builder: (context, setDialogState) {
+                                    return AlertDialog(
+                                      title: const Text('Enter Calories'),
+                                      content: TextField(
+                                        controller: controller,
+                                        keyboardType: TextInputType.number,
+                                        autofocus: true,
+                                        decoration: InputDecoration(
+                                          hintText: 'e.g. 500',
+                                          suffixText: 'kcal',
+                                          errorText: errorText,
+                                        ),
+                                        onChanged: (value) {
+                                          if (errorText != null) {
+                                            setDialogState(
+                                              () => errorText = null,
+                                            );
+                                          }
+                                        },
+                                        onSubmitted: (value) {
+                                          final val = double.tryParse(value);
+                                          if (val != null && val > 0) {
+                                            setState(() => _calories = val);
+                                            Navigator.pop(context);
+                                          } else {
+                                            setDialogState(
+                                              () => errorText =
+                                                  'Please enter a valid value',
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            final val = double.tryParse(
+                                              controller.text,
+                                            );
+                                            if (val != null && val > 0) {
+                                              setState(() => _calories = val);
+                                              Navigator.pop(context);
+                                            } else {
+                                              setDialogState(
+                                                () => errorText =
+                                                    'Please enter a valid value',
+                                              );
+                                            }
+                                          },
+                                          child: const Text('Confirm'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Text(
+                              '${_calories.toInt()} kcal',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -524,6 +608,9 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                                       ),
                                       min: minCalories,
                                       max: maxCalories,
+                                      onChangeStart: (_) {
+                                        // Haptic feedback could be added here
+                                      },
                                       onChanged: (val) {
                                         setState(() => _calories = val);
                                       },
@@ -734,7 +821,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     String name,
     String subtitle,
     int index,
-    int quantity,
+    double quantity,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -763,36 +850,55 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
           Row(
             children: [
               GestureDetector(
-                onTap: () => _updateFoodQuantity(index, -1),
+                onTap: () => _updateFoodQuantity(index, -0.5),
                 child: Container(
-                  width: 32,
-                  height: 32,
+                  width: 44, // Increased touch target
+                  height: 44,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
                     shape: BoxShape.circle,
+                    // color: Colors.grey.shade100, // Optional background for bigger target perception
                   ),
-                  child: const Icon(Icons.remove, size: 16, color: Colors.grey),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.remove,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
               ),
               SizedBox(
                 width: 40,
                 child: Center(
                   child: Text(
-                    '$quantity',
+                    '${quantity % 1 == 0 ? quantity.toInt() : quantity}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
               GestureDetector(
-                onTap: () => _updateFoodQuantity(index, 1),
+                onTap: () => _updateFoodQuantity(index, 0.5),
                 child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    shape: BoxShape.circle,
+                  width: 44, // Increased touch target
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(shape: BoxShape.circle),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add, size: 16, color: Colors.grey),
                   ),
-                  child: const Icon(Icons.add, size: 16, color: Colors.grey),
                 ),
               ),
             ],

@@ -153,7 +153,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
     }
   }
 
-  void _updateFoodQuantity(int index, int delta) {
+  void _updateFoodQuantity(int index, double delta) {
     setState(() {
       final item = _addedFoods[index];
       final newQuantity = item.quantity + delta;
@@ -429,7 +429,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
                         children: [
                           _buildFoodItemRow(
                             food.name,
-                            '${(food.calories * food.quantity).toStringAsFixed(0)} kcal, ${food.servingSize}',
+                            '${(food.calories * food.quantity).toStringAsFixed(0)} kcal, ${food.quantity % 1 == 0 ? food.quantity.toInt() : food.quantity} serving',
                             index,
                             food.quantity,
                           ),
@@ -519,7 +519,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
     String name,
     String subtitle,
     int index,
-    int quantity,
+    double quantity,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -546,7 +546,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
           ),
           // Stepper
           GestureDetector(
-            onTap: () => _updateFoodQuantity(index, -1),
+            onTap: () => _updateFoodQuantity(index, -0.5),
             child: Container(
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.shade300),
@@ -564,7 +564,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
             ),
           ),
           GestureDetector(
-            onTap: () => _updateFoodQuantity(index, 1),
+            onTap: () => _updateFoodQuantity(index, 0.5),
             child: Container(
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.shade300),

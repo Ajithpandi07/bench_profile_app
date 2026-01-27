@@ -121,7 +121,7 @@ class _CreateMealPageState extends State<CreateMealPage> {
     }
   }
 
-  void _updateFoodQuantity(int index, int delta) {
+  void _updateFoodQuantity(int index, double delta) {
     setState(() {
       final item = _addedFoods[index];
       final newQuantity = item.quantity + delta;
@@ -310,7 +310,7 @@ class _CreateMealPageState extends State<CreateMealPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${(food.calories).toStringAsFixed(0)} kcal. ${food.quantity} serving',
+                                  '${(food.calories).toStringAsFixed(0)} kcal. ${food.quantity % 1 == 0 ? food.quantity.toInt() : food.quantity} serving',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey.shade500,
@@ -323,7 +323,7 @@ class _CreateMealPageState extends State<CreateMealPage> {
                           Row(
                             children: [
                               GestureDetector(
-                                onTap: () => _updateFoodQuantity(index, -1),
+                                onTap: () => _updateFoodQuantity(index, -0.5),
                                 child: Container(
                                   width: 32,
                                   height: 32,
@@ -340,7 +340,7 @@ class _CreateMealPageState extends State<CreateMealPage> {
                               ),
                               const SizedBox(width: 12),
                               GestureDetector(
-                                onTap: () => _updateFoodQuantity(index, 1),
+                                onTap: () => _updateFoodQuantity(index, 0.5),
                                 child: Container(
                                   width: 32,
                                   height: 32,

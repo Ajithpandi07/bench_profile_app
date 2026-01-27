@@ -171,13 +171,13 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       // Re-hydrate items
       final hydratedItems = itemsList.map((i) {
         final id = i['id'] ?? '';
-        final snapshotCalories = (i['calories'] as num).toDouble();
-        final quantity = i['quantity'] ?? 1;
+        final snapshotCalories = (i['calories'] as num?)?.toDouble() ?? 0.0;
+        final quantity = (i['quantity'] as num?)?.toDouble() ?? 1.0;
         final serving = i['servingSize'] ?? '';
         final snapshotName = i['name'];
-        final snapshotCarbs = (i['carbs'] as num?)?.toDouble();
-        final snapshotProtein = (i['protein'] as num?)?.toDouble();
-        final snapshotFat = (i['fat'] as num?)?.toDouble();
+        final snapshotCarbs = (i['carbs'] as num?)?.toDouble() ?? 0.0;
+        final snapshotProtein = (i['protein'] as num?)?.toDouble() ?? 0.0;
+        final snapshotFat = (i['fat'] as num?)?.toDouble() ?? 0.0;
 
         if (snapshotName != null) {
           // Fast path: Data is in the log
@@ -186,9 +186,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
             name: snapshotName,
             calories:
                 snapshotCalories, // per total or unit? Logic implies these are saved properties
-            carbs: snapshotCarbs ?? 0,
-            protein: snapshotProtein ?? 0,
-            fat: snapshotFat ?? 0,
+            carbs: snapshotCarbs,
+            protein: snapshotProtein,
+            fat: snapshotFat,
             quantity: quantity,
             servingSize: serving,
           );
@@ -219,7 +219,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
           userId: data['userId'],
           timestamp: (data['timestamp'] as Timestamp).toDate(),
           mealType: data['mealType'],
-          totalCalories: (data['totalCalories'] as num).toDouble(),
+          totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
           items: hydratedItems,
           userMeals:
               (data['userMeals'] as List<dynamic>?)
@@ -288,12 +288,12 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       return FoodItem(
         id: i['id'] ?? '',
         name: i['name'] ?? 'Unknown',
-        calories: (i['calories'] as num).toDouble(),
+        calories: (i['calories'] as num?)?.toDouble() ?? 0.0,
         carbs: (i['carbs'] as num?)?.toDouble() ?? 0,
         protein: (i['protein'] as num?)?.toDouble() ?? 0,
         fat: (i['fat'] as num?)?.toDouble() ?? 0,
         servingSize: i['servingSize'] ?? '',
-        quantity: i['quantity'] ?? 1,
+        quantity: (i['quantity'] as num?)?.toDouble() ?? 1.0,
         sodium: (i['sodium'] as num?)?.toDouble() ?? 0,
         potassium: (i['potassium'] as num?)?.toDouble() ?? 0,
         dietaryFibre: (i['dietaryFibre'] as num?)?.toDouble() ?? 0,
@@ -368,7 +368,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         foods: hydratedFoods,
         totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
         creatorId: data['creatorId'] ?? '',
-        quantity: (data['quantity'] as num?)?.toInt() ?? 1,
+        quantity: (data['quantity'] as num?)?.toDouble() ?? 1.0,
         createdAt: data['createdAt'] != null
             ? (data['createdAt'] as Timestamp).toDate()
             : null,
@@ -438,7 +438,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
                 summaries.add(
                   DailyMealSummary(
                     date: date,
-                    totalCalories: (calDynamic as num).toDouble(),
+                    totalCalories: (calDynamic as num?)?.toDouble() ?? 0.0,
                   ),
                 );
               }
@@ -479,7 +479,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     if (!logSnapshot.exists) return; // Nothing to delete
 
     final logData = logSnapshot.data()!;
-    final totalCalories = (logData['totalCalories'] as num).toDouble();
+    final totalCalories = (logData['totalCalories'] as num?)?.toDouble() ?? 0.0;
 
     final batch = firestore.batch();
 
