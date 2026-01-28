@@ -209,72 +209,74 @@ class _CreateMealPageState extends State<CreateMealPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter Meal name',
-              style: TextStyle(
-                color: Colors.black54,
-                fontWeight: FontWeight.w500,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter Meal name',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'eg. Rice',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
+              const SizedBox(height: 8),
+              Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'eg. Rice',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            Text(
-              'Total calories: ${_totalCalories.toStringAsFixed(0)} Kcal',
-              style: const TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              height: 50,
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Carb ${_totalCarbs.toStringAsFixed(1)}g, Fat ${_totalFat.toStringAsFixed(1)}g, Protein ${_totalProtein.toStringAsFixed(1)}g',
-                  style: const TextStyle(color: Colors.grey),
+              Text(
+                'Total calories: ${_totalCalories.toStringAsFixed(0)} Kcal',
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Container(
+                height: 50,
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Carb ${_totalCarbs.toStringAsFixed(1)}g, Fat ${_totalFat.toStringAsFixed(1)}g, Protein ${_totalProtein.toStringAsFixed(1)}g',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // List of Added Foods
-            if (_addedFoods.isNotEmpty) ...[
-              Expanded(
-                child: ListView.separated(
+              // List of Added Foods
+              if (_addedFoods.isNotEmpty) ...[
+                ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
                   itemCount: _addedFoods.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 8),
@@ -362,74 +364,74 @@ class _CreateMealPageState extends State<CreateMealPage> {
                     );
                   },
                 ),
-              ),
-              const SizedBox(height: 16),
-            ] else
-              const Spacer(),
+                const SizedBox(height: 16),
+              ] else
+                const SizedBox(height: 24),
 
-            GestureDetector(
-              onTap: _addFood,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE93448).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(
-                  child: Text(
-                    'Add Food +',
-                    style: TextStyle(
-                      color: Color(0xFFE93448),
-                      fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: _addFood,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE93448).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Add Food +',
+                      style: TextStyle(
+                        color: Color(0xFFE93448),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            const Spacer(),
+              const SizedBox(height: 32),
 
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(child: Text('Cancel')),
                       ),
-                      child: const Center(child: Text('Cancel')),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: _saveMeal,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE93448),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Save',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _saveMeal,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE93448),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Save',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

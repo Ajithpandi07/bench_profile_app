@@ -149,6 +149,46 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       return;
     }
 
+    // New: Check for low calories relative to food items
+    double minCalories = 0;
+    for (var f in _currentFoods) {
+      minCalories += f.calories * f.quantity;
+    }
+
+    // If user entered less than 90% of calculated sum (and difference > 50 cal), warn them.
+    // Or just check if significantly lower.
+    // User request: "calories less than normal (Meal)"
+    // Let's compare _calories vs minCalories.
+    if (_calories < minCalories && (minCalories - _calories) > 10) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Low Calorie Alert'),
+          content: Text(
+            'The total calories (${_calories.toInt()}) is lower than the calculated sum from foods (${minCalories.toInt()}). Are you sure?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                _proceedToLog(timestamp);
+              },
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    _proceedToLog(timestamp);
+  }
+
+  void _proceedToLog(DateTime timestamp) {
     // Capture the final list of foods with updated quantities
     final log = MealLog(
       id: const Uuid().v4(),
@@ -562,19 +602,10 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                           minCalories += f.calories * f.quantity;
                         }
 
-                        // Ensure UI obeys minimum visually
+                        // DISABLED ENFORCEMENT for user freedom
+                        // We enable full range now.
+                        // But we still need a reasonable min for slider (e.g. 0).
                         double displayValue = _calories;
-                        if (displayValue < minCalories) {
-                          displayValue = minCalories;
-                        }
-
-                        // We update _calories to match min if it fell below
-                        if (_calories < minCalories) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted)
-                              setState(() => _calories = minCalories);
-                          });
-                        }
 
                         double maxCalories =
                             (minCalories > 2000 || displayValue > 2000)
@@ -603,10 +634,10 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                                     ),
                                     child: Slider(
                                       value: displayValue.clamp(
-                                        minCalories,
+                                        0.0, // Allow down to 0
                                         maxCalories,
                                       ),
-                                      min: minCalories,
+                                      min: 0.0,
                                       max: maxCalories,
                                       onChangeStart: (_) {
                                         // Haptic feedback could be added here
@@ -623,7 +654,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  minCalories.toStringAsFixed(0),
+                                  '0',
                                   style: const TextStyle(
                                     fontSize: 10,
                                     color: Colors.grey,

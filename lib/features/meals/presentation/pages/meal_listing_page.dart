@@ -169,55 +169,68 @@ class _MealListingPageState extends State<MealListingPage>
                 // Headers
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildHeaderAction(
-                        Icons.room_service,
-                        'Add\nNew Food',
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<MealBloc>(),
-                                child: const AddFoodPage(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildHeaderAction(
-                        Icons.restaurant_menu,
-                        'Create\nNew meal',
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<MealBloc>(),
-                                child: const CreateMealPage(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildHeaderAction(
-                        Icons.local_fire_department,
-                        'Quick\ncalories',
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<MealBloc>(),
-                                child: QuickLogPage(mealType: widget.mealType),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  child: IntrinsicHeight(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _buildHeaderAction(
+                            Icons.room_service,
+                            'Add\nNew Food',
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<MealBloc>(),
+                                    child: const AddFoodPage(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildHeaderAction(
+                            Icons.restaurant_menu,
+                            'Create\nNew meal',
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<MealBloc>(),
+                                    child: const CreateMealPage(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildHeaderAction(
+                            Icons.local_fire_department,
+                            'Quick\ncalories',
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<MealBloc>(),
+                                    child: QuickLogPage(
+                                      mealType: widget.mealType,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -337,8 +350,6 @@ class _MealListingPageState extends State<MealListingPage>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 100.56,
-        height: 116,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -356,10 +367,8 @@ class _MealListingPageState extends State<MealListingPage>
           children: [
             Icon(icon, color: const Color(0xFFE93448), size: 26),
             const SizedBox(height: 4),
-            ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 90,
-              ), // Constrain text width
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 label,
                 textAlign: TextAlign.center,
@@ -367,9 +376,8 @@ class _MealListingPageState extends State<MealListingPage>
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
-                maxLines: 2, // Allow up to 2 lines
-                overflow:
-                    TextOverflow.ellipsis, // Handle overflow with ellipsis
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(height: 4),

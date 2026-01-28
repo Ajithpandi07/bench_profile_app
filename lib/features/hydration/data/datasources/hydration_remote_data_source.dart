@@ -228,7 +228,7 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
           .collection('water_logs')
           .doc(dateId)
           .collection('logs')
-          .orderBy('timestamp', descending: true)
+          .orderBy('timestamp', descending: false)
           .get(const GetOptions(source: Source.server));
 
       return querySnapshot.docs.map((doc) {

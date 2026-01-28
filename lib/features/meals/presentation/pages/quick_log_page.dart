@@ -167,7 +167,7 @@ class _QuickLogPageState extends State<QuickLogPage> {
     });
   }
 
-  void _logMeal() {
+  Future<void> _logMeal() async {
     // Check future date
     final date = widget.initialDate ?? DateTime.now();
     final now = DateTime.now();
@@ -184,9 +184,58 @@ class _QuickLogPageState extends State<QuickLogPage> {
       return;
     }
 
-    // Logic: calculate total from foods.
-    // For now, let's treat it as: Items are specific, and total calories is the slider value (user can override).
+    // Check if entered calories is less than sum of added foods
+    double totalFoodCalories = 0;
+    for (var f in _addedFoods) {
+      totalFoodCalories += f.calories * f.quantity;
+    }
 
+    // Floating point comparison buffer
+    if (_calories < totalFoodCalories - 1.0) {
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Calorie Adjustment',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'You are adjusting lesser than total calculated calories. Is that okay?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Confirm',
+                style: TextStyle(
+                  color: Color(0xFFE93448),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+    }
+
+    // Logic: calculate total from foods.
     final log = MealLog(
       id: const Uuid().v4(),
       userId: '',
@@ -198,8 +247,10 @@ class _QuickLogPageState extends State<QuickLogPage> {
       createdAt: DateTime.now(),
     );
 
-    context.read<MealBloc>().add(LogMealEvent(log));
-    Navigator.pop(context, true);
+    if (mounted) {
+      context.read<MealBloc>().add(LogMealEvent(log));
+      Navigator.pop(context, true);
+    }
   }
 
   @override
@@ -334,6 +385,14 @@ class _QuickLogPageState extends State<QuickLogPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      Text(
+                        ' (Meal)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
                     ],
                   ),
                   // Showing macro summary of added foods
@@ -373,9 +432,12 @@ class _QuickLogPageState extends State<QuickLogPage> {
                             ),
                           ),
                           child: Slider(
-                            value: _calories.clamp(0.0, 3000.0), // Safe clamp
+                            value: _calories.clamp(
+                              0.0,
+                              10000.0,
+                            ), // Increased Max
                             min: 0,
-                            max: 3000,
+                            max: 10000,
                             onChanged: (val) => setState(() => _calories = val),
                           ),
                         ),
@@ -390,11 +452,11 @@ class _QuickLogPageState extends State<QuickLogPage> {
                         style: TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                       Text(
-                        '1500',
+                        '5000',
                         style: TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                       Text(
-                        '3000',
+                        '10000',
                         style: TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                     ],

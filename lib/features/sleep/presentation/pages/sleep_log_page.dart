@@ -23,6 +23,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
   late int _quality;
   late DateTime _minAllowedDate;
   late DateTime _maxAllowedDate;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -252,6 +253,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
                 backgroundColor: Colors.red,
               ),
             );
+            setState(() => _isSaving = false);
           }
         },
         child: SingleChildScrollView(
@@ -325,7 +327,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
               const SizedBox(height: 32),
 
               // Save Button
-              PrimaryButton(text: 'Save', onPressed: _saveLog),
+              if (_isSaving)
+                const Center(child: CircularProgressIndicator())
+              else
+                PrimaryButton(text: 'Save', onPressed: _saveLog),
 
               if (widget.existingLog != null) ...[
                 const SizedBox(height: 16),
@@ -359,6 +364,8 @@ class _SleepLogPageState extends State<SleepLogPage> {
   }
 
   void _saveLog() {
+    if (_isSaving) return;
+
     if (_endDateTime.isAfter(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -396,6 +403,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
         }
       }
     }
+
+    setState(() {
+      _isSaving = true;
+    });
 
     final log = SleepLog(
       id:
