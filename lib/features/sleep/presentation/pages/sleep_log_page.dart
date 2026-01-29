@@ -44,7 +44,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
       referenceDate.year,
       referenceDate.month,
       referenceDate.day,
-      11,
+      23,
       59,
     );
 
@@ -169,54 +169,63 @@ class _SleepLogPageState extends State<SleepLogPage> {
   void _handleTimeChange(DateTime newTime, bool isStart) {
     setState(() {
       DateTime oldTime = isStart ? _startDateTime : _endDateTime;
+
+      // 1. Calculate the hour difference to detect midnight "wraparound"
+      final int hourDelta = newTime.hour - oldTime.hour;
+
       DateTime updatedTime = newTime;
 
-      // Logic: If we crossed midnight, shift the day.
-      // 23 -> 0/1 (PM to AM): Day +1
-      // 0/1 -> 23 (AM to PM): Day -1
-
-      // Note: CircularSleepTimer returns 'newTime' with the SAME Y/M/D as 'oldTime' passed to it.
-      // So we just need to adjust the Day of 'updatedTime'.
-
-      if (oldTime.hour >= 18 && newTime.hour < 6) {
-        // Crossed Midnight Forward (Evening -> Morning)
-        updatedTime = newTime.add(const Duration(days: 1));
-      } else if (oldTime.hour < 6 && newTime.hour >= 18) {
-        // Crossed Midnight Backward (Morning -> Evening)
-        updatedTime = newTime.subtract(const Duration(days: 1));
+      // Logic: If the jump is more than 12 hours, the user likely
+      // dragged the slider across the 12/0 marker.
+      if (hourDelta < -12) {
+        // Dragged forward across midnight (e.g., 23:00 -> 01:00)
+        updatedTime = DateTime(
+          oldTime.year,
+          oldTime.month,
+          oldTime.day + 1,
+          newTime.hour,
+          newTime.minute,
+        );
+      } else if (hourDelta > 12) {
+        // Dragged backward across midnight (e.g., 01:00 -> 23:00)
+        updatedTime = DateTime(
+          oldTime.year,
+          oldTime.month,
+          oldTime.day - 1,
+          newTime.hour,
+          newTime.minute,
+        );
+      } else {
+        // Same day, just update hour/minute but keep the year/month/day of the oldTime (or current day context)
+        // Actually, the newTime coming from CircularSleepTimer has the 'initialDate' context usually, or just raw time.
+        // But we need to preserve the *current* date of the slider.
+        updatedTime = DateTime(
+          oldTime.year,
+          oldTime.month,
+          oldTime.day,
+          newTime.hour,
+          newTime.minute,
+        );
       }
 
-      // Enforce Bounds
+      // 2. Enforce Bounds and Min-Duration
       updatedTime = _clampDateTime(updatedTime);
 
       if (isStart) {
-        // Calculate original duration to attempt preservation
-        final duration = _endDateTime.difference(_startDateTime);
+        final currentDuration = _endDateTime.difference(_startDateTime);
         _startDateTime = updatedTime;
-        // Potential new end time
-        DateTime proposedEnd = updatedTime.add(duration);
-        // Clamp end time if it exceeds bounds (prevent pushing end beyond limit)
-        if (proposedEnd.isAfter(_maxAllowedDate)) {
-          proposedEnd = _maxAllowedDate;
-        }
-
-        // Validation: Ensure Start != End (min 5 mins)
-        if (proposedEnd.difference(_startDateTime).inMinutes.abs() < 5) {
-          // Revert or adjust?
-          // Since we are shifting, this usually happens if hitting bounds.
-          // Let's just return and NOT update if it results in collision.
-          return;
-        }
-        _endDateTime = proposedEnd;
+        // Try to maintain duration unless it hits max bounds
+        DateTime proposedEnd = _startDateTime.add(currentDuration);
+        _endDateTime = proposedEnd.isAfter(_maxAllowedDate)
+            ? _maxAllowedDate
+            : proposedEnd;
       } else {
-        // Validation: Ensure Start != End (min 5 mins)
-        if (updatedTime.difference(_startDateTime).inMinutes.abs() < 5) {
-          return;
+        // Ensure at least 5 mins of sleep
+        if (updatedTime.difference(_startDateTime).inMinutes > 5) {
+          _endDateTime = updatedTime;
         }
-        _endDateTime = updatedTime;
       }
 
-      _updateDuration();
       _quality = _calculateQuality(_startDateTime, _endDateTime);
     });
   }

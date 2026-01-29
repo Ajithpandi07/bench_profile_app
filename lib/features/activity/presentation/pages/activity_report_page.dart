@@ -276,7 +276,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                           Row(
                             children: [
                               const Text(
-                                'WORKOUT',
+                                'ACTIVITY',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -315,7 +315,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Total Exercise 20',
+                                'Total Activity 20',
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,

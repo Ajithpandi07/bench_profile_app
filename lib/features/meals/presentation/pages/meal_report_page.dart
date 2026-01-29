@@ -774,6 +774,10 @@ class _MealReportPageState extends State<MealReportPage> {
             allFoods: const [],
             logDate: _selectedDate,
             existingLogIds: typeMeals.map((e) => e.id).toList(),
+            initialCalories: typeMeals.fold<double>(
+              0,
+              (sum, m) => sum + m.totalCalories,
+            ),
           ),
         ),
       ),

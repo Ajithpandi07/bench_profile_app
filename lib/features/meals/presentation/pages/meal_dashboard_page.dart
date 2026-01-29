@@ -172,7 +172,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
     if (_allSummaries.isNotEmpty) {
       DateTime rangeStart;
       DateTime rangeEnd;
-      if (_selectedView == '7 days') {
+      if (_selectedView == 'Weekly') {
         rangeStart = DateUtils.dateOnly(
           now.subtract(Duration(days: now.weekday - 1)),
         );

@@ -24,7 +24,10 @@ class ReviewMealPage extends StatefulWidget {
     required this.allFoods,
     this.logDate,
     this.existingLogIds = const [],
+    this.initialCalories,
   });
+
+  final double? initialCalories;
 
   @override
   State<ReviewMealPage> createState() => _ReviewMealPageState();
@@ -68,7 +71,11 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
       }
     }
 
-    _calculateTotalCalories();
+    if (widget.initialCalories != null) {
+      _calories = widget.initialCalories!;
+    } else {
+      _calculateTotalCalories();
+    }
   }
 
   void _calculateTotalCalories() {
@@ -484,7 +491,9 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                             showDialog(
                               context: context,
                               builder: (context) {
-                                final controller = TextEditingController();
+                                final controller = TextEditingController(
+                                  text: _calories.round().toString(),
+                                );
                                 String? errorText;
 
                                 return StatefulBuilder(
@@ -561,7 +570,7 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
                               border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: Text(
-                              '${_calories.toInt()} kcal',
+                              '${_calories.round()} kcal',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
