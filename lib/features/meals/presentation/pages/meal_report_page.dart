@@ -17,6 +17,7 @@ import 'meal_dashboard_page.dart';
 import 'review_meal_page.dart';
 import '../widgets/meal_summary_card.dart';
 import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
+import 'meal_details_page.dart';
 
 class MealReportPage extends StatefulWidget {
   static const String routeName = '/meal-report';
@@ -404,13 +405,35 @@ class _MealReportPageState extends State<MealReportPage> {
                       }
                     });
                   } else {
-                    final allFoods = <FoodItem>[];
-                    final allUserMeals = <UserMeal>[];
+                    // Flatten foods for display
+                    final displayFoods = <FoodItem>[];
                     for (var m in typeMeals) {
-                      allFoods.addAll(m.items);
-                      allUserMeals.addAll(m.userMeals);
+                      displayFoods.addAll(m.items);
+                      for (var um in m.userMeals) {
+                        for (var f in um.foods) {
+                          displayFoods.add(
+                            f.copyWith(quantity: f.quantity * um.quantity),
+                          );
+                        }
+                      }
                     }
-                    _navigateToReview(type, typeMeals);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MealDetailsPage(
+                          mealType: type,
+                          totalCalories: totalCals,
+                          timestamp: typeMeals.isNotEmpty
+                              ? typeMeals.first.timestamp
+                              : DateTime.now(),
+                          foodItems: displayFoods,
+                          onEdit: () {
+                            _navigateToReview(type, typeMeals);
+                          },
+                        ),
+                      ),
+                    );
                   }
                 },
                 child: Row(

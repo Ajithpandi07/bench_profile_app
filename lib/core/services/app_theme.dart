@@ -18,6 +18,12 @@ class AppTheme {
   static const rippleBackground = Color(0xFFFFCED8);
   static const textDark = Color(0xFF131313);
   static const lightGray = Color(0xFFF5F5F5);
+  // Meal Details Page Colors
+  static const mealDetailsBackground = Color(0xFFF5F7FA);
+  static const mealDetailsMetaText = Color(0xFF909DAD);
+  static const mealDetailsLabelText = Color(0xFF556073);
+  static const mealDetailsIconBackground = Color(0xFFFFEBEB);
+  static const mealDetailsBorder = Color(0xFFEAEAEA);
 
   /// Defines the base text theme for the application.
   /// These styles will be adapted with appropriate colors by the ColorScheme.
