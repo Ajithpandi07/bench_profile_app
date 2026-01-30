@@ -36,16 +36,18 @@ class LoadUserLibrary extends MealEvent {}
 
 class AddUserFood extends MealEvent {
   final FoodItem food;
-  const AddUserFood(this.food);
+  final bool isEdit;
+  const AddUserFood(this.food, {this.isEdit = false});
   @override
-  List<Object> get props => [food];
+  List<Object> get props => [food, isEdit];
 }
 
 class AddUserMeal extends MealEvent {
   final UserMeal meal;
-  const AddUserMeal(this.meal);
+  final bool isEdit;
+  const AddUserMeal(this.meal, {this.isEdit = false});
   @override
-  List<Object> get props => [meal];
+  List<Object> get props => [meal, isEdit];
 }
 
 class LoadDashboardStats extends MealEvent {
@@ -99,4 +101,18 @@ class DeleteMultipleMeals extends MealEvent {
 
   @override
   List<Object> get props => [mealLogIds, date];
+}
+
+class DeleteUserFood extends MealEvent {
+  final String id;
+  const DeleteUserFood(this.id);
+  @override
+  List<Object> get props => [id];
+}
+
+class DeleteUserMeal extends MealEvent {
+  final String id;
+  const DeleteUserMeal(this.id);
+  @override
+  List<Object> get props => [id];
 }

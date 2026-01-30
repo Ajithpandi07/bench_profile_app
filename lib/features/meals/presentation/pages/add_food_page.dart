@@ -7,7 +7,8 @@ import '../bloc/meal_event.dart';
 import 'macro_input_row.dart';
 
 class AddFoodPage extends StatefulWidget {
-  const AddFoodPage({super.key});
+  final FoodItem? foodToEdit;
+  const AddFoodPage({super.key, this.foodToEdit});
 
   @override
   State<AddFoodPage> createState() => _AddFoodPageState();
@@ -41,6 +42,25 @@ class _AddFoodPageState extends State<AddFoodPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.foodToEdit != null) {
+      final f = widget.foodToEdit!;
+      _nameController.text = f.name;
+      _servingSizeController.text = f.servingSize;
+      _quantityController.text = f.quantity.toString();
+      _caloriesController.text = f.calories.toString();
+      _carbsController.text = f.carbs.toString();
+      _proteinController.text = f.protein.toString();
+      _fatController.text = f.fat.toString();
+      // optional: populate micros too if needed, for brevity assuming main macros + micros
+      _sodiumController.text = f.sodium.toString();
+      _potassiumController.text = f.potassium.toString();
+      _dietaryFibreController.text = f.dietaryFibre.toString();
+      _sugarsController.text = f.sugars.toString();
+      _vitaminAController.text = f.vitaminA.toString();
+      _vitaminCController.text = f.vitaminC.toString();
+      _calciumController.text = f.calcium.toString();
+      _ironController.text = f.iron.toString();
+    }
     _carbsController.addListener(_calculateCalories);
     _proteinController.addListener(_calculateCalories);
     _fatController.addListener(_calculateCalories);
@@ -101,7 +121,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
     // int parseInt(TextEditingController c) => int.tryParse(c.text.trim()) ?? 1; // Removed as no longer needed
 
     final foodItem = FoodItem(
-      id: const Uuid().v4(),
+      id: widget.foodToEdit?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
       calories: parse(_caloriesController),
       carbs: parse(_carbsController),
@@ -123,7 +143,9 @@ class _AddFoodPageState extends State<AddFoodPage> {
     );
 
     // Dispatch to Bloc to save to User Library
-    context.read<MealBloc>().add(AddUserFood(foodItem));
+    context.read<MealBloc>().add(
+      AddUserFood(foodItem, isEdit: widget.foodToEdit != null),
+    );
 
     // Return the created FoodItem (optional, but good for immediate use if needed)
     Navigator.pop(context, foodItem);
@@ -135,9 +157,9 @@ class _AddFoodPageState extends State<AddFoodPage> {
       backgroundColor: Colors.white, // Match design white bg
       appBar: AppBar(
         leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Add New Food',
-          style: TextStyle(
+        title: Text(
+          widget.foodToEdit != null ? 'Edit Food' : 'Add New Food',
+          style: const TextStyle(
             color: Color(0xFFE93448),
             fontWeight: FontWeight.bold,
           ),

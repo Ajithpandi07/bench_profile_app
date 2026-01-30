@@ -134,17 +134,13 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
     const double dailyKcalGoal = 400; // Hardcoded goal for now
 
     for (var s in summariesInPeriod) {
-      totalKcalInPeriod += s.totalCalories;
-      if (s.totalCalories > 0) activeDaysCount++;
+      if (s.totalCalories > 0) {
+        totalKcalInPeriod += s.totalCalories;
+        activeDaysCount++;
+      }
       if (s.totalCalories >= dailyKcalGoal) kcalGoalMetCount++;
     }
 
-    // Average Kcal (for period, or daily avg?)
-    // "Average Kcal" usually means Daily Average.
-    // If no data, 0. If data, average over active days or total days?
-    // User mockup shows "842 Kcal Average Kcal".
-    // Usually avg over active days is more encouraging, or avg over passed days.
-    // Let's use avg over active days for now to match "days achieved" vibe.
     double averageKcal = activeDaysCount > 0
         ? totalKcalInPeriod / activeDaysCount
         : 0;
@@ -206,16 +202,12 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
             monthTotal += s.totalCalories;
           }
         }
-        int days = DateUtils.getDaysInMonth(now.year, i);
-        double monthAvg = monthTotal / days;
-        // Note: Chart shows Monthly Avg Kcal/Day? Or Monthly Total?
-        // Code below shows monthAvg.
-        if (monthAvg > maxVal) maxVal = monthAvg;
+        if (monthTotal > maxVal) maxVal = monthTotal;
 
         chartItems.add(
           DashboardChartItem(
             label: DateFormat('MMM').format(DateTime(now.year, i))[0],
-            value: monthAvg,
+            value: monthTotal,
             isHighlight:
                 i == _selectedDate.month && now.year == _selectedDate.year,
           ),
@@ -484,7 +476,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
           barBackgroundColor: const Color(
             0xFFF3F4F6,
           ), // Light grey for non-selected
-          chartHeight: 200,
+          chartHeight: 250,
           formatValue: (val) => val.toInt().toString(),
           onBarTap: (index) {
             setState(() {
@@ -512,7 +504,6 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
               }
             });
           },
-          fitAll: _selectedView == 'Monthly',
         ),
         const SizedBox(height: 32),
         const DashboardInsightCard(

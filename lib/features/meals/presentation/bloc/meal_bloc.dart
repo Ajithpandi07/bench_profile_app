@@ -20,6 +20,8 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     on<DeleteMealLog>(_onDeleteMealLog);
     on<DeleteAllMealsForDate>(_onDeleteAllMealsForDate);
     on<DeleteMultipleMeals>(_onDeleteMultipleMeals);
+    on<DeleteUserFood>(_onDeleteUserFood);
+    on<DeleteUserMeal>(_onDeleteUserMeal);
   }
 
   Future<void> _onDeleteMultipleMeals(
@@ -194,7 +196,10 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(UserLibraryItemSaved());
+      final msg = event.isEdit
+          ? 'Food updated successfully'
+          : 'Food added successfully';
+      emit(UserLibraryItemSaved(message: msg));
       add(LoadUserLibrary()); // Reload library
     });
   }
@@ -208,7 +213,10 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(UserLibraryItemSaved());
+      final msg = event.isEdit
+          ? 'Meal updated successfully'
+          : 'Meal added successfully';
+      emit(UserLibraryItemSaved(message: msg));
       add(LoadUserLibrary()); // Reload library
     });
   }
@@ -261,6 +269,34 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     ) {
       emit(MealDeletedSuccess());
       add(LoadMealsForDate(event.date));
+    });
+  }
+
+  Future<void> _onDeleteUserFood(
+    DeleteUserFood event,
+    Emitter<MealState> emit,
+  ) async {
+    // Optimistic or waiting? Waiting is safer for list refresh.
+    // emit(MealLoading()); // Optional: loading state
+    final result = await repository.deleteUserFood(event.id);
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      success,
+    ) {
+      emit(UserLibraryItemDeleted());
+      add(LoadUserLibrary());
+    });
+  }
+
+  Future<void> _onDeleteUserMeal(
+    DeleteUserMeal event,
+    Emitter<MealState> emit,
+  ) async {
+    final result = await repository.deleteUserMeal(event.id);
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      success,
+    ) {
+      emit(UserLibraryItemDeleted());
+      add(LoadUserLibrary());
     });
   }
 }

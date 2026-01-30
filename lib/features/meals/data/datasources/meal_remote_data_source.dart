@@ -18,6 +18,8 @@ abstract class MealRemoteDataSource {
   );
   Future<void> deleteMealLog(String id, DateTime date);
   Future<void> deleteMultipleMealLogs(List<String> ids, DateTime date);
+  Future<void> deleteUserFood(String id);
+  Future<void> deleteUserMeal(String id);
 }
 
 class MealRemoteDataSourceImpl implements MealRemoteDataSource {
@@ -602,5 +604,31 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     }
 
     await batch.commit();
+  }
+
+  @override
+  Future<void> deleteUserFood(String id) async {
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
+
+    await firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('user_foods')
+        .doc(id)
+        .delete();
+  }
+
+  @override
+  Future<void> deleteUserMeal(String id) async {
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
+
+    await firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('user_meals')
+        .doc(id)
+        .delete();
   }
 }

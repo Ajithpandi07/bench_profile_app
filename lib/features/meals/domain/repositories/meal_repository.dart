@@ -20,4 +20,6 @@ abstract class MealRepository {
     List<String> ids,
     DateTime date,
   );
+  Future<Either<Failure, void>> deleteUserFood(String id);
+  Future<Either<Failure, void>> deleteUserMeal(String id);
 }

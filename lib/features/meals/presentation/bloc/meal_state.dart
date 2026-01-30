@@ -35,7 +35,15 @@ class MealConsumptionLogged extends MealState {
 
 class MealDeletedSuccess extends MealState {}
 
-class UserLibraryItemSaved extends MealState {}
+class UserLibraryItemSaved extends MealState {
+  final String? message;
+  const UserLibraryItemSaved({this.message});
+
+  @override
+  List<Object> get props => [if (message != null) message!];
+}
+
+class UserLibraryItemDeleted extends MealState {}
 
 class MealOperationFailure extends MealState {
   final String message;

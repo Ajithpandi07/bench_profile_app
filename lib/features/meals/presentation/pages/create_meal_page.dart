@@ -7,7 +7,8 @@ import '../bloc/bloc.dart';
 import '../bloc/meal_event.dart'; // Import events
 
 class CreateMealPage extends StatefulWidget {
-  const CreateMealPage({super.key});
+  final UserMeal? mealToEdit;
+  const CreateMealPage({super.key, this.mealToEdit});
 
   @override
   State<CreateMealPage> createState() => _CreateMealPageState();
@@ -16,6 +17,15 @@ class CreateMealPage extends StatefulWidget {
 class _CreateMealPageState extends State<CreateMealPage> {
   final _nameController = TextEditingController();
   final List<FoodItem> _addedFoods = [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.mealToEdit != null) {
+      _nameController.text = widget.mealToEdit!.name;
+      _addedFoods.addAll(widget.mealToEdit!.foods);
+    }
+  }
 
   @override
   void dispose() {
@@ -151,7 +161,8 @@ class _CreateMealPageState extends State<CreateMealPage> {
     if (state is UserLibraryLoaded) {
       final duplicate = state.meals.any(
         (m) =>
-            m.name.toLowerCase() == _nameController.text.trim().toLowerCase(),
+            m.name.toLowerCase() == _nameController.text.trim().toLowerCase() &&
+            m.id != widget.mealToEdit?.id,
       );
       if (duplicate) {
         showModernSnackbar(
@@ -176,14 +187,16 @@ class _CreateMealPageState extends State<CreateMealPage> {
     }
 
     final meal = UserMeal(
-      id: const Uuid().v4(),
+      id: widget.mealToEdit?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
       foods: _addedFoods, // Store full food items
       totalCalories: totalCals,
       creatorId: '',
     );
 
-    context.read<MealBloc>().add(AddUserMeal(meal));
+    context.read<MealBloc>().add(
+      AddUserMeal(meal, isEdit: widget.mealToEdit != null),
+    );
     Navigator.pop(context);
   }
 
@@ -193,8 +206,8 @@ class _CreateMealPageState extends State<CreateMealPage> {
       backgroundColor: const Color(0xFFF9F9F9),
       appBar: AppBar(
         leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Add New Meal',
+        title: Text(
+          widget.mealToEdit != null ? 'Edit Meal' : 'Add New Meal',
           style: TextStyle(
             color: Color(0xFFE93448),
             fontWeight: FontWeight.bold,

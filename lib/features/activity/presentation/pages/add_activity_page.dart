@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/activity_log.dart';
 import '../bloc/activity_bloc.dart';
 import '../bloc/activity_event.dart';
+import '../../../../core/utils/snackbar_utils.dart';
 
 class AddActivityPage extends StatefulWidget {
   final String activityType;
@@ -305,6 +306,42 @@ class _AddActivityPageState extends State<AddActivityPage> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
+                      final durationFn = Duration(
+                        hours: _durationHours,
+                        minutes: _durationMinutes,
+                      );
+
+                      // Check 1: Start Time in future
+                      if (_startTime.isAfter(DateTime.now())) {
+                        showModernSnackbar(
+                          context,
+                          'Cannot log activity for future time or dates',
+                          isError: true,
+                        );
+                        return;
+                      }
+
+                      // Check 2: Duration completion checks
+                      final endTime = _startTime.add(durationFn);
+
+                      if (endTime.isAfter(DateTime.now())) {
+                        final validStartTime = DateTime.now().subtract(
+                          durationFn,
+                        );
+                        final timeStr = DateFormat(
+                          'h:mm a',
+                        ).format(validStartTime);
+                        final durationMins =
+                            _durationHours * 60 + _durationMinutes;
+
+                        showModernSnackbar(
+                          context,
+                          'Activity not completed. For a $durationMins min activity, start before $timeStr',
+                          isError: true,
+                        );
+                        return;
+                      }
+
                       final activity = ActivityLog(
                         id: widget.existingActivity?.id ?? const Uuid().v4(),
                         userId: '', // handled by repo
