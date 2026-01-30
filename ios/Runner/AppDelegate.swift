@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import CoreMotion
+import workmanager
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -11,6 +12,11 @@ import CoreMotion
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+    
+    // Register Workmanager
+    WorkmanagerPlugin.setPluginRegistrantCallback { registry in
+        GeneratedPluginRegistrant.register(with: registry)
+    }
 
     if let controller = window?.rootViewController as? FlutterViewController {
       let channel = FlutterMethodChannel(name: "bench_profile/health", binaryMessenger: controller.binaryMessenger)

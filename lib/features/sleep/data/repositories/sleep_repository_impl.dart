@@ -22,10 +22,24 @@ class SleepRepositoryImpl implements SleepRepository {
   });
 
   @override
-  Future<Either<Failure, void>> logSleep(SleepLog log) async {
+  Future<Either<Failure, void>> logSleep(
+    SleepLog log, {
+    SleepLog? previousLog,
+  }) async {
     if (await networkInfo.isConnected) {
       try {
-        await remoteDataSource.logSleep(log);
+        // If ID is the draft ID, treat as new log (clear ID so RemoteDS generates one)
+        final logToSave = (log.id == 'health_connect_draft')
+            ? SleepLog(
+                id: '',
+                startTime: log.startTime,
+                endTime: log.endTime,
+                quality: log.quality,
+                notes: log.notes,
+              )
+            : log;
+
+        await remoteDataSource.logSleep(logToSave, previousLog: previousLog);
         return const Right(null);
       } on ServerException {
         return const Left(ServerFailure('Server Failure'));
@@ -88,10 +102,10 @@ class SleepRepositoryImpl implements SleepRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteSleepLog(SleepLog log) async {
+  Future<Either<Failure, void>> deleteSleepLog(String id, DateTime date) async {
     if (await networkInfo.isConnected) {
       try {
-        await remoteDataSource.deleteSleepLog(log);
+        await remoteDataSource.deleteSleepLog(id, date);
         return const Right(null);
       } on ServerException {
         return const Left(ServerFailure('Server Failure'));

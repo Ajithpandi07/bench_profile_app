@@ -9,6 +9,9 @@ import 'add_food_page.dart';
 import 'create_meal_page.dart';
 import 'quick_log_page.dart';
 import 'review_meal_page.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
+import 'package:bench_profile_app/core/services/app_theme.dart';
 
 class MealListingPage extends StatefulWidget {
   final String mealType;
@@ -22,7 +25,10 @@ class MealListingPage extends StatefulWidget {
     this.initialDate,
     this.initialFoods,
     this.initialMeals,
+    this.existingLogIds = const [],
   });
+
+  final List<String> existingLogIds;
 
   @override
   State<MealListingPage> createState() => _MealListingPageState();
@@ -93,6 +99,7 @@ class _MealListingPageState extends State<MealListingPage>
                 ? (context.read<MealBloc>().state as UserLibraryLoaded).foods
                 : [],
             logDate: widget.initialDate,
+            existingLogIds: widget.existingLogIds,
           ),
         ),
       ),
@@ -124,7 +131,10 @@ class _MealListingPageState extends State<MealListingPage>
       body: BlocListener<MealBloc, MealState>(
         listener: (context, state) {
           if (state is UserLibraryItemSaved) {
-            showModernSnackbar(context, 'Added to your library');
+            showModernSnackbar(
+              context,
+              state.message ?? 'Added to your library',
+            );
           } else if (state is MealConsumptionLogged) {
             // In case listener is active when returning
             // Can handle if needed, or ignore since Review page handles it.
@@ -137,12 +147,23 @@ class _MealListingPageState extends State<MealListingPage>
           }
         },
         child: BlocBuilder<MealBloc, MealState>(
+          buildWhen: (previous, current) {
+            return current is MealLoading ||
+                current is UserLibraryLoaded ||
+                current is MealOperationFailure ||
+                current is MealSaving ||
+                current is UserLibraryItemSaved ||
+                current is UserLibraryItemDeleted;
+          },
           builder: (context, state) {
             // Default empty lists
             List<FoodItem> userFoods = [];
             List<UserMeal> userMeals = [];
 
-            if (state is MealLoading) {
+            if (state is MealLoading ||
+                state is MealSaving ||
+                state is UserLibraryItemSaved ||
+                state is UserLibraryItemDeleted) {
               return const MealListShimmer();
             }
 
@@ -165,55 +186,68 @@ class _MealListingPageState extends State<MealListingPage>
                 // Headers
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildHeaderAction(
-                        Icons.room_service,
-                        'Add\nNew Food',
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<MealBloc>(),
-                                child: const AddFoodPage(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildHeaderAction(
-                        Icons.restaurant_menu,
-                        'Create\nNew meal',
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<MealBloc>(),
-                                child: const CreateMealPage(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildHeaderAction(
-                        Icons.local_fire_department,
-                        'Quick\ncalories',
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<MealBloc>(),
-                                child: QuickLogPage(mealType: widget.mealType),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  child: IntrinsicHeight(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _buildHeaderAction(
+                            Icons.room_service,
+                            'Add\nNew Food',
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<MealBloc>(),
+                                    child: const AddFoodPage(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildHeaderAction(
+                            Icons.restaurant_menu,
+                            'Create\nNew meal',
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<MealBloc>(),
+                                    child: const CreateMealPage(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildHeaderAction(
+                            Icons.local_fire_department,
+                            'Quick\ncalories',
+                            () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<MealBloc>(),
+                                    child: QuickLogPage(
+                                      mealType: widget.mealType,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -265,12 +299,68 @@ class _MealListingPageState extends State<MealListingPage>
                                 final isSelected = _selectedFoodIds.contains(
                                   food.id,
                                 );
-                                return GestureDetector(
-                                  onTap: () => _toggleFoodSelection(food),
-                                  child: _buildListItem(
-                                    food.name,
-                                    '${food.calories.toStringAsFixed(0)} Kcal',
-                                    isSelected,
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Slidable(
+                                    key: ValueKey(food.id),
+                                    endActionPane: ActionPane(
+                                      motion: const ScrollMotion(),
+                                      extentRatio: 0.5,
+                                      children: [
+                                        SlidableAction(
+                                          onPressed: (context) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    BlocProvider.value(
+                                                      value: context
+                                                          .read<MealBloc>(),
+                                                      child: AddFoodPage(
+                                                        foodToEdit: food,
+                                                      ),
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          backgroundColor: AppTheme.lightGray,
+                                          foregroundColor: const Color(
+                                            0xFFE93448,
+                                          ), // AppTheme.primaryColor
+                                          icon: Icons.edit,
+                                          label: 'Edit',
+                                        ),
+                                        SlidableAction(
+                                          onPressed: (context) async {
+                                            final bloc = context
+                                                .read<MealBloc>();
+                                            final confirm =
+                                                await showDeleteConfirmationDialog(
+                                                  context,
+                                                );
+                                            if (confirm == true) {
+                                              bloc.add(DeleteUserFood(food.id));
+                                            }
+                                          },
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                          icon: Icons.delete,
+                                          label: 'Delete',
+                                          borderRadius:
+                                              const BorderRadius.horizontal(
+                                                right: Radius.circular(12),
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () => _toggleFoodSelection(food),
+                                      child: _buildListItem(
+                                        food.name,
+                                        '${food.calories.toStringAsFixed(0)} Kcal',
+                                        isSelected,
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
@@ -289,12 +379,68 @@ class _MealListingPageState extends State<MealListingPage>
                                 final isSelected = _selectedMealIds.contains(
                                   meal.id,
                                 );
-                                return GestureDetector(
-                                  onTap: () => _toggleMealSelection(meal),
-                                  child: _buildListItem(
-                                    meal.name,
-                                    '${meal.totalCalories.toStringAsFixed(0)} Kcal',
-                                    isSelected,
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Slidable(
+                                    key: ValueKey(meal.id),
+                                    endActionPane: ActionPane(
+                                      motion: const ScrollMotion(),
+                                      extentRatio: 0.5,
+                                      children: [
+                                        SlidableAction(
+                                          onPressed: (context) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    BlocProvider.value(
+                                                      value: context
+                                                          .read<MealBloc>(),
+                                                      child: CreateMealPage(
+                                                        mealToEdit: meal,
+                                                      ),
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          backgroundColor: AppTheme.lightGray,
+                                          foregroundColor: const Color(
+                                            0xFFE93448,
+                                          ),
+                                          icon: Icons.edit,
+                                          label: 'Edit',
+                                        ),
+                                        SlidableAction(
+                                          onPressed: (context) async {
+                                            final bloc = context
+                                                .read<MealBloc>();
+                                            final confirm =
+                                                await showDeleteConfirmationDialog(
+                                                  context,
+                                                );
+                                            if (confirm == true) {
+                                              bloc.add(DeleteUserMeal(meal.id));
+                                            }
+                                          },
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                          icon: Icons.delete,
+                                          label: 'Delete',
+                                          borderRadius:
+                                              const BorderRadius.horizontal(
+                                                right: Radius.circular(12),
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () => _toggleMealSelection(meal),
+                                      child: _buildListItem(
+                                        meal.name,
+                                        '${meal.totalCalories.toStringAsFixed(0)} Kcal',
+                                        isSelected,
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
@@ -333,11 +479,6 @@ class _MealListingPageState extends State<MealListingPage>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 100.56,
-        height: 116,
-        // Remove padding that might conflict with fixed height/centering
-        // or keep vertical padding if content dictates.
-        // Let's use Column's MainAxisAlignment to center content.
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -355,10 +496,18 @@ class _MealListingPageState extends State<MealListingPage>
           children: [
             Icon(icon, color: const Color(0xFFE93448), size: 26),
             const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const SizedBox(height: 4),
             const CircleAvatar(
@@ -375,16 +524,13 @@ class _MealListingPageState extends State<MealListingPage>
   Widget _buildListItem(String title, String subtitle, bool isSelected) {
     return Container(
       height: 50,
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: isSelected
-            ? const Color(0xFFFFF0F1)
-            : Colors.grey.shade50, // Light red tint if selected
+        color: isSelected ? const Color(0xFFFFF0F1) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: isSelected
             ? Border.all(color: const Color(0xFFE93448), width: 1.5)
-            : Border.all(color: Colors.transparent),
+            : Border.all(color: Colors.grey.shade200, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

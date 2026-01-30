@@ -8,7 +8,7 @@ class UserMeal extends Equatable {
   final List<FoodItem> foods; // Changed from foodIds
   final double totalCalories;
   final String creatorId;
-  final int quantity;
+  final double quantity;
   final DateTime? createdAt;
 
   const UserMeal({
@@ -17,7 +17,7 @@ class UserMeal extends Equatable {
     required this.foods,
     required this.totalCalories,
     required this.creatorId,
-    this.quantity = 1,
+    this.quantity = 1.0,
     this.createdAt,
   });
 
@@ -37,7 +37,7 @@ class UserMeal extends Equatable {
     List<FoodItem>? foods,
     double? totalCalories,
     String? creatorId,
-    int? quantity,
+    double? quantity,
     DateTime? createdAt,
   }) {
     return UserMeal(
@@ -76,7 +76,7 @@ class UserMeal extends Equatable {
           [],
       totalCalories: (map['totalCalories'] as num?)?.toDouble() ?? 0.0,
       creatorId: map['creatorId'] ?? '',
-      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
+      quantity: (map['quantity'] as num?)?.toDouble() ?? 1.0,
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : null,

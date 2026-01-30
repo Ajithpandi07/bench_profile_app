@@ -28,6 +28,23 @@ class HydrationRepositoryImpl implements HydrationRepository {
   }
 
   @override
+  Future<Either<Failure, void>> deleteHydrationLog(
+    String id,
+    DateTime date,
+  ) async {
+    if (await networkInfo.isConnected) {
+      try {
+        await remoteDataSource.deleteHydrationLog(id, date);
+        return const Right(null);
+      } catch (e) {
+        return Left(ServerFailure('Failed to delete hydration log: $e'));
+      }
+    } else {
+      return const Left(NetworkFailure('No internet connection.'));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<HydrationLog>>> getHydrationLogsForDate(
     DateTime date,
   ) async {

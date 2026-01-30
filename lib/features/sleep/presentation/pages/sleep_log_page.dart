@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/services/app_theme.dart';
+
 import '../../../reminder/presentation/widgets/primary_button.dart';
 import '../../domain/entities/sleep_log.dart';
 import '../bloc/bloc.dart';
@@ -21,10 +21,32 @@ class _SleepLogPageState extends State<SleepLogPage> {
   late DateTime _startDateTime;
   late DateTime _endDateTime;
   late int _quality;
+  late DateTime _minAllowedDate;
+  late DateTime _maxAllowedDate;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
+
+    final referenceDate = widget.initialDate;
+    final previousDay = referenceDate.subtract(const Duration(days: 1));
+
+    // Define Bounds: Day-1 12:00 PM to Day 11:59 AM
+    _minAllowedDate = DateTime(
+      previousDay.year,
+      previousDay.month,
+      previousDay.day,
+      12,
+      0,
+    );
+    _maxAllowedDate = DateTime(
+      referenceDate.year,
+      referenceDate.month,
+      referenceDate.day,
+      23,
+      59,
+    );
 
     if (widget.existingLog != null) {
       _startDateTime = widget.existingLog!.startTime;
@@ -51,8 +73,21 @@ class _SleepLogPageState extends State<SleepLogPage> {
         7,
         0,
       );
-      _quality = 75;
+      _quality = _calculateQuality(_startDateTime, _endDateTime);
     }
+  }
+
+  int _calculateQuality(DateTime start, DateTime end) {
+    // 8 hours = 480 minutes
+    final duration = end.difference(start).inMinutes;
+    return ((duration / 480) * 100).clamp(0, 100).toInt();
+  }
+
+  // Helper to restrict date selection to the valid window
+  DateTime _clampDateTime(DateTime dt) {
+    if (dt.isBefore(_minAllowedDate)) return _minAllowedDate;
+    if (dt.isAfter(_maxAllowedDate)) return _maxAllowedDate;
+    return dt;
   }
 
   // Helper to maintain reasonable duration logic when times change
@@ -62,6 +97,9 @@ class _SleepLogPageState extends State<SleepLogPage> {
         _endDateTime = _endDateTime.add(const Duration(days: 1));
       }
     }
+    // Ensure final times never exceed bounds
+    _startDateTime = _clampDateTime(_startDateTime);
+    _endDateTime = _clampDateTime(_endDateTime);
   }
 
   Future<void> _pickTime(bool isStart) async {
@@ -73,31 +111,123 @@ class _SleepLogPageState extends State<SleepLogPage> {
 
     if (picked != null) {
       setState(() {
-        final newDateTime = DateTime(
-          initial.year,
-          initial.month,
-          initial.day,
-          picked.hour,
-          picked.minute,
-        );
-
         if (isStart) {
-          _startDateTime = newDateTime;
+          final today = DateTime(
+            widget.initialDate.year,
+            widget.initialDate.month,
+            widget.initialDate.day,
+            picked.hour,
+            picked.minute,
+          );
+          final yesterday = today.subtract(const Duration(days: 1));
+
+          // Heuristic: "Smart Day Selection"
+          // Times 00:00 - 17:59 (Midnight to 6 PM) -> Assume Today (Morning sleep / Afternoon Nap)
+          // Times 18:00 - 23:59 (6 PM to Midnight) -> Assume Yesterday (Night Sleep start)
+          // This fixes the issue where 1 PM - 5 PM was incorrectly jumping to Yesterday.
+          DateTime newStart;
+          if (picked.hour < 18) {
+            newStart = today;
+          } else {
+            newStart = yesterday;
+          }
+
+          // Smart Shift: Move End Time to preserve duration
+          final currentDuration = _endDateTime.difference(_startDateTime);
+          _startDateTime = newStart;
+          _endDateTime = newStart.add(currentDuration);
         } else {
-          _endDateTime = newDateTime;
+          // Heuristic: "Next Valid Time"
+          final start = _startDateTime;
+          final candidateSameDay = DateTime(
+            start.year,
+            start.month,
+            start.day,
+            picked.hour,
+            picked.minute,
+          );
+          // If candidate is before start, it must be next day (crossing midnight)
+          // or if it's explicitly the next day relative to start.
+          // Simple logic: Ensure End > Start.
+          if (candidateSameDay.isAfter(start)) {
+            _endDateTime = candidateSameDay;
+          } else {
+            _endDateTime = candidateSameDay.add(const Duration(days: 1));
+          }
         }
 
-        if (_endDateTime.isBefore(_startDateTime)) {
-          if (!_isSameDay(_startDateTime, _endDateTime)) {
-            // already handled?
-          }
-          if (_endDateTime.hour < _startDateTime.hour) {
-            _endDateTime = _endDateTime.add(const Duration(days: 1));
-          }
-        }
+        // Apply Clamping
+        _startDateTime = _clampDateTime(_startDateTime);
+        _endDateTime = _clampDateTime(_endDateTime);
+
         _updateDuration();
+        _quality = _calculateQuality(_startDateTime, _endDateTime);
       });
     }
+  }
+
+  void _handleTimeChange(DateTime newTime, bool isStart) {
+    setState(() {
+      DateTime oldTime = isStart ? _startDateTime : _endDateTime;
+
+      // 1. Calculate the hour difference to detect midnight "wraparound"
+      final int hourDelta = newTime.hour - oldTime.hour;
+
+      DateTime updatedTime = newTime;
+
+      // Logic: If the jump is more than 12 hours, the user likely
+      // dragged the slider across the 12/0 marker.
+      if (hourDelta < -12) {
+        // Dragged forward across midnight (e.g., 23:00 -> 01:00)
+        updatedTime = DateTime(
+          oldTime.year,
+          oldTime.month,
+          oldTime.day + 1,
+          newTime.hour,
+          newTime.minute,
+        );
+      } else if (hourDelta > 12) {
+        // Dragged backward across midnight (e.g., 01:00 -> 23:00)
+        updatedTime = DateTime(
+          oldTime.year,
+          oldTime.month,
+          oldTime.day - 1,
+          newTime.hour,
+          newTime.minute,
+        );
+      } else {
+        // Same day, just update hour/minute but keep the year/month/day of the oldTime (or current day context)
+        // Actually, the newTime coming from CircularSleepTimer has the 'initialDate' context usually, or just raw time.
+        // But we need to preserve the *current* date of the slider.
+        updatedTime = DateTime(
+          oldTime.year,
+          oldTime.month,
+          oldTime.day,
+          newTime.hour,
+          newTime.minute,
+        );
+      }
+
+      // 2. Enforce Bounds and Min-Duration
+      updatedTime = _clampDateTime(updatedTime);
+
+      if (isStart) {
+        final currentDuration = _endDateTime.difference(_startDateTime);
+        _startDateTime = updatedTime;
+        // Try to maintain duration unless it hits max bounds
+        DateTime proposedEnd = _startDateTime.add(currentDuration);
+        _endDateTime = proposedEnd.isAfter(_maxAllowedDate)
+            ? _maxAllowedDate
+            : proposedEnd;
+      } else {
+        // Ensure at least 5 mins of sleep
+        if (updatedTime.difference(_startDateTime).inMinutes > 5) {
+          _endDateTime = updatedTime;
+        }
+      }
+
+      _quality = _calculateQuality(_startDateTime, _endDateTime);
+    });
   }
 
   bool _isSameDay(DateTime a, DateTime b) {
@@ -107,14 +237,16 @@ class _SleepLogPageState extends State<SleepLogPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Sleep'),
-        leading: const BackButton(color: Colors.black),
-        backgroundColor: Colors.white,
+        leading: BackButton(
+          color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.black,
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        titleTextStyle: const TextStyle(
-          color: AppTheme.primaryColor,
+        titleTextStyle: TextStyle(
+          color: Theme.of(context).primaryColor,
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
@@ -124,9 +256,13 @@ class _SleepLogPageState extends State<SleepLogPage> {
           if (state is SleepOperationSuccess) {
             Navigator.pop(context, true);
           } else if (state is SleepError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+            setState(() => _isSaving = false);
           }
         },
         child: SingleChildScrollView(
@@ -137,9 +273,9 @@ class _SleepLogPageState extends State<SleepLogPage> {
               // Header Date
               Text(
                 DateFormat('E, MMM d').format(widget.initialDate),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey,
+                  color: Theme.of(context).hintColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -147,15 +283,15 @@ class _SleepLogPageState extends State<SleepLogPage> {
 
               // Circular Timer
               Container(
-                height: 320,
-                width: 320,
-                padding: const EdgeInsets.all(20),
+                height: 380,
+                width: 380,
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Theme.of(context).shadowColor.withOpacity(0.1),
                       blurRadius: 20,
                       spreadRadius: 5,
                       offset: const Offset(0, 10),
@@ -165,18 +301,8 @@ class _SleepLogPageState extends State<SleepLogPage> {
                 child: CircularSleepTimer(
                   startTime: _startDateTime,
                   endTime: _endDateTime,
-                  onStartTimeChanged: (val) {
-                    setState(() {
-                      _startDateTime = val;
-                      _updateDuration();
-                    });
-                  },
-                  onEndTimeChanged: (val) {
-                    setState(() {
-                      _endDateTime = val;
-                      _updateDuration();
-                    });
-                  },
+                  onStartTimeChanged: (val) => _handleTimeChange(val, true),
+                  onEndTimeChanged: (val) => _handleTimeChange(val, false),
                 ),
               ),
               const SizedBox(height: 32),
@@ -210,7 +336,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
               const SizedBox(height: 32),
 
               // Save Button
-              PrimaryButton(text: 'Save', onPressed: _saveLog),
+              if (_isSaving)
+                const Center(child: CircularProgressIndicator())
+              else
+                PrimaryButton(text: 'Save', onPressed: _saveLog),
 
               if (widget.existingLog != null) ...[
                 const SizedBox(height: 16),
@@ -219,15 +348,19 @@ class _SleepLogPageState extends State<SleepLogPage> {
                   child: TextButton(
                     onPressed: _deleteLog,
                     style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFEBEE), // Light red
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.errorContainer,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Delete Sleep Record',
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ),
                 ),
@@ -240,16 +373,62 @@ class _SleepLogPageState extends State<SleepLogPage> {
   }
 
   void _saveLog() {
+    if (_isSaving) return;
+
+    if (_endDateTime.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Wait, you haven\'t woken up yet! Sleep cannot end in the future.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 1. Check for overlapping inputs against loaded logs
+    final state = context.read<SleepBloc>().state;
+    if (state is SleepLoaded) {
+      final newStart = _startDateTime;
+      final newEnd = _endDateTime;
+      // Allow 24h log rule
+      if (newEnd.difference(newStart) < const Duration(hours: 24)) {
+        for (var log in state.logs) {
+          if (widget.existingLog != null && log.id == widget.existingLog!.id)
+            continue;
+
+          if (newStart.isBefore(log.endTime) && newEnd.isAfter(log.startTime)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Selection overlaps with existing log (${DateFormat('h:mm a').format(log.startTime)} - ${DateFormat('h:mm a').format(log.endTime)})',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+        }
+      }
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
     final log = SleepLog(
       id:
           widget.existingLog?.id ??
-          DateTime.now().millisecondsSinceEpoch
-              .toString(), // Fix: Ensure ID is generated for new logs
+          DateTime.now().millisecondsSinceEpoch.toString(),
       startTime: _startDateTime,
       endTime: _endDateTime,
-      quality: _quality, // Hardcoded for now, could add slider
+      quality: _quality,
+      notes: widget.existingLog?.notes,
     );
-    context.read<SleepBloc>().add(LogSleep(log));
+    context.read<SleepBloc>().add(
+      LogSleep(log, previousLog: widget.existingLog),
+    );
   }
 
   // ... (rest of methods: _deleteLog, _getDateLabel, _buildTimeCard)
@@ -289,27 +468,50 @@ class _SleepLogPageState extends State<SleepLogPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         decoration: BoxDecoration(
-          color: const Color(0xffF7F8F8),
-          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withOpacity(0.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).shadowColor.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: isBedtime ? AppTheme.primaryColor : Colors.orange,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color:
+                        (isBedtime
+                                ? Theme.of(context).primaryColor
+                                : Colors.orange)
+                            .withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: isBedtime
+                        ? Theme.of(context).primaryColor
+                        : Colors.orange,
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 12),
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey,
-                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).hintColor.withOpacity(0.8),
+                    letterSpacing: 1.0,
                   ),
                 ),
               ],
@@ -320,19 +522,19 @@ class _SleepLogPageState extends State<SleepLogPage> {
                 children: [
                   TextSpan(
                     text: DateFormat('h:mm').format(time),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontFamily:
                           'Poppins', // Ensuring font consistency if needed
                     ),
                   ),
                   TextSpan(
                     text: DateFormat(' a').format(time).toLowerCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,
+                      color: Theme.of(context).hintColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -342,7 +544,10 @@ class _SleepLogPageState extends State<SleepLogPage> {
             const SizedBox(height: 2),
             Text(
               _getDateLabel(time),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).hintColor.withOpacity(0.5),
+              ),
             ),
           ],
         ),

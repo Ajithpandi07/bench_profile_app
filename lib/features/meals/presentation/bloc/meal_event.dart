@@ -36,16 +36,18 @@ class LoadUserLibrary extends MealEvent {}
 
 class AddUserFood extends MealEvent {
   final FoodItem food;
-  const AddUserFood(this.food);
+  final bool isEdit;
+  const AddUserFood(this.food, {this.isEdit = false});
   @override
-  List<Object> get props => [food];
+  List<Object> get props => [food, isEdit];
 }
 
 class AddUserMeal extends MealEvent {
   final UserMeal meal;
-  const AddUserMeal(this.meal);
+  final bool isEdit;
+  const AddUserMeal(this.meal, {this.isEdit = false});
   @override
-  List<Object> get props => [meal];
+  List<Object> get props => [meal, isEdit];
 }
 
 class LoadDashboardStats extends MealEvent {
@@ -71,4 +73,46 @@ class ReplaceMealLogEvent extends MealEvent {
 
   @override
   List<Object> get props => [newLog, oldLogIds, oldDate];
+}
+
+class DeleteMealLog extends MealEvent {
+  final String mealLogId;
+  final DateTime date;
+
+  const DeleteMealLog(this.mealLogId, this.date);
+
+  @override
+  List<Object> get props => [mealLogId, date];
+}
+
+class DeleteAllMealsForDate extends MealEvent {
+  final DateTime date;
+  const DeleteAllMealsForDate(this.date);
+
+  @override
+  List<Object> get props => [date];
+}
+
+class DeleteMultipleMeals extends MealEvent {
+  final List<String> mealLogIds;
+  final DateTime date;
+
+  const DeleteMultipleMeals(this.mealLogIds, this.date);
+
+  @override
+  List<Object> get props => [mealLogIds, date];
+}
+
+class DeleteUserFood extends MealEvent {
+  final String id;
+  const DeleteUserFood(this.id);
+  @override
+  List<Object> get props => [id];
+}
+
+class DeleteUserMeal extends MealEvent {
+  final String id;
+  const DeleteUserMeal(this.id);
+  @override
+  List<Object> get props => [id];
 }

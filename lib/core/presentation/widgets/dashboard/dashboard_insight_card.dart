@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class DashboardInsightCard extends StatelessWidget {
   final String title;
   final String message;
-  final IconData icon;
+  final IconData icon; // New
+  final Color iconColor; // New
   final Color iconBackgroundColor;
   final Color backgroundColor;
 
@@ -11,7 +12,8 @@ class DashboardInsightCard extends StatelessWidget {
     super.key,
     this.title = 'Great job!',
     required this.message,
-    this.icon = Icons.auto_awesome,
+    this.icon = Icons.auto_awesome, // Default
+    this.iconColor = Colors.white, // Default
     this.iconBackgroundColor = Colors.blue,
     this.backgroundColor = const Color(0xFFF0F8FF),
   });
@@ -34,7 +36,7 @@ class DashboardInsightCard extends StatelessWidget {
               color: iconBackgroundColor,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(

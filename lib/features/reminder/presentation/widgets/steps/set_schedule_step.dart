@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../primary_button.dart';
 import '../modals/time_goal_modal.dart';
-import '../../../../../core/services/app_theme.dart';
 
 class SetScheduleStep extends StatelessWidget {
   final String scheduleType;
@@ -14,6 +13,8 @@ class SetScheduleStep extends StatelessWidget {
   final TimeOfDay? selectedTime;
   final String selectedGoal;
   final String selectedUnit;
+
+  final TextEditingController nameController; // Added name controller
 
   // Custom Fields
   final int interval;
@@ -41,6 +42,7 @@ class SetScheduleStep extends StatelessWidget {
 
   const SetScheduleStep({
     super.key,
+    required this.nameController, // Required now
     required this.scheduleType,
     required this.startDate,
     required this.endDate,
@@ -83,22 +85,24 @@ class SetScheduleStep extends StatelessWidget {
             Stack(
               alignment: Alignment.center,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                    onPressed: onBack,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                if (onBack !=
+                    null) // Conditional back button if needed, or just remove if it's step 1
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                      onPressed: onBack,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                   ),
-                ),
-                const Center(
+                Center(
                   child: Text(
                     'Set Schedule',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
                 ),
@@ -107,10 +111,45 @@ class SetScheduleStep extends StatelessWidget {
 
             const SizedBox(height: 30),
 
+            // Reminder Name Input
+            Text(
+              'Reminder Name',
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).hintColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  hintText: 'E.g., Drink water, Yoga, etc.',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            const SizedBox(height: 30),
+
             // Question
             Text(
               'How often do you want to track this activity?',
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -119,7 +158,7 @@ class SetScheduleStep extends StatelessWidget {
               width: double.infinity,
               height: 37,
               decoration: BoxDecoration(
-                color: const Color.fromRGBO(229, 231, 235, 0.3),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(18.5),
               ),
               child: Row(
@@ -131,7 +170,7 @@ class SetScheduleStep extends StatelessWidget {
                           child: Container(
                             decoration: BoxDecoration(
                               color: scheduleType == type
-                                  ? AppTheme.primaryColor
+                                  ? Theme.of(context).primaryColor
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(18.5),
                             ),
@@ -140,8 +179,8 @@ class SetScheduleStep extends StatelessWidget {
                               type,
                               style: TextStyle(
                                 color: scheduleType == type
-                                    ? Colors.white
-                                    : AppTheme.primaryColor,
+                                    ? Theme.of(context).colorScheme.onPrimary
+                                    : Theme.of(context).primaryColor,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -160,22 +199,40 @@ class SetScheduleStep extends StatelessWidget {
               _buildCustomScheduleOptions(context),
             ] else ...[
               if (scheduleType == 'Weekly') ...[
+                // Interval for Weekly
+                const Text(
+                  'Repeat Every',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                _buildSimpleIntervalSelector(context, 'Weeks'),
+                const SizedBox(height: 16),
+
                 const Text(
                   'Repeat on',
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
-                _buildWeekDaySelector(),
+                _buildWeekDaySelector(context),
                 const SizedBox(height: 24),
               ],
 
               if (scheduleType == 'Monthly') ...[
+                // Interval for Monthly
+                const Text(
+                  'Repeat Every',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                _buildSimpleIntervalSelector(context, 'Months'),
+                const SizedBox(height: 16),
+
                 const Text(
                   'Repeat on',
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
-                _buildMonthDaySelector(),
+                _buildMonthDaySelector(context),
                 const SizedBox(height: 24),
               ],
             ],
@@ -299,7 +356,7 @@ class SetScheduleStep extends StatelessWidget {
                 height: 36,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -337,7 +394,9 @@ class SetScheduleStep extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -349,9 +408,9 @@ class SetScheduleStep extends StatelessWidget {
                   height: 36,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).canvasColor,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                   ),
                   child: TextField(
                     controller: TextEditingController(text: interval.toString())
@@ -384,10 +443,11 @@ class SetScheduleStep extends StatelessWidget {
           // Weekday selector if Frequency is Weeks
           if (customFrequency == 'Weeks') ...[
             _buildWeekDaySelector(
+              context,
               isSmall: true,
             ), // Pass flag to use smaller bubbles
           ],
-          if (customFrequency == 'Months') ...[_buildMonthDaySelector()],
+          if (customFrequency == 'Months') ...[_buildMonthDaySelector(context)],
         ],
       ),
     );
@@ -424,11 +484,13 @@ class SetScheduleStep extends StatelessWidget {
     return Column(
       children: [
         _buildDurationOption(
+          context,
           title: 'Forever',
           isSelected: recurrenceEndType == 'Forever',
           onTap: () => onRecurrenceEndTypeChanged('Forever'),
         ),
         _buildDurationOption(
+          context,
           title: 'Until',
           isSelected: recurrenceEndType == 'Until',
           onTap: () => onRecurrenceEndTypeChanged('Until'),
@@ -472,6 +534,7 @@ class SetScheduleStep extends StatelessWidget {
           },
         ),
         _buildDurationOption(
+          context,
           title: 'Specific number of times',
           isSelected: recurrenceEndType == 'Count',
           onTap: () => onRecurrenceEndTypeChanged('Count'),
@@ -519,7 +582,8 @@ class SetScheduleStep extends StatelessWidget {
     );
   }
 
-  Widget _buildDurationOption({
+  Widget _buildDurationOption(
+    BuildContext context, {
     required String title,
     required bool isSelected,
     required VoidCallback onTap,
@@ -553,7 +617,9 @@ class SetScheduleStep extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
+                  color: isSelected
+                      ? Theme.of(context).primaryColor
+                      : Theme.of(context).dividerColor,
                   width: isSelected ? 5 : 1,
                 ),
               ),
@@ -586,7 +652,7 @@ class SetScheduleStep extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 144),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(16),
       ),
       child: (selectedGoal.isNotEmpty && selectedTime != null)
@@ -677,7 +743,7 @@ class SetScheduleStep extends StatelessWidget {
     );
   }
 
-  Widget _buildWeekDaySelector({bool isSmall = false}) {
+  Widget _buildWeekDaySelector(BuildContext context, {bool isSmall = false}) {
     const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     // 1=Mon, ..., 7=Sun.
     // Index map: 0(S)->7, 1(M)->1, 2(T)->2, 3(W)->3, 4(T)->4, 5(F)->5, 6(S)->6
@@ -707,9 +773,13 @@ class SetScheduleStep extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+              color: isSelected
+                  ? Theme.of(context).primaryColor
+                  : Colors.transparent,
               border: Border.all(
-                color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
+                color: isSelected
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).dividerColor,
               ),
             ),
             child: Text(
@@ -726,7 +796,7 @@ class SetScheduleStep extends StatelessWidget {
     );
   }
 
-  Widget _buildMonthDaySelector() {
+  Widget _buildMonthDaySelector(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 40,
@@ -740,7 +810,10 @@ class SetScheduleStep extends StatelessWidget {
         child: DropdownButton<int>(
           value: dayOfMonth,
           isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor),
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: Theme.of(context).primaryColor,
+          ),
           items: List.generate(31, (index) {
             final day = index + 1;
             return DropdownMenuItem(
@@ -795,8 +868,8 @@ class SetScheduleStep extends StatelessWidget {
         height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          color: Theme.of(context).cardColor,
+          border: Border.all(color: Theme.of(context).dividerColor),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -806,13 +879,16 @@ class SetScheduleStep extends StatelessWidget {
               children: [
                 Text(
                   '$hint: ', // Added hint prefix to match context
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
                 Text(
                   '${date.day}/${date.month}/${date.year}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -821,9 +897,82 @@ class SetScheduleStep extends StatelessWidget {
             Icon(
               Icons.calendar_today_outlined,
               size: 18,
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).primaryColor,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSimpleIntervalSelector(BuildContext context, String unit) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Text(
+                '$interval',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(unit, style: TextStyle(color: Theme.of(context).hintColor)),
+            ],
+          ),
+
+          Row(
+            children: [
+              _buildIncrementButton(
+                context,
+                icon: Icons.remove,
+                onTap: () {
+                  if (interval > 1) onIntervalChanged(interval - 1);
+                },
+              ),
+              const SizedBox(width: 8),
+              _buildIncrementButton(
+                context,
+                icon: Icons.add,
+                onTap: () {
+                  onIntervalChanged(interval + 1);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIncrementButton(
+    BuildContext context, {
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          shape: BoxShape.circle,
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Icon(
+          icon,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );

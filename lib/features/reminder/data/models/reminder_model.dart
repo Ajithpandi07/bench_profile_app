@@ -16,12 +16,14 @@ class ReminderModel extends Reminder {
     required super.endDate,
     super.smartReminder = false,
     super.isCompleted = false,
+    super.isStandard = false,
     super.createdAt,
     super.updatedAt,
     super.interval,
     super.customFrequency,
     super.recurrenceEndType,
     super.recurrenceCount,
+    super.skippedDates,
   });
 
   factory ReminderModel.fromSnapshot(DocumentSnapshot doc) {
@@ -44,12 +46,18 @@ class ReminderModel extends Reminder {
       isCompleted: data['isCompleted'] is bool
           ? data['isCompleted']
           : data['isCompleted'].toString().toLowerCase() == 'true',
+      isStandard: data['isStandard'] is bool
+          ? data['isStandard']
+          : data['isStandard'].toString().toLowerCase() == 'true',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
       interval: data['interval'] as int?,
       customFrequency: data['customFrequency'] as String?,
       recurrenceEndType: data['recurrenceEndType'] as String?,
       recurrenceCount: data['recurrenceCount'] as int?,
+      skippedDates: (data['skippedDates'] as List<dynamic>?)
+          ?.map((e) => (e as Timestamp).toDate())
+          .toList(),
     );
   }
 
@@ -67,12 +75,14 @@ class ReminderModel extends Reminder {
       'endDate': Timestamp.fromDate(endDate),
       'smartReminder': smartReminder,
       'isCompleted': isCompleted,
+      'isStandard': isStandard,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'interval': interval,
       'customFrequency': customFrequency,
       'recurrenceEndType': recurrenceEndType,
       'recurrenceCount': recurrenceCount,
+      'skippedDates': skippedDates?.map((e) => Timestamp.fromDate(e)).toList(),
     };
   }
 
@@ -91,12 +101,14 @@ class ReminderModel extends Reminder {
       endDate: reminder.endDate,
       smartReminder: reminder.smartReminder,
       isCompleted: reminder.isCompleted,
+      isStandard: reminder.isStandard,
       createdAt: reminder.createdAt,
       updatedAt: reminder.updatedAt,
       interval: reminder.interval,
       customFrequency: reminder.customFrequency,
       recurrenceEndType: reminder.recurrenceEndType,
       recurrenceCount: reminder.recurrenceCount,
+      skippedDates: reminder.skippedDates,
     );
   }
 
@@ -115,12 +127,14 @@ class ReminderModel extends Reminder {
       endDate: endDate,
       smartReminder: smartReminder,
       isCompleted: isCompleted,
+      isStandard: isStandard,
       createdAt: createdAt,
       updatedAt: updatedAt,
       interval: interval,
       customFrequency: customFrequency,
       recurrenceEndType: recurrenceEndType,
       recurrenceCount: recurrenceCount,
+      skippedDates: skippedDates,
     );
   }
 
@@ -139,12 +153,14 @@ class ReminderModel extends Reminder {
     DateTime? endDate,
     bool? smartReminder,
     bool? isCompleted,
+    bool? isStandard,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? interval,
     String? customFrequency,
     String? recurrenceEndType,
     int? recurrenceCount,
+    List<DateTime>? skippedDates,
   }) {
     return ReminderModel(
       id: id ?? this.id,
@@ -160,12 +176,14 @@ class ReminderModel extends Reminder {
       endDate: endDate ?? this.endDate,
       smartReminder: smartReminder ?? this.smartReminder,
       isCompleted: isCompleted ?? this.isCompleted,
+      isStandard: isStandard ?? this.isStandard,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       interval: interval ?? this.interval,
       customFrequency: customFrequency ?? this.customFrequency,
       recurrenceEndType: recurrenceEndType ?? this.recurrenceEndType,
       recurrenceCount: recurrenceCount ?? this.recurrenceCount,
+      skippedDates: skippedDates ?? this.skippedDates,
     );
   }
 }

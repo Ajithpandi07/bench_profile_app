@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bench_profile_app/core/core.dart';
 import 'package:bench_profile_app/features/hydration/domain/entities/hydration_log.dart';
@@ -6,6 +7,7 @@ import 'package:bench_profile_app/features/hydration/domain/entities/hydration_d
 
 abstract class HydrationRemoteDataSource {
   Future<void> logWaterIntake(HydrationLog log);
+  Future<void> deleteHydrationLog(String id, DateTime date);
   Future<List<HydrationLog>> getHydrationLogsForDate(DateTime date);
   Future<List<HydrationDailySummary>> getHydrationStats(
     DateTime startDate,
@@ -122,6 +124,93 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
   }
 
   @override
+  Future<void> deleteHydrationLog(String id, DateTime date) async {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw ServerException('User not authenticated');
+    }
+
+    try {
+      final dateId =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      debugPrint(
+        'DATASOURCE: Delete requested for dateId: $dateId, logId: $id',
+      );
+
+      final dateDocRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('water_logs')
+          .doc(dateId);
+
+      final logRef = dateDocRef.collection('logs').doc(id);
+
+      // Fetch log to get amount for stats decrement
+      final snapshot = await logRef.get();
+      if (!snapshot.exists) {
+        debugPrint('DATASOURCE: Log document not found!');
+        return;
+      }
+      debugPrint('DATASOURCE: Log found, proceeding with delete batch');
+
+      final data = snapshot.data();
+      final amountLiters = (data?['amountLiters'] as num?)?.toDouble() ?? 0.0;
+
+      final batch = firestore.batch();
+      batch.delete(logRef);
+
+      // Decrement Daily Total
+      batch.set(dateDocRef, {
+        'totalLiters': FieldValue.increment(-amountLiters),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Decrement Monthly Summary
+      final year = date.year;
+      final month = date.month;
+      final day = date.day;
+      final summaryId = '${year}_$month';
+
+      final summaryRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('water_logs_monthly')
+          .doc(summaryId);
+
+      batch.set(summaryRef, {
+        'id': summaryId,
+        'userId': user.uid,
+        'year': year,
+        'month': month,
+      }, SetOptions(merge: true));
+
+      batch.update(summaryRef, {
+        'totalLiters': FieldValue.increment(-amountLiters),
+        'dailyBreakdown.${day.toString()}': FieldValue.increment(-amountLiters),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+      debugPrint('DATASOURCE: Batch delete committed successfully');
+
+      // Verify deletion
+      final checkSnapshot = await logRef.get(
+        const GetOptions(source: Source.server),
+      );
+      if (checkSnapshot.exists) {
+        debugPrint(
+          'DATASOURCE: CRITICAL - Document still exists after delete commit!',
+        );
+      } else {
+        debugPrint('DATASOURCE: Verification - Document is gone.');
+      }
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
   Future<List<HydrationLog>> getHydrationLogsForDate(DateTime date) async {
     // ... existing implementation ...
     final user = auth.currentUser;
@@ -139,8 +228,8 @@ class HydrationRemoteDataSourceImpl implements HydrationRemoteDataSource {
           .collection('water_logs')
           .doc(dateId)
           .collection('logs')
-          .orderBy('timestamp', descending: true)
-          .get();
+          .orderBy('timestamp', descending: false)
+          .get(const GetOptions(source: Source.server));
 
       return querySnapshot.docs.map((doc) {
         final data = doc.data();

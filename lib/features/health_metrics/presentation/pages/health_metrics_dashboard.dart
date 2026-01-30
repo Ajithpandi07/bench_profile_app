@@ -10,10 +10,13 @@ import '../../../auth/auth.dart';
 import '../bloc/bloc.dart';
 import '../widgets/widgets.dart';
 import '../../domain/entities/entities.dart';
-import '../../../reminder/reminder.dart';
+
 import '../../../sleep/presentation.dart';
 import '../../../hydration/presentation.dart';
 import '../../../meals/presentation.dart';
+import '../../../activity/presentation/pages/activity_report_page.dart';
+import '../../../activity/presentation/bloc/activity_bloc.dart';
+import '../../../activity/presentation/bloc/activity_event.dart';
 
 class HealthMetricsDashboard extends StatefulWidget {
   const HealthMetricsDashboard({super.key});
@@ -145,9 +148,9 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
+                      strokeWidth: 0.1,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Color.fromARGB(255, 19, 19, 19),
+                        Color.fromARGB(255, 217, 214, 214),
                       ),
                     ),
                   ),
@@ -267,39 +270,24 @@ class _HomeTab extends StatelessWidget {
                         clipBehavior: Clip.none,
                         children: [
                           Positioned(
-                            top:
-                                -380, // Align 500 center to 120 (ScoreCard center)
+                            top: -85 - (size.height * 1.2 / 2),
                             left: 0,
                             right: 0,
-                            height: 1000,
-                            child: Center(
-                              child: SizedBox(
-                                width: 1000,
-                                height: 1000,
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: ClipPath(
-                                        clipper: _RippleBoxClipper(),
-                                        child: Container(
-                                          color: AppTheme.rippleBackground
-                                              .withOpacity(0.3),
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned.fill(
-                                      child: ClipPath(
-                                        clipper: _RippleBoxClipper(),
-                                        child: CustomPaint(
-                                          painter: RippleBackgroundPainter(
-                                            color: primaryColor.withOpacity(
-                                              0.05,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                            height: size.height * 1.2,
+                            child: ClipPath(
+                              clipper: _RippleBoxClipper(),
+                              child: Container(
+                                color: AppTheme.rippleBackground.withOpacity(
+                                  0.3,
+                                ),
+                                child: CustomPaint(
+                                  painter: RippleBackgroundPainter(
+                                    color: primaryColor.withOpacity(0.05),
+                                    centerOffset: const Offset(
+                                      0,
+                                      205,
+                                    ), // Align ripple center to ScoreCard
+                                  ),
                                 ),
                               ),
                             ),
@@ -335,6 +323,10 @@ class _HomeTab extends StatelessWidget {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
+                                                settings: const RouteSettings(
+                                                  name:
+                                                      MealReportPage.routeName,
+                                                ),
                                                 builder: (context) =>
                                                     BlocProvider.value(
                                                       value: sl<MealBloc>(),
@@ -366,6 +358,10 @@ class _HomeTab extends StatelessWidget {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
+                                                settings: const RouteSettings(
+                                                  name: HydrationReportPage
+                                                      .routeName,
+                                                ),
                                                 builder: (context) =>
                                                     BlocProvider.value(
                                                       value:
@@ -395,24 +391,48 @@ class _HomeTab extends StatelessWidget {
                                           top: 40,
                                         ), // Lower point (inner)
                                         child: GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
+                                          onTap: () async {
+                                            await Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) =>
-                                                    BlocProvider<ReminderBloc>(
+                                                settings: const RouteSettings(
+                                                  name: ActivityReportPage
+                                                      .routeName,
+                                                ),
+                                                builder: (context) => MultiBlocProvider(
+                                                  providers: [
+                                                    BlocProvider<ActivityBloc>(
                                                       create: (context) =>
-                                                          sl<ReminderBloc>()
-                                                            ..add(
-                                                              LoadReminders(),
+                                                          sl<ActivityBloc>()..add(
+                                                            LoadActivitiesForDate(
+                                                              DateTime.now(),
                                                             ),
-                                                      child: const ReminderPage(
-                                                        initialCategory:
-                                                            'Activity',
-                                                      ),
+                                                          ),
                                                     ),
+                                                    BlocProvider<
+                                                      HealthMetricsBloc
+                                                    >(
+                                                      create: (context) =>
+                                                          sl<
+                                                              HealthMetricsBloc
+                                                            >()
+                                                            ..add(
+                                                              GetMetricsForDate(
+                                                                DateTime.now(),
+                                                              ),
+                                                            ),
+                                                    ),
+                                                  ],
+                                                  child:
+                                                      const ActivityReportPage(),
+                                                ),
                                               ),
                                             );
+                                            if (context.mounted) {
+                                              context
+                                                  .read<HealthMetricsBloc>()
+                                                  .add(const RefreshMetrics());
+                                            }
                                           },
                                           child: _StatItem(
                                             icon: Icons.directions_run,
@@ -428,10 +448,13 @@ class _HomeTab extends StatelessWidget {
                                           top: 0,
                                         ), // Highest point (outer)
                                         child: GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
+                                          onTap: () async {
+                                            await Navigator.push(
                                               context,
                                               MaterialPageRoute(
+                                                settings: const RouteSettings(
+                                                  name: SleepPage.routeName,
+                                                ),
                                                 builder: (context) =>
                                                     BlocProvider<SleepBloc>(
                                                       create: (context) =>
@@ -440,25 +463,17 @@ class _HomeTab extends StatelessWidget {
                                                     ),
                                               ),
                                             );
+                                            if (context.mounted) {
+                                              context
+                                                  .read<HealthMetricsBloc>()
+                                                  .add(const RefreshMetrics());
+                                            }
                                           },
                                           child: _StatItem(
                                             icon:
                                                 Icons.brightness_3, // Moon icon
                                             sub: '+',
-                                            val:
-                                                'Sleep', // Placeholder or fetch actual sleep hours from somewhere if dashboard bloc had it? Dashboard bloc doesn't have Sleep info.
-                                            // Ideally HealthMetricsBloc should fetch sleep too. For now static or simple.
-                                            // User screenshot shows "In 3 h". This implies a countdown to bedtime.
-                                            // The Reminder card previously did this "In 3 h".
-                                            // Sleep card usually shows "7h 30m" if logged.
-                                            // Since I can't easily modify HealthMetricsBloc to fetch sleep summary in this turn without expanding scope significantly, I'll stick to a static label or "Sleep" for now, or "Record"
-                                            // But user screenshot 1 shows "In 3 h". I'll keep "In 3 h" if that's what they had for Reminder/Schedule?
-                                            // Actually, "In 3 h" was likely from Reminder logic.
-                                            // Let's change val to "Record" or "--" until fetched?
-                                            // Or keep "In 3 h" as hardcoded placeholder to match screenshot 1?
-                                            // The user said: "update the sleep icon in the dashboard last item card... like above" (Image 1).
-                                            // Image 1 has: Bed Icon, Red Plus, "In 3 h".
-                                            // So I will use that.
+                                            val: 'In 3 h',
                                             unit: '',
                                           ),
                                         ),
@@ -589,36 +604,64 @@ class _StatItem extends StatelessWidget {
 class _RippleBoxClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
-    // Defines a curved clipping area for the ripple painter box.
-    // The painter box is 1000x1000.
-    // Box Top (0) aligns with Stack Top -380.
-    // Side items (Meal/Calendar) Bottom ~ 310 -> Visual Y relative to box ~ 690.
-    // Middle items (Water/Activity) Bottom ~ 350 -> Visual Y relative to box ~ 730.
-    // Center logic: Ripple center is 500,500.
-    // We want a nice curve that encompasses the buttons.
-
     final path = Path();
-    // Start at top-left of visual area? No, we need to fill the top.
-    // So we trace the BOTTOM edge of the shape basically.
-    // The ripple box is BIG (1000x1000). The useful part is the bottom curve.
-    // Top is 0.
 
-    // We draw the shape from Top-Left (0,0) -> Bottom-Left (0, 700) -> Curve -> Bottom-Right (1000, 700) -> Top-Right (1000, 0)
+    // Calculate vertical reference points based on the center of the ripple
+    // Center is at size.height / 2
+    // We want the curve to drop down to cover the buttons.
+    // ScoreCard center Y is 120 (relative to stack top)
+    // Background center Y is 120 (relative to stack top)
+    // Buttons are roughly at Stack Y=400 area.
+    // Stack Y 400 corresponds to Painter Y = 400 - (120 - H/2) = 280 + H/2
+    // Let's rely on relative sizing to center.
 
-    path.lineTo(0, 650); // Side height (Meal)
+    final centerY = size.height / 2;
+    final curveBottomY = centerY + 350; // Use reasonable offset
 
-    // Cubic allows for a flatter bottom or "squaricle" feel if needed.
-    // We use a cubic curve to create a wider bottom that encompasses the stats buttons better.
+    path.lineTo(0, curveBottomY - 150); // Start of curve at sides
+
     path.cubicTo(
-      350,
-      870, // Control Point 1
-      650,
-      650, // Control Point 2
-      1000,
-      -1800, // End Point
+      size.width * 0.35,
+      curveBottomY + 100, // Control Point 1
+      size.width * 0.65,
+      curveBottomY - 150, // Control Point 2
+      size.width,
+      -100, // Go way up
+    );
+    // Wait, the previous cubic wasn't symmetric.
+    // Previous: 0,650 -> (350,870) -> (650,650) -> (1000, -1800)
+    // It swoops down then up-right.
+    // Let's replicate the swoop but responsive.
+
+    // 0, SideHeight
+    // C1 (W*0.35, BottomDepth)
+    // C2 (W*0.65, SideHeight)
+    // End (W, -TopDepth)
+
+    // We need to cover the buttons on the right side too.
+    // Previous endDepth was -size.height (way up), creating a steep diagonal.
+    // We'll lower the endDepth to be closer to 0 (top of view) or even positive,
+    // to flatten the curve and ensure it stays behind the right-side buttons.
+
+    // Reverted to standardized symmetric U-shape (pre-adjustment).
+    // Start/End at 350, Depth at 450 for wide coverage.
+
+    final startHeight = centerY + 350;
+    final endHeight = centerY + 350;
+    final controlDepth = centerY + 450;
+
+    path.reset();
+    path.lineTo(0, startHeight);
+    path.cubicTo(
+      size.width * 0.25, // C1 X
+      controlDepth, // C1 Y
+      size.width * 0.75, // C2 X
+      controlDepth, // C2 Y
+      size.width, // End X
+      endHeight, // End Y
     );
 
-    path.lineTo(1000, 0);
+    path.lineTo(size.width, 0);
     path.close();
     return path;
   }

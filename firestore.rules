@@ -72,6 +72,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    match /bench_profile/{userId}/activity_logs/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /bench_profile/{userId}/activity_logs_monthly/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // ---------------------------------------------------------
     // Default Deny
     // ---------------------------------------------------------

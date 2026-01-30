@@ -41,16 +41,26 @@ class _MealTypeSelectorState extends State<MealTypeSelector> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 16), // Reduced from 24
-          const Text(
-            'Meal type',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFE93448), // Primary Red
-            ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(width: 24), // Spacer to balance close button
+              const Text(
+                'Meal type',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFE93448), // Primary Red
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.black),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
           ),
-          const SizedBox(height: 16), // Reduced from 24
+          const SizedBox(height: 16),
           // List of Radio options (Custom Styled)
           ..._mealTypes.map((type) => _buildOption(type)),
 

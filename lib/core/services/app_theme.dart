@@ -14,8 +14,16 @@ class AppTheme {
   static const primaryColor = Color(0xFFEE374D);
 
   static const primaryVariant = Color(0xFFA72740);
-  static const primaryLight = Color.fromRGBO(226, 146, 146, 1);
+  static const primaryLight = Color(0xFFFF9DB0); // Updated from palette
   static const rippleBackground = Color(0xFFFFCED8);
+  static const textDark = Color(0xFF131313);
+  static const lightGray = Color(0xFFF5F5F5);
+  // Meal Details Page Colors
+  static const mealDetailsBackground = Color(0xFFF5F7FA);
+  static const mealDetailsMetaText = Color(0xFF909DAD);
+  static const mealDetailsLabelText = Color(0xFF556073);
+  static const mealDetailsIconBackground = Color(0xFFFFEBEB);
+  static const mealDetailsBorder = Color(0xFFEAEAEA);
 
   /// Defines the base text theme for the application.
   /// These styles will be adapted with appropriate colors by the ColorScheme.
@@ -38,7 +46,7 @@ class AppTheme {
   /// The light theme configuration for the application.
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
-    scaffoldBackgroundColor: const Color(0xFFF8F8F8),
+    scaffoldBackgroundColor: const Color(0xFFFFFFFF), // Updated to white
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryColor,
       primary: primaryColor,

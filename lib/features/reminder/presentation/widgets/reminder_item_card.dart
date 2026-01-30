@@ -3,131 +3,149 @@ import 'package:flutter/material.dart';
 class ReminderItemCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final String scheduleType;
-  final String? time; // Added time field
+  final String? detail1; // e.g. "Every 2 Hrs" or "7:30 PM"
+  final String? detail2; // e.g. "Breakfast" or "Cycling"
   final Color? color;
   final IconData? icon;
+
+  final bool isEnabled;
+  final ValueChanged<bool>? onToggle;
+  final VoidCallback? onTap;
 
   const ReminderItemCard({
     super.key,
     required this.title,
     required this.subtitle,
-    required this.scheduleType,
-    this.time,
+    this.detail1,
+    this.detail2,
     this.color,
     this.icon,
+    this.isEnabled = true,
+    this.onToggle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final themeColor = color ?? Colors.blue;
+
     return Container(
-      height: 65, // Fixed height as per user request
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ), // Adjusted padding to fit height
+      width: 340,
+      height: 119,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          bottomLeft: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 32.6,
+            offset: const Offset(0, 19),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // Icon Container
-          Container(
-            padding: const EdgeInsets.all(
-              8,
-            ), // Reduced padding for icon container
-            decoration: BoxDecoration(
-              color: (color ?? Colors.blue).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              icon ?? Icons.notifications,
-              color: color ?? Colors.blue,
-              size: 20, // Reduced icon size
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Texts
-          Expanded(
-            child: Column(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment:
-                  MainAxisAlignment.center, // Center text vertically
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
+                // Icon Container
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    icon ?? Icons.notifications,
+                    color: themeColor,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                // Texts
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
                         title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14, // Slightly reduced font size
+                        style: TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1D1617),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      if (detail1 != null && detail1!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          detail1!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: themeColor.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                      if (detail2 != null && detail2!.isNotEmpty) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          detail2!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // Toggle Switch
+                if (onToggle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Transform.scale(
+                      scale: 0.7,
+                      child: Switch(
+                        value: isEnabled,
+                        onChanged: onToggle,
+                        activeColor: Colors.white,
+                        activeTrackColor: const Color(
+                          0xFFFF5252,
+                        ), // Matching the mockup's red/pink active color
+                        inactiveThumbColor: Colors.white,
+                        inactiveTrackColor: Colors.grey.withValues(alpha: 0.2),
+                        trackOutlineColor: WidgetStateProperty.all(
+                          Colors.transparent,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (color ?? Colors.blue).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            scheduleType,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: color ?? Colors.blue,
-                            ),
-                          ),
-                          if (time != null && time!.isNotEmpty) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              "| $time",
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: color ?? Colors.blue,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11, // Slightly reduced font size
-                    color: Color(0xFF7B6F72),
                   ),
-                ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

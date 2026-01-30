@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/reminder.dart';
 
 abstract class ReminderEvent extends Equatable {
   const ReminderEvent();
@@ -137,6 +138,21 @@ class DeleteReminder extends ReminderEvent {
 
   @override
   List<Object?> get props => [id];
+}
+
+class ToggleReminderForDate extends ReminderEvent {
+  final Reminder reminder;
+  final DateTime date;
+  final bool isEnabled; // true = remove from skipped, false = add to skipped
+
+  const ToggleReminderForDate({
+    required this.reminder,
+    required this.date,
+    required this.isEnabled,
+  });
+
+  @override
+  List<Object?> get props => [reminder, date, isEnabled];
 }
 
 class RescheduleAllNotifications extends ReminderEvent {}

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/core.dart';
 
 class MetricCard extends StatelessWidget {
   final String title;
@@ -21,7 +20,7 @@ class MetricCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -37,10 +36,10 @@ class MetricCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.08),
+              color: Theme.of(context).primaryColor.withOpacity(0.08),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: AppTheme.primaryColor, size: 24),
+            child: Icon(icon, color: Theme.of(context).primaryColor, size: 24),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -80,7 +79,9 @@ class MetricCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade500,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -91,8 +92,11 @@ class MetricCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded,
-              color: Colors.grey.shade300, size: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.grey.shade300,
+            size: 4,
+          ),
         ],
       ),
     );

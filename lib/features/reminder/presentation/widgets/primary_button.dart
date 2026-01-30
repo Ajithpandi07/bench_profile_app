@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/services/app_theme.dart';
+
 import '../../../../core/constants/app_dimensions.dart';
 
 class PrimaryButton extends StatelessWidget {
@@ -33,10 +33,11 @@ class PrimaryButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.transparent, // Button handles color
         borderRadius: BorderRadius.circular(
-            borderRadius ?? AppDimensions.primaryButtonRadius),
+          borderRadius ?? AppDimensions.primaryButtonRadius,
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
+            color: Theme.of(context).primaryColor.withOpacity(0.3),
             offset: const Offset(0, 4),
             blurRadius: 9.2,
             spreadRadius: 0,
@@ -48,11 +49,14 @@ class PrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           fixedSize: Size(w, h),
           minimumSize: Size(w, h),
-          backgroundColor: AppTheme.primaryColor, // Red background
-          foregroundColor: Colors.white, // Text color
+          backgroundColor: Theme.of(context).primaryColor, // Red background
+          foregroundColor: Theme.of(
+            context,
+          ).colorScheme.onPrimary, // Text color
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(
-                borderRadius ?? AppDimensions.primaryButtonRadius),
+              borderRadius ?? AppDimensions.primaryButtonRadius,
+            ),
           ),
           padding: padding ?? EdgeInsets.zero,
           elevation: 0, // Disable material shadow
@@ -63,7 +67,7 @@ class PrimaryButton extends StatelessWidget {
           style: TextStyle(
             fontSize: fontSize ?? 14,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             height: 20 / (fontSize ?? 14), // Enforce 20px line height
           ),
         ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'steps/add_details_step.dart';
+
 import 'steps/set_schedule_step.dart';
 import 'steps/review_reminder_step.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +17,10 @@ class AddReminderModal extends StatefulWidget {
   final DateTime? initialEndDate;
   final String? initialTime; // Add this
   final bool initialSmartReminder;
+  final int? initialInterval;
+  final String? initialCustomFrequency;
+  final String? initialRecurrenceEndType;
+  final int? initialRecurrenceCount;
 
   const AddReminderModal({
     super.key,
@@ -31,6 +35,10 @@ class AddReminderModal extends StatefulWidget {
     this.initialEndDate,
     this.initialTime, // Add this
     this.initialSmartReminder = false,
+    this.initialInterval,
+    this.initialCustomFrequency,
+    this.initialRecurrenceEndType,
+    this.initialRecurrenceCount,
   });
 
   @override
@@ -80,6 +88,10 @@ class _AddReminderModalState extends State<AddReminderModal> {
     _endDate =
         widget.initialEndDate ?? DateTime.now().add(const Duration(days: 30));
     _isSmartReminder = widget.initialSmartReminder;
+    _interval = widget.initialInterval ?? 1;
+    _customFrequency = widget.initialCustomFrequency ?? 'Weeks';
+    _recurrenceEndType = widget.initialRecurrenceEndType ?? 'Forever';
+    _recurrenceCount = widget.initialRecurrenceCount ?? 1;
 
     // Initialize Time
     if (widget.initialTime != null) {
@@ -121,12 +133,11 @@ class _AddReminderModalState extends State<AddReminderModal> {
   }
 
   void _nextStep() {
-    if (_currentStep < 2) {
-      if (_currentStep == 1 && _selectedTime == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please set a time and goal')),
-        );
-        return;
+    if (_currentStep < 1) {
+      // reduced from 2
+      // validation if needed for step 0 (schedule)
+      if (_currentStep == 0 && _selectedTime == null) {
+        // Optionally validate name too?
       }
 
       _pageController.nextPage(
@@ -223,9 +234,9 @@ class _AddReminderModalState extends State<AddReminderModal> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.70,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor, // or cardColor
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: Column(
         children: [
@@ -235,7 +246,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Theme.of(context).dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -246,16 +257,8 @@ class _AddReminderModalState extends State<AddReminderModal> {
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                AddDetailsStep(
-                  nameController: _nameController,
-                  quantityController: _quantityController,
-                  unitController: _unitController,
-                  selectedCategory: _selectedCategory,
-                  onCategoryChanged: (val) =>
-                      setState(() => _selectedCategory = val),
-                  onNext: _nextStep,
-                ),
                 SetScheduleStep(
+                  nameController: _nameController, // Pass it here
                   scheduleType: _scheduleType,
                   daysOfWeek: _daysOfWeek,
                   dayOfMonth: _dayOfMonth,
@@ -294,7 +297,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
                       setState(() => _recurrenceCount = val),
 
                   onNext: _nextStep,
-                  onBack: _prevStep,
+                  onBack: () {}, // No back action on first step
                 ),
                 ReviewReminderStep(
                   name: _nameController.text,

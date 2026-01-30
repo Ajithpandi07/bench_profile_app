@@ -1,12 +1,8 @@
-import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_average_display.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_insight_card.dart';
+
+import '../../../../core/core.dart';
 import '../../domain/entities/hydration_daily_summary.dart';
 import '../bloc/bloc.dart';
 
@@ -18,6 +14,7 @@ class HydrationDashboardPage extends StatefulWidget {
 }
 
 class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
+  static const double _targetLiters = 3.0;
   String _selectedView = 'Weekly'; // 'Weekly', 'Monthly', 'Yearly'
   DateTime _selectedDate = DateTime.now();
 
@@ -145,19 +142,6 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
     return chartItems;
   }
 
-  String _getDateRangeText() {
-    final now = DateTime.now();
-    if (_selectedView == 'Weekly') {
-      final monday = now.subtract(Duration(days: now.weekday - 1));
-      final sunday = monday.add(const Duration(days: 6));
-      return '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
-    } else if (_selectedView == 'Monthly') {
-      return DateFormat('MMMM yyyy').format(now);
-    } else {
-      return DateFormat('yyyy').format(now);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,7 +150,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
         title: const Text(
           'Water',
           style: TextStyle(
-            color: Color(0xFFEE374D),
+            color: AppTheme.primaryColor,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
@@ -194,7 +178,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                   });
                   _loadStats();
                 },
-                activeColor: const Color(0xFFEE374D),
+                activeColor: AppTheme.primaryColor,
               ),
               const SizedBox(height: 32),
 
@@ -205,36 +189,88 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     return const DashboardLoadingView();
                   }
 
-                  // Default values
-                  double average = 0;
                   String waterGoal = '0/7';
                   String timeGoal = '0/7';
+                  String avgLiters = '0 ml';
                   List<DashboardChartItem> chartData = [];
                   double maxVal = 10.0;
 
                   if (state is HydrationStatsLoaded) {
                     // Process Average
                     final processedItems = _processChartData(state.stats);
-                    if (processedItems.isNotEmpty) {
-                      double total = processedItems.fold(
+
+                    // All over average for the period (only considering active entries)
+                    if (state.stats.isNotEmpty) {
+                      final totalValue = state.stats.fold(
                         0.0,
-                        (sum, item) => sum + item.value,
+                        (sum, e) => sum + e.totalLiters,
                       );
-                      average = (total * 1000) / processedItems.length;
+                      final avg = totalValue / state.stats.length;
+                      avgLiters = '${(avg * 1000).toInt()} ml';
                     }
 
                     // Process Goals
-                    int achieved = state.stats
-                        .where((e) => e.totalLiters >= 3.0)
-                        .length;
-                    int totalDays = 7;
-                    if (_selectedView == 'Monthly')
-                      totalDays = 30;
-                    else if (_selectedView == 'Yearly')
-                      totalDays = 12;
+                    int timeAchieved = 0;
+                    int waterAchieved = 0;
+                    int totalDaysCount = 0;
 
-                    waterGoal = '$achieved/$totalDays';
-                    timeGoal = '$achieved/$totalDays';
+                    if (_selectedView == 'Yearly') {
+                      totalDaysCount = 12;
+                      // Calculate met months
+                      for (int i = 1; i <= 12; i++) {
+                        final monthStats = state.stats.where(
+                          (e) =>
+                              e.date.month == i &&
+                              e.date.year == DateTime.now().year,
+                        );
+                        if (monthStats.isNotEmpty) {
+                          // Time Goal: Month has ANY activity
+                          final hasActivity = monthStats.any(
+                            (e) => e.totalLiters > 0,
+                          );
+                          if (hasActivity) timeAchieved++;
+
+                          final totalLiters = monthStats.fold(
+                            0.0,
+                            (sum, e) => sum + e.totalLiters,
+                          );
+                          // Calculate average based on active days (entries > 0)
+                          final activeDays = monthStats
+                              .where((e) => e.totalLiters > 0)
+                              .length;
+                          final avg = activeDays > 0
+                              ? totalLiters / activeDays
+                              : 0.0;
+
+                          if (avg >= _targetLiters) {
+                            waterAchieved++;
+                          }
+                        }
+                      }
+                    } else {
+                      // Weekly or Monthly - Count Days
+                      // Time Goal: Any intake > 0
+                      timeAchieved = state.stats
+                          .where((e) => e.totalLiters > 0)
+                          .length;
+
+                      // Water Goal: Intake >= Target
+                      waterAchieved = state.stats
+                          .where((e) => e.totalLiters >= _targetLiters)
+                          .length;
+
+                      if (_selectedView == 'Monthly') {
+                        totalDaysCount = DateUtils.getDaysInMonth(
+                          DateTime.now().year,
+                          DateTime.now().month,
+                        );
+                      } else {
+                        totalDaysCount = 7;
+                      }
+                    }
+
+                    waterGoal = '$waterAchieved/$totalDaysCount';
+                    timeGoal = '$timeAchieved/$totalDaysCount';
 
                     // Process Chart
                     chartData = processedItems;
@@ -245,27 +281,101 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                     // Ensure sensible minimum and nice rounding for grid lines
                     // Round up to nearest integer for clean quarters (0.25, 0.5, 0.75 steps)
                     if (calculatedMax < 2.0) calculatedMax = 2.0;
+                    // Add buffer
+                    calculatedMax = calculatedMax * 1.2;
                     maxVal = calculatedMax.ceilToDouble();
                     // Add buffer if close to top
-                    if (maxVal - calculatedMax < 0.2) maxVal += 1.0;
+                    // if (maxVal - calculatedMax < 0.2) maxVal += 1.0;
+                  }
+
+                  // Calculate selected value
+                  double selectedValue = 0;
+                  String selectedLabel = '';
+
+                  if (state is HydrationStatsLoaded) {
+                    if (_selectedView == 'Yearly') {
+                      final monthStats = state.stats.where(
+                        (e) =>
+                            e.date.month == _selectedDate.month &&
+                            e.date.year == _selectedDate.year,
+                      );
+                      selectedValue = monthStats.fold(
+                        0.0,
+                        (sum, e) => sum + e.totalLiters,
+                      );
+                      selectedLabel = DateFormat('MMMM').format(_selectedDate);
+                    } else {
+                      final dayStat = state.stats.firstWhere(
+                        (e) =>
+                            e.date.year == _selectedDate.year &&
+                            e.date.month == _selectedDate.month &&
+                            e.date.day == _selectedDate.day,
+                        orElse: () => HydrationDailySummary(
+                          date: _selectedDate,
+                          totalLiters: 0,
+                        ),
+                      );
+                      selectedValue = dayStat.totalLiters;
+                      selectedLabel = DateFormat('d MMM').format(_selectedDate);
+                    }
+                  }
+
+                  final now = DateTime.now();
+                  String dateRangeText = '';
+                  if (_selectedView == 'Weekly') {
+                    final monday = now.subtract(
+                      Duration(days: now.weekday - 1),
+                    );
+                    final sunday = monday.add(const Duration(days: 6));
+                    dateRangeText =
+                        '${DateFormat('MMM d').format(monday)} - ${DateFormat('MMM d').format(sunday)}';
+                  } else if (_selectedView == 'Monthly') {
+                    dateRangeText = DateFormat('MMMM yyyy').format(now);
+                  } else {
+                    dateRangeText = DateFormat('yyyy').format(now);
                   }
 
                   return Column(
                     children: [
-                      Text(
-                        _getDateRangeText(),
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Average Display
-                      DashboardAverageDisplay(
-                        value: average > 0 ? average.toStringAsFixed(0) : '0',
-                        unit: 'ml',
-                        label: 'Average Hydration',
+                      // Average Section (New)
+                      Column(
+                        children: [
+                          Text(
+                            dateRangeText,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: (avgLiters.split(' ')[0]),
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                const TextSpan(
+                                  text: ' ml',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Average Hydration',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 32),
 
@@ -293,11 +403,51 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                       ),
                       const SizedBox(height: 32),
 
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_selectedView == 'Yearly'
+                                ? 'Yearly'
+                                : _selectedView == 'Monthly'
+                                ? 'Monthly'
+                                : 'Weekly'} Overview',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (selectedLabel.isNotEmpty)
+                                Text(
+                                  selectedLabel,
+                                  style: TextStyle(
+                                    color: Theme.of(context).hintColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              Text(
+                                '${(selectedValue * 1000).toInt()} ml',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+
                       // Chart
                       DashboardChart(
                         items: chartData,
                         maxVal: maxVal,
-                        highlightColor: const Color(0xFFEE374D),
+                        highlightColor: AppTheme.primaryColor,
                         chartHeight: 250,
                         formatValue: (val) {
                           if (val % 1 == 0) return val.toInt().toString();

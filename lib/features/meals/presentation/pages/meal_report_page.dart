@@ -1,10 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/presentation/widgets/app_date_selector.dart';
-import '../../../../core/services/app_theme.dart';
-import '../../../../core/utils/snackbar_utils.dart';
+import '../../../../core/core.dart';
 
 import '../../domain/entities/entities.dart';
 import '../../domain/entities/meal_log.dart';
@@ -15,8 +15,12 @@ import 'meal_listing_page.dart';
 import 'quick_log_page.dart';
 import 'meal_dashboard_page.dart';
 import 'review_meal_page.dart';
+import '../widgets/meal_summary_card.dart';
+import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
+import 'meal_details_page.dart';
 
 class MealReportPage extends StatefulWidget {
+  static const String routeName = '/meal-report';
   const MealReportPage({super.key});
 
   @override
@@ -24,7 +28,10 @@ class MealReportPage extends StatefulWidget {
 }
 
 class _MealReportPageState extends State<MealReportPage> {
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
+  bool _isBlurActive = false;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -38,167 +45,207 @@ class _MealReportPageState extends State<MealReportPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'Meal Report',
-          style: TextStyle(
-            color: AppTheme.primaryColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            title: Text(
+              _isSelectionMode
+                  ? '${_selectedIds.length} selected'
+                  : 'Meal Report',
+              style: const TextStyle(
+                color: AppTheme.primaryColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            leading: _isSelectionMode
+                ? IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () {
+                      setState(() {
+                        _isSelectionMode = false;
+                        _selectedIds.clear();
+                      });
+                    },
+                  )
+                : const BackButton(color: Colors.black),
+            backgroundColor: Colors.white,
+            elevation: 0,
+            actions: _isSelectionMode
+                ? [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.black,
+                      ),
+                      onPressed: _selectedIds.isEmpty
+                          ? null
+                          : () {
+                              final bloc = context.read<MealBloc>();
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Delete selected meals?'),
+                                  content: Text(
+                                    'Are you sure you want to delete ${_selectedIds.length} items?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        final idsToDelete = _selectedIds
+                                            .toList();
+                                        Navigator.pop(context);
+                                        bloc.add(
+                                          DeleteMultipleMeals(
+                                            idsToDelete,
+                                            _selectedDate,
+                                          ),
+                                        );
+                                        setState(() {
+                                          _isSelectionMode = false;
+                                          _selectedIds.clear();
+                                        });
+                                      },
+                                      child: const Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                    ),
+                  ]
+                : [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.bar_chart_rounded,
+                        color: Colors.black,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MealDashboardPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.black),
+                      onSelected: (value) {
+                        if (value == 'add') {
+                          _showMealTypeSelector();
+                        } else if (value == 'delete') {
+                          setState(() {
+                            _isSelectionMode = true;
+                            _selectedIds.clear();
+                          });
+                        }
+                      },
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              value: 'add',
+                              child: Text('Add new'),
+                            ),
+                            const PopupMenuItem<String>(
+                              value: 'delete',
+                              child: Text('Bulk delete'),
+                            ),
+                          ],
+                    ),
+                    const SizedBox(width: 8),
+                  ],
           ),
-        ),
-        leading: const BackButton(color: Colors.black),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart_rounded, color: Colors.black),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MealDashboardPage()),
-              );
+          body: RefreshIndicator(
+            onRefresh: () async {
+              _loadLogs();
             },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _loadLogs();
-        },
-        child: BlocListener<MealBloc, MealState>(
-          listener: (context, state) {
-            if (state is MealOperationFailure) {
-              showModernSnackbar(context, state.message, isError: true);
-            }
-          },
-          child: Column(
-            children: [
-              const SizedBox(height: 2),
-              // Date Selector
-              AppDateSelector(
-                selectedDate: _selectedDate,
-                onDateSelected: (date) {
-                  setState(() {
-                    _selectedDate = date;
-                  });
-                  _loadLogs();
-                },
+            child: BlocListener<MealBloc, MealState>(
+              listener: (context, state) {
+                if (state is MealConsumptionLogged) {
+                  showModernSnackbar(
+                    context,
+                    state.message ?? 'Meal logged successfully!',
+                  );
+                } else if (state is MealDeletedSuccess) {
+                  // Final success message
+                  showModernSnackbar(context, 'Meal deleted successfully');
+                } else if (state is MealOperationFailure) {
+                  showModernSnackbar(context, state.message, isError: true);
+                }
+              },
+              child: Column(
+                children: [
+                  const SizedBox(height: 2),
+                  // Date Selector
+                  AppDateSelector(
+                    selectedDate: _selectedDate,
+                    onDateSelected: (date) {
+                      setState(() {
+                        _selectedDate = date;
+                      });
+                      _loadLogs();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Content
+                  Expanded(
+                    child: BlocBuilder<MealBloc, MealState>(
+                      builder: (context, state) {
+                        if (state is MealLoading ||
+                            state is MealDeletedSuccess) {
+                          return const MealReportShimmer();
+                        } else if (state is MealsLoaded) {
+                          final meals = state.meals;
+                          // Optional: verify date match, but usually Bloc is trustworthy if we cleared cache logic
+                          if (meals.isEmpty) {
+                            return _buildEmptyState();
+                          } else {
+                            return _buildLoggedState(meals);
+                          }
+                        } else if (state is MealOperationFailure) {
+                          return Center(
+                            child: Text(
+                              'Failed to load logs',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              // Content
-              Expanded(
-                child: BlocBuilder<MealBloc, MealState>(
-                  builder: (context, state) {
-                    if (state is MealLoading) {
-                      return const MealReportShimmer();
-                    } else if (state is MealsLoaded) {
-                      if (state.meals.isEmpty) {
-                        return _buildEmptyState();
-                      } else {
-                        return _buildLoggedState(state.meals);
-                      }
-                    } else if (state is MealOperationFailure) {
-                      // Allow retry or show empty to prevent stuck state?
-                      // For now center text is fine.
-                      return const Center(
-                        child: Text(
-                          'Failed to load logs',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
+          // floatingActionButton removed
         ),
-      ),
-      floatingActionButton: BlocBuilder<MealBloc, MealState>(
-        builder: (context, state) {
-          if (state is MealsLoaded && state.meals.isNotEmpty) {
-            return FloatingActionButton(
-              onPressed: _showMealTypeSelector,
-              backgroundColor: const Color(0xFFE93448),
-              child: const Icon(Icons.add, color: Colors.white),
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
+        if (_isBlurActive)
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(color: Colors.black.withOpacity(0.1)),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildEmptyState() {
     return Column(
       children: [
-        const Spacer(flex: 1),
-        const Text('Food', style: TextStyle(color: Colors.grey, fontSize: 16)),
-        const SizedBox(height: 8),
-        const Text(
-          '0 Kcal',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF131313),
-          ),
-        ),
         const SizedBox(height: 32),
-        // Target Card
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    height: 40,
-                    width: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE93448),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Target Calories',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF131313),
-                    ),
-                  ),
-                ],
-              ),
-              const Text(
-                '450 kcal', // Placeholder target, could be dynamic
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
+        const MealSummaryCard(currentKcal: 0, targetKcal: 450),
         const Spacer(flex: 2),
         Padding(
           padding: const EdgeInsets.only(bottom: 40.0),
@@ -220,12 +267,12 @@ class _MealReportPageState extends State<MealReportPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.edit, color: Color(0xFFE93448), size: 20),
+                  Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
                   SizedBox(width: 8),
                   Text(
                     'Enter food manually',
                     style: TextStyle(
-                      color: Color(0xFF131313),
+                      color: AppTheme.textDark,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -243,16 +290,37 @@ class _MealReportPageState extends State<MealReportPage> {
 
     // Calculate global properties for Insight Card
     double globalTotalKcal = 0;
+    DateTime? lastMealTime;
     for (var m in meals) {
       globalTotalKcal += m.totalCalories;
+      if (lastMealTime == null || m.timestamp.isAfter(lastMealTime)) {
+        lastMealTime = m.timestamp;
+      }
     }
     const double maxGoal = 2000;
+    const double targetKcal = 2000; // Updated to match global goal
+
+    String? lastAddedTime;
+    if (lastMealTime != null) {
+      lastAddedTime = DateFormat('hh:mm a').format(lastMealTime);
+    }
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       children: [
+        MealSummaryCard(
+          currentKcal: globalTotalKcal,
+          targetKcal: targetKcal,
+          lastAddedTime: lastAddedTime,
+        ),
+        const SizedBox(height: 24),
         ...types.map((type) {
-          final typeMeals = meals.where((m) => m.mealType == type).toList();
+          final typeMeals = meals.where((m) {
+            if (type == 'Snack') {
+              return m.mealType.contains('Snack');
+            }
+            return m.mealType == type;
+          }).toList();
           double totalCals = 0;
           for (var m in typeMeals) {
             totalCals += m.totalCalories;
@@ -262,133 +330,254 @@ class _MealReportPageState extends State<MealReportPage> {
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
-            child: GestureDetector(
-              onTap: () {
-                final allFoods = <FoodItem>[];
-                final allUserMeals = <UserMeal>[];
-                for (var m in typeMeals) {
-                  allFoods.addAll(m.items);
-                  allUserMeals.addAll(m.userMeals);
-                }
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<MealBloc>(),
-                      child: ReviewMealPage(
-                        mealType: type,
-                        selectedFoods: allFoods,
-                        selectedMeals: allUserMeals,
-                        allFoods: const [],
-                        logDate: _selectedDate,
-                        existingLogIds: typeMeals.map((e) => e.id).toList(),
-                      ),
-                    ),
+            child: Slidable(
+              key: ValueKey('${type}_${_selectedDate.millisecondsSinceEpoch}'),
+              endActionPane: ActionPane(
+                motion: const ScrollMotion(),
+                extentRatio: 0.5,
+                children: [
+                  SlidableAction(
+                    onPressed: (context) {
+                      _navigateToReview(type, typeMeals);
+                    },
+                    backgroundColor: AppTheme.lightGray,
+                    foregroundColor: AppTheme.primaryColor,
+                    icon: Icons.edit,
+                    label: 'Edit',
                   ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
+                  Builder(
+                    builder: (ctx) {
+                      return SlidableAction(
+                        onPressed: (ctx) async {
+                          final bloc = context
+                              .read<
+                                MealBloc
+                              >(); // Use parent context for safety
+                          final ids = typeMeals.map((m) => m.id).toList();
+                          final date = _selectedDate;
+
+                          final confirm = await showDeleteConfirmationDialog(
+                            context,
+                          );
+                          if (confirm == true) {
+                            bloc.add(DeleteMultipleMeals(ids, date));
+                          }
+                        },
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        icon: Icons.delete,
+                        label: 'Delete',
+                        borderRadius: const BorderRadius.horizontal(
+                          right: Radius.circular(16),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              child: GestureDetector(
+                onLongPress: () {
+                  if (!_isSelectionMode) {
+                    setState(() {
+                      _isSelectionMode = true;
+                      for (var m in typeMeals) {
+                        _selectedIds.add(m.id);
+                      }
+                    });
+                  }
+                },
+                onTap: () {
+                  if (_isSelectionMode) {
+                    setState(() {
+                      // Check if all are currently selected
+                      final allSelected = typeMeals.every(
+                        (m) => _selectedIds.contains(m.id),
+                      );
+                      if (allSelected) {
+                        for (var m in typeMeals) {
+                          _selectedIds.remove(m.id);
+                        }
+                        if (_selectedIds.isEmpty) _isSelectionMode = false;
+                      } else {
+                        for (var m in typeMeals) {
+                          _selectedIds.add(m.id);
+                        }
+                      }
+                    });
+                  } else {
+                    // Flatten foods for display
+                    final displayFoods = <FoodItem>[];
+                    for (var m in typeMeals) {
+                      displayFoods.addAll(m.items);
+                      for (var um in m.userMeals) {
+                        for (var f in um.foods) {
+                          displayFoods.add(
+                            f.copyWith(quantity: f.quantity * um.quantity),
+                          );
+                        }
+                      }
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MealDetailsPage(
+                          mealType: type,
+                          totalCalories: totalCals,
+                          timestamp: typeMeals.isNotEmpty
+                              ? typeMeals.first.timestamp
+                              : DateTime.now(),
+                          foodItems: displayFoods,
+                          onEdit: () {
+                            _navigateToReview(type, typeMeals);
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                },
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Content Column
+                    if (_isSelectionMode)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12.0),
+                        child: Checkbox(
+                          value: typeMeals.every(
+                            (m) => _selectedIds.contains(m.id),
+                          ),
+                          activeColor: AppTheme.primaryColor,
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                for (var m in typeMeals) {
+                                  _selectedIds.add(m.id);
+                                }
+                              } else {
+                                for (var m in typeMeals) {
+                                  _selectedIds.remove(m.id);
+                                }
+                              }
+                            });
+                          },
+                        ),
+                      ),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header: Icon + Name
-                          Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFEBEB),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.restaurant,
-                                  color: Color(0xFFE93448),
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                type.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF556073),
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 1.0,
-                                ),
+                      child: Center(
+                        child: Container(
+                          width: double.infinity,
+                          constraints: const BoxConstraints(minHeight: 81),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color.fromRGBO(0, 0, 0, 0.05),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                                spreadRadius: -2,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          // Calories
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Text(
-                                '${totalCals.toStringAsFixed(0)} ',
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF131313),
-                                ),
+                              // Icon + Type
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFFFEBEB),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.restaurant,
+                                          color: AppTheme.primaryColor,
+                                          size: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 120,
+                                        ),
+                                        child: Text(
+                                          type.toUpperCase(),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF556073),
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 1.0,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (typeMeals.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 4.0,
+                                        left: 32.0,
+                                      ),
+                                      child: Text(
+                                        DateFormat(
+                                          'hh:mm a',
+                                        ).format(typeMeals.first.timestamp),
+                                        style: const TextStyle(
+                                          color: Color(0xFF909DAD),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
-                              const Text(
-                                'Kcal',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Color(0xFF909DAD),
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              const Spacer(),
+                              // Calories
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Text(
+                                        '${totalCals.toStringAsFixed(0)} ',
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF131313),
+                                        ),
+                                      ),
+                                      const Text(
+                                        'Kcal',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF909DAD),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Time
+                                ],
                               ),
                             ],
                           ),
-                          // Time
-                          if (typeMeals.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                DateFormat(
-                                  'hh:mm a',
-                                ).format(typeMeals.first.timestamp),
-                                style: const TextStyle(
-                                  color: Color(0xFF556073),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Action Arrow (Right Side)
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFAFAFA),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_right,
-                        color: Color(0xFF131313),
+                        ),
                       ),
                     ),
                   ],
@@ -400,7 +589,6 @@ class _MealReportPageState extends State<MealReportPage> {
 
         const SizedBox(height: 16),
         // Insight Card
-        // Insight Card (Needs Attention)
         LayoutBuilder(
           builder: (context, constraints) {
             return Container(
@@ -445,7 +633,7 @@ class _MealReportPageState extends State<MealReportPage> {
                           child: const Text(
                             'Needs Attention',
                             style: TextStyle(
-                              color: Color(0xFFE93448),
+                              color: AppTheme.primaryColor,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -501,17 +689,60 @@ class _MealReportPageState extends State<MealReportPage> {
         ),
 
         const SizedBox(height: 40),
+        Center(
+          child: GestureDetector(
+            onTap: _showMealTypeSelector,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Enter food manually',
+                    style: TextStyle(
+                      color: Color(0xFF131313),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 40),
       ],
     );
   }
 
   void _showMealTypeSelector() {
+    setState(() {
+      _isBlurActive = true;
+    });
+
     showModalBottomSheet(
       context: context,
+      barrierColor: Colors.transparent, // Transparent to show blur
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) => const MealTypeSelector(),
     ).then((result) async {
+      setState(() {
+        _isBlurActive = false;
+      });
+
       if (result != null && result is Map) {
         final type = result['type'] as String?;
         if (type == 'ManualCalories') {
@@ -521,13 +752,13 @@ class _MealReportPageState extends State<MealReportPage> {
               builder: (_) => BlocProvider.value(
                 value: context.read<MealBloc>(),
                 child: QuickLogPage(
-                  mealType: 'Snack',
+                  mealType: 'Morning Snack',
                   initialDate: _selectedDate,
                 ),
               ),
             ),
           );
-          _loadLogs();
+          _loadLogs(); // Reload logs to restore state
         } else if (type != null) {
           await Navigator.push(
             context,
@@ -541,9 +772,38 @@ class _MealReportPageState extends State<MealReportPage> {
               ),
             ),
           );
-          _loadLogs();
+          _loadLogs(); // Reload logs to restore state
         }
       }
     });
+  }
+
+  void _navigateToReview(String type, List<MealLog> typeMeals) {
+    final allFoods = <FoodItem>[];
+    final allUserMeals = <UserMeal>[];
+    for (var m in typeMeals) {
+      allFoods.addAll(m.items);
+      allUserMeals.addAll(m.userMeals);
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<MealBloc>(),
+          child: ReviewMealPage(
+            mealType: type,
+            selectedFoods: allFoods,
+            selectedMeals: allUserMeals,
+            allFoods: const [],
+            logDate: _selectedDate,
+            existingLogIds: typeMeals.map((e) => e.id).toList(),
+            initialCalories: typeMeals.fold<double>(
+              0,
+              (sum, m) => sum + m.totalCalories,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

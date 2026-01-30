@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_loading_view.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/services/app_theme.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_average_display.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_chart.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_date_selector.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_goal_card.dart';
-import '../../../../core/presentation/widgets/dashboard/dashboard_insight_card.dart';
+
+import '../../../../core/core.dart';
 import '../../domain/entities/sleep_log.dart';
 import '../bloc/bloc.dart';
 
@@ -56,28 +51,20 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Sleep',
           style: TextStyle(
-            color: AppTheme.primaryColor,
+            color: Theme.of(context).primaryColor,
             fontWeight: FontWeight.bold,
           ),
         ),
-        leading: const BackButton(color: Colors.black),
-        backgroundColor: Colors.white,
+        leading: BackButton(
+          color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.black,
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share, color: Colors.black),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: BlocBuilder<SleepBloc, SleepState>(
         builder: (context, state) {
@@ -104,23 +91,23 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                   onSelected: (view) {
                     setState(() {
                       _selectedView = view;
-                      // Reset selected date to today when view changes,
-                      // or keep it if it falls within range?
-                      // Simplest UX: Reset to today or nearest valid date.
                       _selectedDate = DateTime.now();
                     });
                     _loadStats();
                   },
-                  activeColor: const Color(0xffFF4B55),
+                  activeColor: Theme.of(context).primaryColor,
                 ),
                 const SizedBox(height: 24),
 
                 // Date Range Text
                 Text(
                   _getDateRangeText(),
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).hintColor,
+                    fontSize: 14,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
                 // Main Avg Sleep
                 _buildMainAverage(logs),
@@ -134,7 +121,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                         title: 'AVG BEDTIME',
                         value: _calculateAvgBedtime(logs),
                         icon: Icons.bedtime,
-                        iconColor: Colors.red,
+                        iconColor: Theme.of(context).primaryColor,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -150,18 +137,21 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
                 ),
                 const SizedBox(height: 32),
 
+                // Selected Date Value Display (Overview Row)
+                _buildOverviewRow(logs),
+                const SizedBox(height: 32),
+
                 // Chart
                 _buildChart(logs),
 
                 const SizedBox(height: 32),
 
                 // Insight Card
-                const DashboardInsightCard(
+                DashboardInsightCard(
                   title: 'Great job!',
                   message:
                       'Your sleep schedule is consistent.', // Placeholder message
-                  iconBackgroundColor:
-                      Colors.purple, // Sleep theme color often purple/indigo
+                  iconBackgroundColor: Theme.of(context).primaryColor,
                 ),
               ],
             ),
@@ -169,6 +159,15 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
         },
       ),
     );
+  }
+
+  Map<String, List<SleepLog>> _groupLogsByDate(List<SleepLog> logs) {
+    final Map<String, List<SleepLog>> groups = {};
+    for (var log in logs) {
+      final key = DateFormat('yyyy-MM-dd').format(log.endTime);
+      groups.putIfAbsent(key, () => []).add(log);
+    }
+    return groups;
   }
 
   String _getDateRangeText() {
@@ -194,23 +193,63 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
   }
 
   Widget _buildMainAverage(List<SleepLog> logs) {
-    if (logs.isEmpty) {
-      return const DashboardAverageDisplay(
-        value: '0',
-        unit: 'h 0m',
-        label: 'Average Sleep',
-      );
-    }
-    final totalMin = logs.fold(0, (sum, log) => sum + log.duration.inMinutes);
-    final avgMin = totalMin ~/ logs.length;
-    final h = avgMin ~/ 60;
-    final m = avgMin % 60;
+    int h = 0;
+    int m = 0;
 
-    // Custom display since standard is "Value Unit" side by side, but sleep usually likes "8h 30m"
-    // We can reuse DashboardAverageDisplay if we format value strictly or just use custom here to match design
-    // The DashboardAverageDisplay takes value and unit.
-    // Let's pass "7h 30m" as value and empty unit? Or "7" as value and "h 30m" as unit?
-    // Let's try to stick to the design: "8h 30m"
+    if (logs.isNotEmpty) {
+      // 1. Filter logs to current view range
+      final now = DateTime.now();
+      DateTime start;
+      DateTime end;
+
+      if (_selectedView == 'Weekly') {
+        int daysToSubtract = now.weekday - 1;
+        start = DateUtils.dateOnly(
+          now.subtract(Duration(days: daysToSubtract)),
+        );
+        end = start.add(
+          const Duration(days: 7),
+        ); // Exclusive end for comparison??
+        // Let's use inclusive logic or DateUtils
+        end = DateTime(start.year, start.month, start.day + 7);
+      } else if (_selectedView == 'Monthly') {
+        start = DateTime(now.year, now.month, 1);
+        end = DateTime(now.year, now.month + 1, 1); // Start of next month
+      } else {
+        start = DateTime(now.year, 1, 1);
+        end = DateTime(now.year + 1, 1, 1);
+      }
+
+      final periodLogs = logs
+          .where(
+            (l) =>
+                l.endTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+                l.endTime.isBefore(end),
+          )
+          .toList();
+
+      if (periodLogs.isNotEmpty) {
+        // 2. Group by day to get daily totals
+        final Map<String, int> dailyTotals = {};
+        for (var log in periodLogs) {
+          final key = DateFormat('yyyy-MM-dd').format(log.endTime);
+          dailyTotals[key] = (dailyTotals[key] ?? 0) + log.duration.inMinutes;
+        }
+
+        // 3. Filter active days (already implied since we only have logs)
+        // If dailyTotal is 0 (impossible from logs), we'd filter.
+        final activeDailyTotals = dailyTotals.values
+            .where((v) => v > 0)
+            .toList();
+
+        if (activeDailyTotals.isNotEmpty) {
+          final grandTotal = activeDailyTotals.fold(0, (sum, val) => sum + val);
+          final avgMinutes = grandTotal ~/ activeDailyTotals.length;
+          h = avgMinutes ~/ 60;
+          m = avgMinutes % 60;
+        }
+      }
+    }
 
     return Column(
       children: [
@@ -223,31 +262,126 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
               '$h',
               style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
             ),
-            const Text('h', style: TextStyle(fontSize: 24, color: Colors.grey)),
+            Text(
+              'h',
+              style: TextStyle(
+                fontSize: 24,
+                color: Theme.of(context).hintColor,
+              ),
+            ),
             const SizedBox(width: 8),
             Text(
               '$m',
               style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
             ),
-            const Text('m', style: TextStyle(fontSize: 24, color: Colors.grey)),
+            Text(
+              'm',
+              style: TextStyle(
+                fontSize: 24,
+                color: Theme.of(context).hintColor,
+              ),
+            ),
           ],
         ),
-        const Text('Average Sleep', style: TextStyle(color: Colors.grey)),
+        const SizedBox(height: 8),
+        Text(
+          'Average Sleep',
+          style: TextStyle(color: Theme.of(context).hintColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverviewRow(List<SleepLog> logs) {
+    String selectedValue = '0h 0m';
+    String selectedLabel = '';
+
+    if (logs.isNotEmpty) {
+      if (_selectedView == 'Yearly') {
+        final monthLogs = logs.where(
+          (l) =>
+              l.endTime.year == _selectedDate.year &&
+              l.endTime.month == _selectedDate.month,
+        );
+        if (monthLogs.isNotEmpty) {
+          final Map<int, int> daysTotal = {};
+          for (var l in monthLogs) {
+            daysTotal[l.endTime.day] =
+                (daysTotal[l.endTime.day] ?? 0) + l.duration.inMinutes;
+          }
+          final totalMin = daysTotal.values.fold(0, (sum, min) => sum + min);
+          final avg = totalMin ~/ daysTotal.length;
+          selectedValue = '${avg ~/ 60}h ${avg % 60}m';
+        }
+        selectedLabel = DateFormat('MMMM').format(_selectedDate);
+      } else {
+        final key = DateFormat('yyyy-MM-dd').format(_selectedDate);
+        final dayLogs = _groupLogsByDate(logs)[key] ?? [];
+        final totalMin = dayLogs.fold(
+          0,
+          (sum, l) => sum + l.duration.inMinutes,
+        );
+
+        selectedValue = '${totalMin ~/ 60}h ${totalMin % 60}m';
+        selectedLabel = DateFormat('d MMM').format(_selectedDate);
+      }
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '$_selectedView Overview',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (selectedLabel.isNotEmpty)
+              Text(
+                selectedLabel,
+                style: TextStyle(
+                  color: Theme.of(context).hintColor,
+                  fontSize: 12,
+                ),
+              ),
+            Text(
+              selectedValue,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   String _calculateAvgBedtime(List<SleepLog> logs) {
     if (logs.isEmpty) return '--:--';
+
+    // Filter out naps (e.g. < 3 hours) to avoid skewing "Bedtime"
+    final mainSleeps = logs.where((l) => l.duration.inHours >= 3).toList();
+    if (mainSleeps.isEmpty) return '--:--';
+
     int totalMinutes = 0;
-    for (var log in logs) {
+    for (var log in mainSleeps) {
       int min = log.startTime.hour * 60 + log.startTime.minute;
+      // Identify "Night" times vs "Early Morning" times for averaging
+      // e.g. 11 PM (23:00) vs 1 AM (1:00).
+      // We want 1 AM to be "later" than 11 PM, so 1 AM -> 25:00.
       if (log.startTime.hour < 12) {
         min += 1440;
       }
       totalMinutes += min;
     }
-    int avg = totalMinutes ~/ logs.length;
+    int avg = totalMinutes ~/ mainSleeps.length;
     if (avg >= 1440) avg -= 1440;
 
     final h = avg ~/ 60;
@@ -258,12 +392,17 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
 
   String _calculateAvgWakeup(List<SleepLog> logs) {
     if (logs.isEmpty) return '--:--';
+
+    // Filter out naps
+    final mainSleeps = logs.where((l) => l.duration.inHours >= 3).toList();
+    if (mainSleeps.isEmpty) return '--:--';
+
     int totalMinutes = 0;
-    for (var log in logs) {
+    for (var log in mainSleeps) {
       int min = log.endTime.hour * 60 + log.endTime.minute;
       totalMinutes += min;
     }
-    int avg = totalMinutes ~/ logs.length;
+    int avg = totalMinutes ~/ mainSleeps.length;
     final h = avg ~/ 60;
     final m = avg % 60;
     final dt = DateTime(2022, 1, 1, h, m);
@@ -281,17 +420,14 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
 
       for (int i = 0; i < 7; i++) {
         final date = startOfWeek.add(Duration(days: i));
-
-        final log = logs.firstWhere(
-          (l) =>
-              l.endTime.year == date.year &&
-              l.endTime.month == date.month &&
-              l.endTime.day == date.day,
-          orElse: () =>
-              SleepLog(id: '', startTime: date, endTime: date, quality: 0),
+        final key = DateFormat('yyyy-MM-dd').format(date);
+        final dayLogs = _groupLogsByDate(logs)[key] ?? [];
+        final totalMin = dayLogs.fold(
+          0,
+          (sum, l) => sum + l.duration.inMinutes,
         );
 
-        final hours = log.duration.inMinutes / 60.0;
+        final hours = totalMin / 60.0;
         if (hours > maxVal) maxVal = hours;
 
         items.add(
@@ -309,21 +445,25 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
       for (int i = 1; i <= daysInMonth; i++) {
         final date = DateTime(now.year, now.month, i);
-        // Better matching: filter list for day
-        final log = logs.firstWhere(
-          (l) =>
-              l.endTime.year == date.year &&
-              l.endTime.month == date.month &&
-              l.endTime.day == date.day,
-          orElse: () =>
-              SleepLog(id: '', startTime: date, endTime: date, quality: 0),
+        final key = DateFormat('yyyy-MM-dd').format(date);
+        final dayLogs = _groupLogsByDate(logs)[key] ?? [];
+        final totalMin = dayLogs.fold(
+          0,
+          (sum, l) => sum + l.duration.inMinutes,
         );
-        final hours = log.duration.inMinutes / 60.0;
+
+        final hours = totalMin / 60.0;
         if (hours > maxVal) maxVal = hours;
+
+        // Sparse labels: 1, 5, 10, 15, 20, 25, 30
+        String label = '';
+        if (i == 1 || i % 5 == 0) {
+          label = i.toString();
+        }
 
         items.add(
           DashboardChartItem(
-            label: i.toString(),
+            label: label,
             value: hours,
             isHighlight:
                 date.year == _selectedDate.year &&
@@ -361,6 +501,7 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
     }
 
     // Round maxVal up to even reasonable number
+    maxVal = maxVal * 1.2;
     maxVal = (maxVal.ceil() + 1).toDouble();
     if (maxVal < 8) maxVal = 8;
 
@@ -368,7 +509,8 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       items: items,
       maxVal: maxVal,
       chartHeight: 250,
-      highlightColor: const Color(0xffFF4B55),
+      fitAll: _selectedView == 'Monthly', // Disable scrolling for monthly
+      highlightColor: Theme.of(context).primaryColor,
       formatValue: (val) {
         if (val % 1 == 0) return val.toInt().toString();
         return val.toStringAsFixed(1);

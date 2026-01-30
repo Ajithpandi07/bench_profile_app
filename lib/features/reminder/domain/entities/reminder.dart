@@ -21,6 +21,7 @@ class Reminder extends Equatable {
   final DateTime endDate;
   final bool smartReminder;
   final bool isCompleted;
+  final bool isStandard; // Standard reminders cannot have their time changed
   final DateTime? createdAt;
   final DateTime? updatedAt;
   // Custom Schedule
@@ -28,6 +29,7 @@ class Reminder extends Equatable {
   final String? customFrequency;
   final String? recurrenceEndType;
   final int? recurrenceCount;
+  final List<DateTime>? skippedDates;
 
   const Reminder({
     required this.id,
@@ -43,12 +45,14 @@ class Reminder extends Equatable {
     required this.endDate,
     this.smartReminder = false,
     this.isCompleted = false,
+    this.isStandard = false,
     this.createdAt,
     this.updatedAt,
     this.interval,
     this.customFrequency,
     this.recurrenceEndType,
     this.recurrenceCount,
+    this.skippedDates,
   });
 
   Reminder copyWith({
@@ -65,12 +69,14 @@ class Reminder extends Equatable {
     DateTime? endDate,
     bool? smartReminder,
     bool? isCompleted,
+    bool? isStandard,
     DateTime? createdAt,
     DateTime? updatedAt,
     int? interval,
     String? customFrequency,
     String? recurrenceEndType,
     int? recurrenceCount,
+    List<DateTime>? skippedDates,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -86,12 +92,14 @@ class Reminder extends Equatable {
       endDate: endDate ?? this.endDate,
       smartReminder: smartReminder ?? this.smartReminder,
       isCompleted: isCompleted ?? this.isCompleted,
+      isStandard: isStandard ?? this.isStandard,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       interval: interval ?? this.interval,
       customFrequency: customFrequency ?? this.customFrequency,
       recurrenceEndType: recurrenceEndType ?? this.recurrenceEndType,
       recurrenceCount: recurrenceCount ?? this.recurrenceCount,
+      skippedDates: skippedDates ?? this.skippedDates,
     );
   }
 
@@ -110,11 +118,13 @@ class Reminder extends Equatable {
     endDate,
     smartReminder,
     isCompleted,
+    isStandard,
     createdAt,
     updatedAt,
     interval,
     customFrequency,
     recurrenceEndType,
     recurrenceCount,
+    skippedDates,
   ];
 }

@@ -16,7 +16,56 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     on<LoadUserLibrary>(_onLoadUserLibrary); // Added
     on<AddUserFood>(_onAddUserFood);
     on<SearchFoodEvent>(_onSearchFood);
-    on<ReplaceMealLogEvent>(_onReplaceMealLog); // Added
+    on<ReplaceMealLogEvent>(_onReplaceMealLog);
+    on<DeleteMealLog>(_onDeleteMealLog);
+    on<DeleteAllMealsForDate>(_onDeleteAllMealsForDate);
+    on<DeleteMultipleMeals>(_onDeleteMultipleMeals);
+    on<DeleteUserFood>(_onDeleteUserFood);
+    on<DeleteUserMeal>(_onDeleteUserMeal);
+  }
+
+  Future<void> _onDeleteMultipleMeals(
+    DeleteMultipleMeals event,
+    Emitter<MealState> emit,
+  ) async {
+    emit(MealLoading());
+    // debugPrint('BLOC: Starting DeleteMultipleMeals for ${event.mealLogIds.length} items');
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final result = await repository.deleteMultipleMealLogs(
+      event.mealLogIds,
+      event.date,
+    );
+
+    result.fold(
+      (failure) {
+        // debugPrint('BLOC: Deletion FAILED: ${failure.message}');
+        emit(MealOperationFailure(failure.message));
+        add(LoadMealsForDate(event.date));
+      },
+      (success) {
+        // debugPrint('BLOC: Deletion SUCCESS, reloading logs');
+        emit(MealDeletedSuccess());
+        add(LoadMealsForDate(event.date));
+      },
+    );
+  }
+
+  Future<void> _onDeleteAllMealsForDate(
+    DeleteAllMealsForDate event,
+    Emitter<MealState> emit,
+  ) async {
+    emit(MealLoading());
+    final result = await repository.getMealsForDate(event.date);
+    await result.fold(
+      (failure) async => emit(MealOperationFailure(failure.message)),
+      (meals) async {
+        for (var meal in meals) {
+          await repository.deleteMealLog(meal.id, event.date);
+        }
+        add(LoadMealsForDate(event.date));
+      },
+    );
   }
 
   Future<void> _onLoadDashboardStats(
@@ -59,10 +108,11 @@ class MealBloc extends Bloc<MealEvent, MealState> {
   ) async {
     emit(MealLoading());
     final result = await repository.getMealsForDate(event.date);
-    result.fold(
-      (failure) => emit(MealOperationFailure(failure.message)),
-      (meals) => emit(MealsLoaded(meals, event.date)),
-    );
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      meals,
+    ) {
+      emit(MealsLoaded(meals, event.date));
+    });
   }
 
   Future<void> _onLogMeal(LogMealEvent event, Emitter<MealState> emit) async {
@@ -71,7 +121,11 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(MealConsumptionLogged());
+      emit(
+        MealConsumptionLogged(
+          message: '${event.log.mealType} added successfully',
+        ),
+      );
       // Optionally reload the day's meals
       add(LoadMealsForDate(event.log.timestamp));
     });
@@ -142,7 +196,10 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(UserLibraryItemSaved());
+      final msg = event.isEdit
+          ? 'Food updated successfully'
+          : 'Food added successfully';
+      emit(UserLibraryItemSaved(message: msg));
       add(LoadUserLibrary()); // Reload library
     });
   }
@@ -156,7 +213,10 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(UserLibraryItemSaved());
+      final msg = event.isEdit
+          ? 'Meal updated successfully'
+          : 'Meal added successfully';
+      emit(UserLibraryItemSaved(message: msg));
       add(LoadUserLibrary()); // Reload library
     });
   }
@@ -190,8 +250,53 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       success,
     ) {
-      emit(MealConsumptionLogged());
+      emit(
+        MealConsumptionLogged(
+          message: '${event.newLog.mealType} updated successfully',
+        ),
+      );
       add(LoadMealsForDate(event.newLog.timestamp));
+    });
+  }
+
+  Future<void> _onDeleteMealLog(
+    DeleteMealLog event,
+    Emitter<MealState> emit,
+  ) async {
+    final result = await repository.deleteMealLog(event.mealLogId, event.date);
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      success,
+    ) {
+      emit(MealDeletedSuccess());
+      add(LoadMealsForDate(event.date));
+    });
+  }
+
+  Future<void> _onDeleteUserFood(
+    DeleteUserFood event,
+    Emitter<MealState> emit,
+  ) async {
+    // Optimistic or waiting? Waiting is safer for list refresh.
+    // emit(MealLoading()); // Optional: loading state
+    final result = await repository.deleteUserFood(event.id);
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      success,
+    ) {
+      emit(UserLibraryItemDeleted());
+      add(LoadUserLibrary());
+    });
+  }
+
+  Future<void> _onDeleteUserMeal(
+    DeleteUserMeal event,
+    Emitter<MealState> emit,
+  ) async {
+    final result = await repository.deleteUserMeal(event.id);
+    result.fold((failure) => emit(MealOperationFailure(failure.message)), (
+      success,
+    ) {
+      emit(UserLibraryItemDeleted());
+      add(LoadUserLibrary());
     });
   }
 }

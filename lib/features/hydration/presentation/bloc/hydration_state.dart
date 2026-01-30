@@ -17,14 +17,21 @@ class HydrationLoading extends HydrationState {}
 
 class HydrationSuccess extends HydrationState {}
 
+class HydrationDeletedSuccess extends HydrationState {}
+
 class HydrationLogsLoaded extends HydrationState {
   final List<HydrationLog> logs;
   final DateTime date;
+  final String? snackbarMessage;
 
-  const HydrationLogsLoaded(this.logs, this.date);
+  const HydrationLogsLoaded(this.logs, this.date, {this.snackbarMessage});
 
   @override
-  List<Object> get props => [logs, date];
+  List<Object> get props => [
+    logs,
+    date,
+    if (snackbarMessage != null) snackbarMessage!,
+  ];
 }
 
 class HydrationFailure extends HydrationState {

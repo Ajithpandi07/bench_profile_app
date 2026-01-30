@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:device_preview/device_preview.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'app/bench_app.dart';
 import 'core/core.dart';
@@ -13,6 +14,9 @@ import 'features/health_metrics/health_metrics.dart' hide SyncManager;
 
 import 'firebase_options.dart';
 import 'features/meals/presentation/bloc/bloc.dart';
+import 'features/activity/presentation/bloc/activity_bloc.dart';
+import 'features/hydration/presentation/bloc/hydration_bloc.dart';
+import 'features/sleep/presentation/bloc/sleep_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,15 +74,25 @@ void main() async {
   //   });
   // }
 
+  // Toggle this to enable/disable Device Preview
+  const bool enableDevicePreview = false;
+
   // Provide blocs at the app level
   runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()),
-        BlocProvider(create: (_) => di.sl<AuthBloc>()),
-        BlocProvider(create: (_) => di.sl<MealBloc>()),
-      ],
-      child: const BenchApp(),
+    DevicePreview(
+      enabled: enableDevicePreview,
+      devices: [...Devices.ios.all, ...Devices.android.all],
+      builder: (context) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => di.sl<HealthMetricsBloc>()),
+          BlocProvider(create: (_) => di.sl<AuthBloc>()),
+          BlocProvider(create: (_) => di.sl<MealBloc>()),
+          BlocProvider(create: (_) => di.sl<ActivityBloc>()),
+          BlocProvider(create: (_) => di.sl<HydrationBloc>()),
+          BlocProvider(create: (_) => di.sl<SleepBloc>()),
+        ],
+        child: const BenchApp(),
+      ),
     ),
   );
 }

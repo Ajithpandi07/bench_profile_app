@@ -8,7 +8,7 @@ class FoodItem extends Equatable {
   final double protein;
   final double fat;
   final String servingSize;
-  final int quantity; // e.g. 1 serving
+  final double quantity; // e.g. 1 serving
 
   final double sodium;
   final double potassium;
@@ -29,7 +29,7 @@ class FoodItem extends Equatable {
     this.protein = 0,
     this.fat = 0,
     this.servingSize = '1 serving',
-    this.quantity = 1,
+    this.quantity = 1.0,
     this.sodium = 0,
     this.potassium = 0,
     this.dietaryFibre = 0,
@@ -49,7 +49,7 @@ class FoodItem extends Equatable {
     double? protein,
     double? fat,
     String? servingSize,
-    int? quantity,
+    double? quantity,
     double? sodium,
     double? potassium,
     double? dietaryFibre,
@@ -112,7 +112,7 @@ class FoodItem extends Equatable {
       protein: (map['protein'] as num?)?.toDouble() ?? 0.0,
       fat: (map['fat'] as num?)?.toDouble() ?? 0.0,
       servingSize: map['servingSize'] ?? '1 serving',
-      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
+      quantity: (map['quantity'] as num?)?.toDouble() ?? 1.0,
       sodium: (map['sodium'] as num?)?.toDouble() ?? 0.0,
       potassium: (map['potassium'] as num?)?.toDouble() ?? 0.0,
       dietaryFibre: (map['dietaryFibre'] as num?)?.toDouble() ?? 0.0,

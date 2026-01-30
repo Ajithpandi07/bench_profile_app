@@ -17,6 +17,9 @@ abstract class MealRemoteDataSource {
     DateTime end,
   );
   Future<void> deleteMealLog(String id, DateTime date);
+  Future<void> deleteMultipleMealLogs(List<String> ids, DateTime date);
+  Future<void> deleteUserFood(String id);
+  Future<void> deleteUserMeal(String id);
 }
 
 class MealRemoteDataSourceImpl implements MealRemoteDataSource {
@@ -98,19 +101,21 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .collection('meal_logs_monthly')
         .doc(summaryId);
 
-    // Note: To use atomic increment on a map field like `dailyBreakdown.5`, the map field `dailyBreakdown` must exist.
-    // SetOptions(merge: true) handles creates.
+    // Note: Use set(merge:true) to ensure doc exists, then update() for nested dot notation.
     batch.set(summaryRef, {
       'id': summaryId,
       'userId': user.uid,
       'year': year,
       'month': month,
-      'totalCalories': FieldValue.increment(log.totalCalories),
-      'dailyBreakdown': {
-        day.toString(): FieldValue.increment(log.totalCalories),
-      },
-      'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    batch.update(summaryRef, {
+      'totalCalories': FieldValue.increment(log.totalCalories),
+      'dailyBreakdown.${day.toString()}': FieldValue.increment(
+        log.totalCalories,
+      ),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
 
     await batch.commit();
   }
@@ -131,7 +136,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .doc(dateId)
         .collection('logs')
         .orderBy('timestamp')
-        .get();
+        .get(const GetOptions(source: Source.server));
 
     if (query.docs.isEmpty) return [];
 
@@ -168,13 +173,13 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       // Re-hydrate items
       final hydratedItems = itemsList.map((i) {
         final id = i['id'] ?? '';
-        final snapshotCalories = (i['calories'] as num).toDouble();
-        final quantity = i['quantity'] ?? 1;
+        final snapshotCalories = (i['calories'] as num?)?.toDouble() ?? 0.0;
+        final quantity = (i['quantity'] as num?)?.toDouble() ?? 1.0;
         final serving = i['servingSize'] ?? '';
         final snapshotName = i['name'];
-        final snapshotCarbs = (i['carbs'] as num?)?.toDouble();
-        final snapshotProtein = (i['protein'] as num?)?.toDouble();
-        final snapshotFat = (i['fat'] as num?)?.toDouble();
+        final snapshotCarbs = (i['carbs'] as num?)?.toDouble() ?? 0.0;
+        final snapshotProtein = (i['protein'] as num?)?.toDouble() ?? 0.0;
+        final snapshotFat = (i['fat'] as num?)?.toDouble() ?? 0.0;
 
         if (snapshotName != null) {
           // Fast path: Data is in the log
@@ -183,9 +188,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
             name: snapshotName,
             calories:
                 snapshotCalories, // per total or unit? Logic implies these are saved properties
-            carbs: snapshotCarbs ?? 0,
-            protein: snapshotProtein ?? 0,
-            fat: snapshotFat ?? 0,
+            carbs: snapshotCarbs,
+            protein: snapshotProtein,
+            fat: snapshotFat,
             quantity: quantity,
             servingSize: serving,
           );
@@ -216,7 +221,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
           userId: data['userId'],
           timestamp: (data['timestamp'] as Timestamp).toDate(),
           mealType: data['mealType'],
-          totalCalories: (data['totalCalories'] as num).toDouble(),
+          totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
           items: hydratedItems,
           userMeals:
               (data['userMeals'] as List<dynamic>?)
@@ -285,12 +290,12 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       return FoodItem(
         id: i['id'] ?? '',
         name: i['name'] ?? 'Unknown',
-        calories: (i['calories'] as num).toDouble(),
+        calories: (i['calories'] as num?)?.toDouble() ?? 0.0,
         carbs: (i['carbs'] as num?)?.toDouble() ?? 0,
         protein: (i['protein'] as num?)?.toDouble() ?? 0,
         fat: (i['fat'] as num?)?.toDouble() ?? 0,
         servingSize: i['servingSize'] ?? '',
-        quantity: i['quantity'] ?? 1,
+        quantity: (i['quantity'] as num?)?.toDouble() ?? 1.0,
         sodium: (i['sodium'] as num?)?.toDouble() ?? 0,
         potassium: (i['potassium'] as num?)?.toDouble() ?? 0,
         dietaryFibre: (i['dietaryFibre'] as num?)?.toDouble() ?? 0,
@@ -311,12 +316,14 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
+    final mealToSave = meal.copyWith(creatorId: user.uid);
+
     await firestore
         .collection('bench_profile')
         .doc(user.uid)
         .collection('user_meals')
-        .doc(meal.id)
-        .set(meal.toMap());
+        .doc(mealToSave.id)
+        .set(mealToSave.toMap());
   }
 
   @override
@@ -363,7 +370,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         foods: hydratedFoods,
         totalCalories: (data['totalCalories'] as num?)?.toDouble() ?? 0.0,
         creatorId: data['creatorId'] ?? '',
-        quantity: (data['quantity'] as num?)?.toInt() ?? 1,
+        quantity: (data['quantity'] as num?)?.toDouble() ?? 1.0,
         createdAt: data['createdAt'] != null
             ? (data['createdAt'] as Timestamp).toDate()
             : null,
@@ -433,7 +440,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
                 summaries.add(
                   DailyMealSummary(
                     date: date,
-                    totalCalories: (calDynamic as num).toDouble(),
+                    totalCalories: (calDynamic as num?)?.toDouble() ?? 0.0,
                   ),
                 );
               }
@@ -474,7 +481,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     if (!logSnapshot.exists) return; // Nothing to delete
 
     final logData = logSnapshot.data()!;
-    final totalCalories = (logData['totalCalories'] as num).toDouble();
+    final totalCalories = (logData['totalCalories'] as num?)?.toDouble() ?? 0.0;
 
     final batch = firestore.batch();
 
@@ -505,14 +512,123 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         .collection('meal_logs_monthly')
         .doc(summaryId);
 
-    // Decrement using negative value.
-    // Note: If the field doesn't exist, this creates it with negative value, which shouldn't happen if logic is correct.
+    // Use set(merge:true) to ensure doc exists, then update() with dot notation.
     batch.set(summaryRef, {
-      'totalCalories': FieldValue.increment(-totalCalories),
-      'dailyBreakdown': {day.toString(): FieldValue.increment(-totalCalories)},
-      'updatedAt': FieldValue.serverTimestamp(),
+      'id': summaryId,
+      'userId': user.uid,
+      'year': year,
+      'month': month,
     }, SetOptions(merge: true));
 
+    batch.update(summaryRef, {
+      'totalCalories': FieldValue.increment(-totalCalories),
+      'dailyBreakdown.${day.toString()}': FieldValue.increment(-totalCalories),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
     await batch.commit();
+  }
+
+  @override
+  Future<void> deleteMultipleMealLogs(List<String> ids, DateTime date) async {
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
+
+    final dateId =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    final logsCollection = firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('meal_logs')
+        .doc(dateId)
+        .collection('logs');
+
+    double totalCaloriesToRemove = 0;
+    final batch = firestore.batch();
+
+    // Note: Since each get() is async, we use Future.wait to fetch all required calories in parallel.
+    final snapshots = await Future.wait(
+      ids.map((id) => logsCollection.doc(id).get()),
+    );
+
+    for (var i = 0; i < snapshots.length; i++) {
+      final snapshot = snapshots[i];
+      if (snapshot.exists) {
+        final logData = snapshot.data()!;
+        final calories = (logData['totalCalories'] as num?)?.toDouble() ?? 0.0;
+        totalCaloriesToRemove += calories;
+        batch.delete(logsCollection.doc(ids[i]));
+      }
+    }
+
+    if (totalCaloriesToRemove > 0) {
+      // 2. Decrement Daily Total
+      final dateDocRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('meal_logs')
+          .doc(dateId);
+
+      batch.set(dateDocRef, {
+        'totalCalories': FieldValue.increment(-totalCaloriesToRemove),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // 3. Update Monthly Summary (Decrement)
+      final year = date.year;
+      final month = date.month;
+      final day = date.day;
+      final summaryId = '${year}_$month';
+
+      final summaryRef = firestore
+          .collection('bench_profile')
+          .doc(user.uid)
+          .collection('meal_logs_monthly')
+          .doc(summaryId);
+
+      batch.set(summaryRef, {
+        'id': summaryId,
+        'userId': user.uid,
+        'year': year,
+        'month': month,
+      }, SetOptions(merge: true));
+
+      batch.update(summaryRef, {
+        'totalCalories': FieldValue.increment(-totalCaloriesToRemove),
+        'dailyBreakdown.${day.toString()}': FieldValue.increment(
+          -totalCaloriesToRemove,
+        ),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+  }
+
+  @override
+  Future<void> deleteUserFood(String id) async {
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
+
+    await firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('user_foods')
+        .doc(id)
+        .delete();
+  }
+
+  @override
+  Future<void> deleteUserMeal(String id) async {
+    final user = auth.currentUser;
+    if (user == null) throw ServerException('User not authenticated');
+
+    await firestore
+        .collection('bench_profile')
+        .doc(user.uid)
+        .collection('user_meals')
+        .doc(id)
+        .delete();
   }
 }

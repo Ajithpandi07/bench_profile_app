@@ -4,9 +4,11 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/entities.dart';
 import '../bloc/bloc.dart';
 import '../bloc/meal_event.dart';
+import 'macro_input_row.dart';
 
 class AddFoodPage extends StatefulWidget {
-  const AddFoodPage({super.key});
+  final FoodItem? foodToEdit;
+  const AddFoodPage({super.key, this.foodToEdit});
 
   @override
   State<AddFoodPage> createState() => _AddFoodPageState();
@@ -40,6 +42,25 @@ class _AddFoodPageState extends State<AddFoodPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.foodToEdit != null) {
+      final f = widget.foodToEdit!;
+      _nameController.text = f.name;
+      _servingSizeController.text = f.servingSize;
+      _quantityController.text = f.quantity.toString();
+      _caloriesController.text = f.calories.toString();
+      _carbsController.text = f.carbs.toString();
+      _proteinController.text = f.protein.toString();
+      _fatController.text = f.fat.toString();
+      // optional: populate micros too if needed, for brevity assuming main macros + micros
+      _sodiumController.text = f.sodium.toString();
+      _potassiumController.text = f.potassium.toString();
+      _dietaryFibreController.text = f.dietaryFibre.toString();
+      _sugarsController.text = f.sugars.toString();
+      _vitaminAController.text = f.vitaminA.toString();
+      _vitaminCController.text = f.vitaminC.toString();
+      _calciumController.text = f.calcium.toString();
+      _ironController.text = f.iron.toString();
+    }
     _carbsController.addListener(_calculateCalories);
     _proteinController.addListener(_calculateCalories);
     _fatController.addListener(_calculateCalories);
@@ -95,20 +116,21 @@ class _AddFoodPageState extends State<AddFoodPage> {
       return;
     }
 
-    // Helper to parse double safely
     double parse(TextEditingController c) =>
         double.tryParse(c.text.trim()) ?? 0.0;
-    int parseInt(TextEditingController c) => int.tryParse(c.text.trim()) ?? 1;
+    // int parseInt(TextEditingController c) => int.tryParse(c.text.trim()) ?? 1; // Removed as no longer needed
 
     final foodItem = FoodItem(
-      id: const Uuid().v4(),
+      id: widget.foodToEdit?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
       calories: parse(_caloriesController),
       carbs: parse(_carbsController),
       protein: parse(_proteinController),
       fat: parse(_fatController),
       servingSize: _servingSizeController.text.trim(),
-      quantity: parseInt(_quantityController),
+      quantity: parse(_quantityController) == 0.0
+          ? 1.0
+          : parse(_quantityController), // Use double parse, default to 1.0
       // Micros
       sodium: parse(_sodiumController),
       potassium: parse(_potassiumController),
@@ -121,7 +143,9 @@ class _AddFoodPageState extends State<AddFoodPage> {
     );
 
     // Dispatch to Bloc to save to User Library
-    context.read<MealBloc>().add(AddUserFood(foodItem));
+    context.read<MealBloc>().add(
+      AddUserFood(foodItem, isEdit: widget.foodToEdit != null),
+    );
 
     // Return the created FoodItem (optional, but good for immediate use if needed)
     Navigator.pop(context, foodItem);
@@ -133,9 +157,9 @@ class _AddFoodPageState extends State<AddFoodPage> {
       backgroundColor: Colors.white, // Match design white bg
       appBar: AppBar(
         leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Add New Food',
-          style: TextStyle(
+        title: Text(
+          widget.foodToEdit != null ? 'Edit Food' : 'Add New Food',
+          style: const TextStyle(
             color: Color(0xFFE93448),
             fontWeight: FontWeight.bold,
           ),
@@ -174,62 +198,91 @@ class _AddFoodPageState extends State<AddFoodPage> {
 
                   const SizedBox(height: 24),
 
-                  // Macros Section
-                  _buildMacroInput(
-                    'Calories per serving',
-                    'kcal',
-                    _caloriesController,
+                  MacroInputRow(
+                    label: 'Calories per serving',
+                    unit: 'kcal',
+                    controller: _caloriesController,
                   ),
                   const SizedBox(height: 16),
 
-                  // Highlighted section for main macros? Design shows plain list mostly.
-                  // But usually Carbs/Fat/Protein are primary.
-                  _buildMacroInput('Total carbohydrate', 'g', _carbsController),
-                  const SizedBox(height: 16),
-                  _buildMacroInput('Total fat', 'g', _fatController),
-                  const SizedBox(height: 16),
-                  _buildMacroInput('Protein', 'g', _proteinController),
-                  const SizedBox(height: 16),
-                  _buildMacroInput(
-                    'Saturated Fat',
-                    'g',
-                    _saturatedFatController,
+                  MacroInputRow(
+                    label: 'Total carbohydrate',
+                    unit: 'g',
+                    controller: _carbsController,
                   ),
                   const SizedBox(height: 16),
-                  _buildMacroInput('Trans Fat', 'mg', _transFatController),
-                  const SizedBox(height: 16),
-                  _buildMacroInput('Cholesterol', 'mg', _cholesterolController),
-                  const SizedBox(height: 16),
-                  _buildMacroInput('Sodium', 'mg', _sodiumController),
-                  const SizedBox(height: 16),
-                  _buildMacroInput('Potassium', 'g', _potassiumController),
-                  const SizedBox(height: 16),
-                  _buildMacroInput(
-                    'Dietary Fibre',
-                    'g',
-                    _dietaryFibreController,
+                  MacroInputRow(
+                    label: 'Total fat',
+                    unit: 'g',
+                    controller: _fatController,
                   ),
                   const SizedBox(height: 16),
-                  _buildMacroInput('Sugars', 'g', _sugarsController),
+                  MacroInputRow(
+                    label: 'Protein',
+                    unit: 'g',
+                    controller: _proteinController,
+                  ),
+                  const SizedBox(height: 16),
+                  MacroInputRow(
+                    label: 'Saturated Fat',
+                    unit: 'g',
+                    controller: _saturatedFatController,
+                  ),
+                  const SizedBox(height: 16),
+                  MacroInputRow(
+                    label: 'Trans Fat',
+                    unit: 'mg',
+                    controller: _transFatController,
+                  ),
+                  const SizedBox(height: 16),
+                  MacroInputRow(
+                    label: 'Cholesterol',
+                    unit: 'mg',
+                    controller: _cholesterolController,
+                  ),
+                  const SizedBox(height: 16),
+                  MacroInputRow(
+                    label: 'Sodium',
+                    unit: 'mg',
+                    controller: _sodiumController,
+                  ),
+                  const SizedBox(height: 16),
+                  MacroInputRow(
+                    label: 'Potassium',
+                    unit: 'g',
+                    controller: _potassiumController,
+                  ),
+                  const SizedBox(height: 16),
+                  MacroInputRow(
+                    label: 'Dietary Fibre',
+                    unit: 'g',
+                    controller: _dietaryFibreController,
+                  ),
+                  const SizedBox(height: 16),
+                  MacroInputRow(
+                    label: 'Sugars',
+                    unit: 'g',
+                    controller: _sugarsController,
+                  ),
                   const SizedBox(height: 16),
 
                   // Vitamins / % DV
-                  _buildMacroInput(
-                    'Vitamin A (100% = 5000 IU)*',
-                    '%',
-                    _vitaminAController,
+                  MacroInputRow(
+                    label: 'Vitamin A (100% = 5000 IU)*',
+                    unit: '%',
+                    controller: _vitaminAController,
                   ),
                   const SizedBox(height: 16),
-                  _buildMacroInput(
-                    'Vitamin C (100% = 60 mg)*',
-                    '%',
-                    _vitaminCController,
+                  MacroInputRow(
+                    label: 'Vitamin C (100% = 60 mg)*',
+                    unit: '%',
+                    controller: _vitaminCController,
                   ),
                   const SizedBox(height: 16),
-                  _buildMacroInput(
-                    'Calcium (100% = 1,000 mg)*',
-                    '%',
-                    _calciumController,
+                  MacroInputRow(
+                    label: 'Calcium (100% = 1,000 mg)*',
+                    unit: '%',
+                    controller: _calciumController,
                   ),
                   const SizedBox(height: 16),
                   // Highlight Iron with blue border as per spec/image example?
@@ -238,11 +291,10 @@ class _AddFoodPageState extends State<AddFoodPage> {
                     //   border: Border.all(color: Colors.blueAccent, width: 2),
                     //   borderRadius: BorderRadius.circular(4),
                     // ),
-                    child: _buildMacroInput(
-                      'Iron (100% = 18 mg)*',
-                      '%',
-                      _ironController,
-                      forceWhiteBg: false, // Let container control border
+                    child: MacroInputRow(
+                      label: 'Iron (100% = 18 mg)*',
+                      unit: '%',
+                      controller: _ironController,
                     ),
                   ),
 
@@ -334,63 +386,6 @@ class _AddFoodPageState extends State<AddFoodPage> {
             contentPadding: EdgeInsets.zero,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildMacroInput(
-    String label,
-    String unit,
-    TextEditingController controller, {
-    bool forceWhiteBg = true,
-  }) {
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: const Color(
-          0xFFF9F9F9,
-        ), // Light grey bg for whole row as per design
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 80,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.end,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '0',
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            unit,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ],
       ),
     );
   }
