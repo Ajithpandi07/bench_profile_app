@@ -116,7 +116,7 @@ class HydrationSummaryCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Target: ${targetLiters.toInt()} Litre',
+                      'Target: ${targetLiters % 1 == 0 ? targetLiters.toInt() : targetLiters.toStringAsFixed(2)} Litre',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade600,

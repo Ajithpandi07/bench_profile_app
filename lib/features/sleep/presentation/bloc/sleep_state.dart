@@ -18,6 +18,13 @@ class SleepLoaded extends SleepState {
 
   const SleepLoaded(this.logs, {this.healthConnectDraft});
 
+  SleepLoaded copyWith({List<SleepLog>? logs, SleepLog? healthConnectDraft}) {
+    return SleepLoaded(
+      logs ?? this.logs,
+      healthConnectDraft: healthConnectDraft ?? this.healthConnectDraft,
+    );
+  }
+
   @override
   List<Object> get props => [
     logs,

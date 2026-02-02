@@ -53,11 +53,21 @@ class _ActivityTypeSelectorState extends State<ActivityTypeSelector> {
           const SizedBox(height: 8),
 
           GestureDetector(
-            onTap: () {
-              // Handle custom activity or return specific flag
-              // For now, let's just assume custom activity is just another name or leads to a text input.
-              // We will return a special flag or handle it.
-              Navigator.pop(context, {'type': 'Custom'});
+            onTap: () async {
+              // Show dialog to get custom activity name
+              final customName = await showDialog<String>(
+                context: context,
+                builder: (context) => _CustomActivityDialog(),
+              );
+
+              if (customName != null &&
+                  customName.isNotEmpty &&
+                  context.mounted) {
+                Navigator.pop(context, {
+                  'type': 'Custom',
+                  'customName': customName,
+                });
+              }
             },
             child: Container(
               height: 50,
@@ -190,6 +200,58 @@ class _ActivityTypeSelectorState extends State<ActivityTypeSelector> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Dialog for entering custom activity name
+class _CustomActivityDialog extends StatefulWidget {
+  @override
+  State<_CustomActivityDialog> createState() => _CustomActivityDialogState();
+}
+
+class _CustomActivityDialogState extends State<_CustomActivityDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Custom Activity'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(
+          hintText: 'Enter activity name (e.g., Rock Climbing)',
+          border: OutlineInputBorder(),
+        ),
+        onSubmitted: (value) {
+          if (value.trim().isNotEmpty) {
+            Navigator.pop(context, value.trim());
+          }
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            final name = _controller.text.trim();
+            if (name.isNotEmpty) {
+              Navigator.pop(context, name);
+            }
+          },
+          child: const Text('Add'),
+        ),
+      ],
     );
   }
 }

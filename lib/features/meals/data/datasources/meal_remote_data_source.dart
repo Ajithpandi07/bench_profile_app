@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:bench_profile_app/core/error/exceptions.dart';
+import '../../../../../core/error/exceptions.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/entities/daily_meal_summary.dart';
 
@@ -26,7 +26,51 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
 
+  // Collection variables
+  static const String _collectionName = 'fitnessprofile';
+  static const String _logSubCollection = 'meal_logs';
+  static const String _monthlySubCollection = 'meal_logs_monthly';
+  static const String _userFoodsCollection = 'user_foods';
+  static const String _userMealsCollection = 'user_meals';
+
   MealRemoteDataSourceImpl({required this.firestore, required this.auth});
+
+  // Helper methods
+  CollectionReference<Map<String, dynamic>> _getMealLogsCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_logSubCollection);
+  }
+
+  CollectionReference<Map<String, dynamic>> _getMonthlyCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_monthlySubCollection);
+  }
+
+  CollectionReference<Map<String, dynamic>> _getUserFoodsCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_userFoodsCollection);
+  }
+
+  CollectionReference<Map<String, dynamic>> _getUserMealsCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_userMealsCollection);
+  }
 
   @override
   Future<void> logMeal(MealLog log) async {
@@ -37,15 +81,10 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         '${log.timestamp.year}-${log.timestamp.month.toString().padLeft(2, '0')}-${log.timestamp.day.toString().padLeft(2, '0')}';
 
     final batch = firestore.batch();
+    final logsCollection = _getMealLogsCollection(user.uid);
 
     // 1. Save detailed log
-    final logRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
-        .doc(dateId)
-        .collection('logs')
-        .doc(log.id);
+    final logRef = logsCollection.doc(dateId).collection('logs').doc(log.id);
 
     batch.set(logRef, {
       'id': log.id,
@@ -75,11 +114,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     });
 
     // 2. DAILY Total (Atomic Increment)
-    final dateDocRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
-        .doc(dateId);
+    final dateDocRef = logsCollection.doc(dateId);
 
     batch.set(dateDocRef, {
       'totalCalories': FieldValue.increment(log.totalCalories),
@@ -95,11 +130,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final day = log.timestamp.day;
     final summaryId = '${year}_$month';
 
-    final summaryRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs_monthly')
-        .doc(summaryId);
+    final summaryRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
     // Note: Use set(merge:true) to ensure doc exists, then update() for nested dot notation.
     batch.set(summaryRef, {
@@ -129,10 +160,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
     // 1. Fetch the lean meal logs
-    final query = await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
+    final query = await _getMealLogsCollection(user.uid)
         .doc(dateId)
         .collection('logs')
         .orderBy('timestamp')
@@ -246,32 +274,27 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
-    await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('user_foods')
-        .doc(food.id)
-        .set({
-          'id': food.id,
-          'name': food.name,
-          'calories': food.calories,
-          'carbs': food.carbs,
-          'protein': food.protein,
-          'fat': food.fat,
-          'servingSize': food.servingSize,
-          'quantity': food.quantity,
-          'sodium': food.sodium,
-          'potassium': food.potassium,
-          'dietaryFibre': food.dietaryFibre,
-          'sugars': food.sugars,
-          'vitaminA': food.vitaminA,
-          'vitaminC': food.vitaminC,
-          'calcium': food.calcium,
-          'iron': food.iron,
-          'createdAt': food.createdAt != null
-              ? Timestamp.fromDate(food.createdAt!)
-              : FieldValue.serverTimestamp(),
-        });
+    await _getUserFoodsCollection(user.uid).doc(food.id).set({
+      'id': food.id,
+      'name': food.name,
+      'calories': food.calories,
+      'carbs': food.carbs,
+      'protein': food.protein,
+      'fat': food.fat,
+      'servingSize': food.servingSize,
+      'quantity': food.quantity,
+      'sodium': food.sodium,
+      'potassium': food.potassium,
+      'dietaryFibre': food.dietaryFibre,
+      'sugars': food.sugars,
+      'vitaminA': food.vitaminA,
+      'vitaminC': food.vitaminC,
+      'calcium': food.calcium,
+      'iron': food.iron,
+      'createdAt': food.createdAt != null
+          ? Timestamp.fromDate(food.createdAt!)
+          : FieldValue.serverTimestamp(),
+    });
   }
 
   @override
@@ -279,11 +302,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
-    final query = await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('user_foods')
-        .get();
+    final query = await _getUserFoodsCollection(user.uid).get();
 
     return query.docs.map((doc) {
       final i = doc.data();
@@ -318,12 +337,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
 
     final mealToSave = meal.copyWith(creatorId: user.uid);
 
-    await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('user_meals')
-        .doc(mealToSave.id)
-        .set(mealToSave.toMap());
+    await _getUserMealsCollection(
+      user.uid,
+    ).doc(mealToSave.id).set(mealToSave.toMap());
   }
 
   @override
@@ -332,11 +348,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     if (user == null) throw ServerException('User not authenticated');
 
     // 1. Fetch User Meals
-    final query = await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('user_meals')
-        .get();
+    final query = await _getUserMealsCollection(user.uid).get();
 
     if (query.docs.isEmpty) return [];
 
@@ -392,10 +404,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       return _getSummariesFromMonthly(user.uid, start, end);
     }
 
-    final query = await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
+    final query = await _getMealLogsCollection(user.uid)
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
         .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
         .get();
@@ -419,12 +428,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       var current = DateTime(start.year, start.month);
       while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
         final summaryId = '${current.year}_${current.month}';
-        final doc = await firestore
-            .collection('bench_profile')
-            .doc(userId)
-            .collection('meal_logs_monthly')
-            .doc(summaryId)
-            .get();
+        final doc = await _getMonthlyCollection(userId).doc(summaryId).get();
 
         if (doc.exists) {
           final data = doc.data()!;
@@ -463,13 +467,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    final logRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
-        .doc(dateId)
-        .collection('logs')
-        .doc(id);
+    final logRef = _getMealLogsCollection(
+      user.uid,
+    ).doc(dateId).collection('logs').doc(id);
 
     // Note: We need to know the calories of the log we are deleting to decrement.
     // This is the ONE read we cannot easily skip unless we trust the client OR store negative value.
@@ -489,11 +489,8 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     batch.delete(logRef);
 
     // 2. Decrement Daily Total
-    final dateDocRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
-        .doc(dateId);
+    // 2. Decrement Daily Total
+    final dateDocRef = _getMealLogsCollection(user.uid).doc(dateId);
 
     batch.set(dateDocRef, {
       'totalCalories': FieldValue.increment(-totalCalories),
@@ -506,11 +503,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final day = date.day;
     final summaryId = '${year}_$month';
 
-    final summaryRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs_monthly')
-        .doc(summaryId);
+    final summaryRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
     // Use set(merge:true) to ensure doc exists, then update() with dot notation.
     batch.set(summaryRef, {
@@ -537,12 +530,9 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    final logsCollection = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('meal_logs')
-        .doc(dateId)
-        .collection('logs');
+    final logsCollection = _getMealLogsCollection(
+      user.uid,
+    ).doc(dateId).collection('logs');
 
     double totalCaloriesToRemove = 0;
     final batch = firestore.batch();
@@ -564,11 +554,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
 
     if (totalCaloriesToRemove > 0) {
       // 2. Decrement Daily Total
-      final dateDocRef = firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('meal_logs')
-          .doc(dateId);
+      final dateDocRef = _getMealLogsCollection(user.uid).doc(dateId);
 
       batch.set(dateDocRef, {
         'totalCalories': FieldValue.increment(-totalCaloriesToRemove),
@@ -581,11 +567,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
       final day = date.day;
       final summaryId = '${year}_$month';
 
-      final summaryRef = firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('meal_logs_monthly')
-          .doc(summaryId);
+      final summaryRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
       batch.set(summaryRef, {
         'id': summaryId,
@@ -611,12 +593,7 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
-    await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('user_foods')
-        .doc(id)
-        .delete();
+    await _getUserFoodsCollection(user.uid).doc(id).delete();
   }
 
   @override
@@ -624,11 +601,6 @@ class MealRemoteDataSourceImpl implements MealRemoteDataSource {
     final user = auth.currentUser;
     if (user == null) throw ServerException('User not authenticated');
 
-    await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('user_meals')
-        .doc(id)
-        .delete();
+    await _getUserMealsCollection(user.uid).doc(id).delete();
   }
 }

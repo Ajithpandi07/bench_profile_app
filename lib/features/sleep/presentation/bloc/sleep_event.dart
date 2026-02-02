@@ -63,3 +63,19 @@ class DeleteMultipleSleepLogs extends SleepEvent {
   @override
   List<Object> get props => [logIds, date];
 }
+
+class IgnoreSleepDraft extends SleepEvent {
+  final String uuid;
+  const IgnoreSleepDraft(this.uuid);
+  @override
+  List<Object> get props => [uuid];
+}
+
+class CheckLocalHealthConnectData extends SleepEvent {
+  final DateTime date;
+
+  const CheckLocalHealthConnectData(this.date);
+
+  @override
+  List<Object> get props => [date];
+}

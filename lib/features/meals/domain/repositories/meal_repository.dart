@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import 'package:bench_profile_app/core/error/failures.dart';
+import '../../../../../core/error/failures.dart';
 import '../entities/entities.dart';
 
 abstract class MealRepository {

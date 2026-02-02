@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import 'package:bench_profile_app/core/error/failures.dart';
-import 'package:bench_profile_app/core/network/network_info.dart';
+import '../../../../../core/error/failures.dart';
+import '../../../../../core/network/network_info.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/entities/daily_meal_summary.dart';
 import '../../domain/repositories/meal_repository.dart';

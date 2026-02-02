@@ -200,10 +200,11 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                     return const WaterListShimmer();
                   } else if (state is HydrationLogsLoaded) {
                     final logs = state.logs;
+                    final target = state.targetWater;
                     if (logs.isEmpty) {
-                      return _buildEmptyState();
+                      return _buildEmptyState(targetLiters: target);
                     } else {
-                      return _buildLoggedState(logs);
+                      return _buildLoggedState(logs, targetLiters: target);
                     }
                   } else if (state is HydrationFailure) {
                     return Center(child: Text(state.message));
@@ -259,14 +260,18 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState({double? targetLiters}) {
+    final effectiveTarget = targetLiters ?? 3.0;
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Column(
           children: [
             const SizedBox(height: 20),
-            HydrationSummaryCard(currentLiters: 0, targetLiters: 3.0),
+            HydrationSummaryCard(
+              currentLiters: 0,
+              targetLiters: effectiveTarget,
+            ),
             const SizedBox(height: 40),
 
             // Manual Entry Button
@@ -277,9 +282,9 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
     );
   }
 
-  Widget _buildLoggedState(List<HydrationLog> logs) {
+  Widget _buildLoggedState(List<HydrationLog> logs, {double? targetLiters}) {
     final totalLiters = logs.fold(0.0, (sum, log) => sum + log.amountLiters);
-    const targetLiters = 3.0;
+    final effectiveTarget = targetLiters ?? 3.0;
 
     // Get last added time
     String? lastAddedTime;
@@ -298,13 +303,13 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
       children: [
         HydrationSummaryCard(
           currentLiters: totalLiters,
-          targetLiters: targetLiters,
+          targetLiters: effectiveTarget,
           lastAddedTime: lastAddedTime,
         ),
         const SizedBox(height: 24),
         ...logs.map((log) => _buildLogItem(log)),
         const SizedBox(height: 24),
-        _buildInsightCard(totalLiters, targetLiters),
+        _buildInsightCard(totalLiters, effectiveTarget),
         const SizedBox(height: 24),
         _buildManualEntryButton(),
         const SizedBox(height: 40), // Spacing for bottom
@@ -360,7 +365,7 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
             width: double.infinity,
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('lib/assets/images/water_card_bg.png'),
+                image: AssetImage('assets/images/water_card_bg.png'),
                 fit: BoxFit.cover,
               ),
             ),

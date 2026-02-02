@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'app_routes.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/pages/health_metrics_page.dart';
+import '../../features/health_metrics/presentation/pages/health_metrics_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bench_profile_app/features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
-import 'package:bench_profile_app/core/injection_container.dart' as di;
+import '../../features/health_metrics/presentation/bloc/health_metrics_bloc.dart';
+import '../../core/injection_container.dart' as di;
 
 import '../../features/auth/presentation/pages/sign_in_page.dart';
 
@@ -25,15 +25,12 @@ class AppRouter {
         );
 
       case AppRoutes.auth:
-        return MaterialPageRoute(
-          builder: (_) => const SignInPage(),
-        );
+        return MaterialPageRoute(builder: (_) => const SignInPage());
 
       default:
         return MaterialPageRoute(
-          builder: (_) => const Scaffold(
-            body: Center(child: Text("Route Not Found")),
-          ),
+          builder: (_) =>
+              const Scaffold(body: Center(child: Text("Route Not Found"))),
         );
     }
   }

@@ -16,7 +16,31 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
 
+  // Collection variables
+  static const String _collectionName = 'fitnessprofile';
+  static const String _logSubCollection = 'sleep_logs';
+  static const String _monthlySubCollection = 'sleep_logs_monthly';
+
   SleepRemoteDataSourceImpl({required this.firestore, required this.auth});
+
+  // Helper methods
+  CollectionReference<Map<String, dynamic>> _getSleepLogsCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_logSubCollection);
+  }
+
+  CollectionReference<Map<String, dynamic>> _getMonthlyCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_monthlySubCollection);
+  }
 
   @override
   Future<void> logSleep(SleepLog log, {SleepLog? previousLog}) async {
@@ -40,11 +64,7 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    final dateDocRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('sleep_logs')
-        .doc(dateId);
+    final dateDocRef = _getSleepLogsCollection(user.uid).doc(dateId);
 
     final logRef = dateDocRef.collection('logs').doc(docId);
 
@@ -57,11 +77,7 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
           '${oldDate.year}-${oldDate.month.toString().padLeft(2, '0')}-${oldDate.day.toString().padLeft(2, '0')}';
 
       if (oldDateId != dateId) {
-        final oldDateDocRef = firestore
-            .collection('bench_profile')
-            .doc(user.uid)
-            .collection('sleep_logs')
-            .doc(oldDateId);
+        final oldDateDocRef = _getSleepLogsCollection(user.uid).doc(oldDateId);
         final oldLogRef = oldDateDocRef.collection('logs').doc(previousLog.id);
         batch.delete(oldLogRef);
         batch.set(oldDateDocRef, {
@@ -101,14 +117,9 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    final snapshot = await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('sleep_logs')
-        .doc(dateId)
-        .collection('logs')
-        .orderBy('end_time')
-        .get();
+    final snapshot = await _getSleepLogsCollection(
+      user.uid,
+    ).doc(dateId).collection('logs').orderBy('end_time').get();
 
     return snapshot.docs
         .map((doc) => SleepLogModel.fromFirestore(doc))
@@ -148,10 +159,7 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
       return allLogs;
     } else {
       // For Yearly view, stick to summaries to save reads.
-      final snapshot = await firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('sleep_logs')
+      final snapshot = await _getSleepLogsCollection(user.uid)
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
           .get();
@@ -180,11 +188,7 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final year = log.endTime.year;
     final month = log.endTime.month;
     final summaryId = '$year-${month.toString().padLeft(2, '0')}';
-    final summaryRef = firestore
-        .collection('bench_profile')
-        .doc(uid)
-        .collection('sleep_logs_monthly')
-        .doc(summaryId);
+    final summaryRef = _getMonthlyCollection(uid).doc(summaryId);
 
     return firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(summaryRef);
@@ -265,11 +269,7 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    final dateDocRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('sleep_logs')
-        .doc(dateId);
+    final dateDocRef = _getSleepLogsCollection(user.uid).doc(dateId);
 
     final logRef = dateDocRef.collection('logs').doc(id);
 
@@ -305,11 +305,7 @@ class SleepRemoteDataSourceImpl implements SleepRemoteDataSource {
     final day = date.day;
     final summaryId = '$year-${month.toString().padLeft(2, '0')}';
 
-    final summaryRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('sleep_logs_monthly')
-        .doc(summaryId);
+    final summaryRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
     batch.set(summaryRef, {
       'id': summaryId,

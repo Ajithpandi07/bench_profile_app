@@ -5,6 +5,7 @@ import '../../../../core/utils/snackbar_utils.dart';
 import '../../domain/entities/entities.dart';
 import '../bloc/bloc.dart';
 import '../bloc/meal_event.dart'; // Import events
+import 'add_food_page.dart';
 
 class CreateMealPage extends StatefulWidget {
   final UserMeal? mealToEdit;
@@ -115,6 +116,59 @@ class _CreateMealPageState extends State<CreateMealPage> {
                         },
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    // Add New Food Button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: GestureDetector(
+                        onTap: () async {
+                          // Navigate to AddFoodPage
+                          final newFood = await Navigator.push<FoodItem>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: mealBloc,
+                                child: const AddFoodPage(),
+                              ),
+                            ),
+                          );
+                          // If a new food was created, return it
+                          if (newFood != null && context.mounted) {
+                            Navigator.pop(context, newFood);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE93448).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFE93448).withOpacity(0.3),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add,
+                                color: Color(0xFFE93448),
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Add New Food',
+                                style: TextStyle(
+                                  color: Color(0xFFE93448),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               );
@@ -186,9 +240,14 @@ class _CreateMealPageState extends State<CreateMealPage> {
       totalCals += (f.calories * f.quantity);
     }
 
+    String capitalize(String s) {
+      if (s.isEmpty) return s;
+      return s[0].toUpperCase() + s.substring(1);
+    }
+
     final meal = UserMeal(
       id: widget.mealToEdit?.id ?? const Uuid().v4(),
-      name: _nameController.text.trim(),
+      name: capitalize(_nameController.text.trim()),
       foods: _addedFoods, // Store full food items
       totalCalories: totalCals,
       creatorId: '',
@@ -246,6 +305,7 @@ class _CreateMealPageState extends State<CreateMealPage> {
                 child: Center(
                   child: TextField(
                     controller: _nameController,
+                    textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       hintText: 'eg. Rice',
@@ -371,6 +431,23 @@ class _CreateMealPageState extends State<CreateMealPage> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(width: 8),
+                          // Delete Button
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _addedFoods.removeAt(index);
+                              });
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                            ),
                           ),
                         ],
                       ),

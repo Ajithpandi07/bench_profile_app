@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:bench_profile_app/features/hydration/domain/entities/hydration_daily_summary.dart';
+import '../../domain/entities/hydration_daily_summary.dart';
 import '../../domain/domain.dart';
 
 abstract class HydrationState extends Equatable {
@@ -22,14 +22,21 @@ class HydrationDeletedSuccess extends HydrationState {}
 class HydrationLogsLoaded extends HydrationState {
   final List<HydrationLog> logs;
   final DateTime date;
+  final double? targetWater;
   final String? snackbarMessage;
 
-  const HydrationLogsLoaded(this.logs, this.date, {this.snackbarMessage});
+  const HydrationLogsLoaded(
+    this.logs,
+    this.date, {
+    this.targetWater,
+    this.snackbarMessage,
+  });
 
   @override
   List<Object> get props => [
     logs,
     date,
+    if (targetWater != null) targetWater!,
     if (snackbarMessage != null) snackbarMessage!,
   ];
 }

@@ -5,10 +5,16 @@ import 'meal_state.dart';
 import '../../domain/entities/food_item.dart';
 import '../../domain/entities/user_meal.dart';
 
+import '../../../auth/domain/repositories/user_profile_repository.dart'; // Added import
+
 class MealBloc extends Bloc<MealEvent, MealState> {
   final MealRepository repository;
+  final UserProfileRepository userProfileRepository; // Added dependency
 
-  MealBloc({required this.repository}) : super(MealInitial()) {
+  MealBloc({
+    required this.repository,
+    required this.userProfileRepository, // Added requirement
+  }) : super(MealInitial()) {
     on<LoadMealsForDate>(_onLoadMeals);
     on<LogMealEvent>(_onLogMeal);
     on<AddUserMeal>(_onAddUserMeal);
@@ -72,18 +78,10 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     LoadDashboardStats event,
     Emitter<MealState> emit,
   ) async {
-    // Default range: Last 12 months from today to cover all views
+    // Use provided range or default to current month (not year!) to be fast
     final now = DateTime.now();
-    final start =
-        event.start ??
-        DateTime(now.year - 1, now.month, now.day); // 1 year back
-    final end =
-        event.end ??
-        DateTime(
-          now.year + 1,
-          12,
-          31,
-        ); // End of next year to be safe, or just ample future.
+    final start = event.start ?? DateTime(now.year, now.month, 1);
+    final end = event.end ?? DateTime(now.year, now.month + 1, 0);
 
     // We don't emit Loading to avoid full screen spinner if possible,
     // or we can emit a specific loading state if the UI handles it separately.
@@ -107,11 +105,37 @@ class MealBloc extends Bloc<MealEvent, MealState> {
     Emitter<MealState> emit,
   ) async {
     emit(MealLoading());
+
+    // Fetch meals
     final result = await repository.getMealsForDate(event.date);
+
+    // Fetch profile target
+    double? targetCalories;
+    try {
+      final profileResult = await userProfileRepository.getUserProfile();
+      profileResult.fold(
+        (failure) {
+          // ignore: avoid_print
+          print('DEBUG MealBloc: Profile fetch failed: ${failure.message}');
+          targetCalories = null;
+        },
+        (profile) {
+          targetCalories = profile.targetCalories;
+          // ignore: avoid_print
+          print(
+            'DEBUG MealBloc: Fetched profile targetCalories: $targetCalories',
+          );
+        },
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print('DEBUG MealBloc: Profile fetch exception: $e');
+    }
+
     result.fold((failure) => emit(MealOperationFailure(failure.message)), (
       meals,
     ) {
-      emit(MealsLoaded(meals, event.date));
+      emit(MealsLoaded(meals, event.date, targetCalories: targetCalories));
     });
   }
 

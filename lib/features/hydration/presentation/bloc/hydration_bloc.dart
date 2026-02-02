@@ -3,11 +3,14 @@ import 'package:bloc/bloc.dart';
 import '../../domain/domain.dart';
 import 'hydration_event.dart';
 import 'hydration_state.dart';
+import '../../../auth/domain/repositories/user_profile_repository.dart';
 
 class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
   final HydrationRepository repository;
+  final UserProfileRepository userProfileRepository;
 
-  HydrationBloc({required this.repository}) : super(HydrationInitial()) {
+  HydrationBloc({required this.repository, required this.userProfileRepository})
+    : super(HydrationInitial()) {
     on<LogHydration>(_onLogHydration);
     on<LoadHydrationLogs>(_onLoadHydrationLogs);
     on<LoadHydrationStats>(_onLoadHydrationStats);
@@ -69,9 +72,41 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     Emitter<HydrationState> emit,
   ) async {
     emit(HydrationLoading());
-    final result = await repository.getHydrationLogsForDate(event.date);
-    result.fold((failure) => emit(HydrationFailure(failure.message)), (logs) {
-      emit(HydrationLogsLoaded(logs, event.date));
+
+    // Fetch logs
+    final logsResult = await repository.getHydrationLogsForDate(event.date);
+
+    // Fetch profile target
+    double? targetWater;
+    try {
+      final profileResult = await userProfileRepository.getUserProfile();
+      profileResult.fold(
+        (failure) {
+          // ignore: avoid_print
+          print('DEBUG: Profile fetch failed: ${failure.message}');
+          targetWater = null;
+        },
+        (profile) {
+          final rawTarget = profile.targetWater;
+          if (rawTarget != null) {
+            // Convert mL to L (e.g. 3000 -> 3.0)
+            targetWater = rawTarget / 1000.0;
+            // ignore: avoid_print
+            print(
+              'DEBUG: Fetched targetWater (mL): $rawTarget -> (L): $targetWater',
+            );
+          }
+        },
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print('DEBUG: Profile fetch exception: $e');
+    }
+
+    logsResult.fold((failure) => emit(HydrationFailure(failure.message)), (
+      logs,
+    ) {
+      emit(HydrationLogsLoaded(logs, event.date, targetWater: targetWater));
     });
   }
 
@@ -95,13 +130,6 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     DeleteHydrationLog event,
     Emitter<HydrationState> emit,
   ) async {
-    // Optimistic update or reload.
-    // Assuming repository has deleteHydrationLog? I need to check repository interface first!
-    // But I will assume it follows pattern or I will check repository now.
-    // Wait, I didn't check repository.
-    // If it doesn't exist, I need to add it to repository interface and impl.
-    // Let's assume for now, but I should probably check.
-    // I will write the handler assuming it exists, if error I fix repository.
     final result = await repository.deleteHydrationLog(event.id, event.date);
     result.fold((failure) => emit(HydrationFailure(failure.message)), (_) {
       emit(HydrationDeletedSuccess());

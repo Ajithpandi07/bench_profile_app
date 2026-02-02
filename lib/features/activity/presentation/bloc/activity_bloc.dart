@@ -21,8 +21,9 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   ) async {
     emit(ActivityLoading());
     final now = DateTime.now();
-    final start = event.start ?? DateTime(now.year - 1, now.month, now.day);
-    final end = event.end ?? DateTime(now.year + 1, 12, 31);
+    // Default to current month if not specified to be fast
+    final start = event.start ?? DateTime(now.year, now.month, 1);
+    final end = event.end ?? DateTime(now.year, now.month + 1, 0);
 
     final result = await repository.getDailySummaries(start, end);
     result.fold(

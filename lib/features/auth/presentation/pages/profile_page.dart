@@ -234,6 +234,83 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
+            // Targets Section (New)
+            BlocBuilder<UserProfileBloc, UserProfileState>(
+              builder: (context, state) {
+                if (state is UserProfileLoading) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                } else if (state is UserProfileError) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'Error loading targets: ${state.message}',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                } else if (state is UserProfileLoaded) {
+                  final calories = state.profile.targetCalories;
+                  final water = state.profile.targetWater;
+                  // ignore: avoid_print
+                  print(
+                    'DEBUG ProfilePage: Loaded. Calories: $calories, Water: $water',
+                  );
+
+                  if (calories != null || water != null) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionHeader('YOUR TARGETS'),
+                        const SizedBox(height: 8),
+                        _buildSettingsContainer(
+                          children: [
+                            if (calories != null)
+                              _buildSettingsTile(
+                                context,
+                                icon: Icons.local_fire_department,
+                                iconColor: Colors.orange,
+                                title: 'Daily Calories',
+                                trailingText: '${calories.toInt()} kcal',
+                                onTap: () {},
+                                showArrow: false,
+                              ),
+                            if (calories != null && water != null)
+                              _buildDivider(),
+                            if (water != null)
+                              _buildSettingsTile(
+                                context,
+                                icon: Icons.water_drop,
+                                iconColor: Colors.blue,
+                                title: 'Daily Water',
+                                trailingText: '${water.toInt()} ml',
+                                onTap: () {},
+                                showArrow: false,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    );
+                  } else {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20.0),
+                      child: Text(
+                        'No targets found in profile (calories/water are null).',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  }
+                }
+                // Initial State
+                return const SizedBox.shrink();
+              },
+            ),
+
             // 3. Statistics Card
             _buildNavigationCard(
               context,

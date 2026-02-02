@@ -20,8 +20,30 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
   @override
   void initState() {
     super.initState();
-    // Dispatch event to load stats
-    context.read<MealBloc>().add(const LoadDashboardStats());
+    _loadStats();
+  }
+
+  void _loadStats() {
+    DateTime start;
+    DateTime end;
+    final now = DateTime.now();
+
+    if (_selectedView == 'Weekly') {
+      // Weekly: Mon - Sun
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      start = DateUtils.dateOnly(monday);
+      end = start.add(const Duration(days: 6));
+    } else if (_selectedView == 'Monthly') {
+      // Monthly: 1st - End of month
+      start = DateTime(now.year, now.month, 1);
+      end = DateTime(now.year, now.month + 1, 0);
+    } else {
+      // Yearly: Jan 1 - Dec 31
+      start = DateTime(now.year, 1, 1);
+      end = DateTime(now.year, 12, 31);
+    }
+
+    context.read<MealBloc>().add(LoadDashboardStats(start: start, end: end));
   }
 
   @override
@@ -67,6 +89,7 @@ class _MealDashboardPageState extends State<MealDashboardPage> {
                     _selectedView = view;
                     _selectedDate = DateTime.now();
                   });
+                  _loadStats();
                 },
                 activeColor: AppTheme.primaryColor,
               ),

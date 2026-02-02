@@ -557,7 +557,8 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          activity.activityType.toUpperCase(),
+                          activity.customActivityName ??
+                              activity.activityType.toUpperCase(),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -622,17 +623,18 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
       builder: (ctx) => const ActivityTypeSelector(),
     );
 
-    if (result != null && result is Map) {
-      if (!mounted) return;
-      final type = result['type'];
-      // Navigate to add activity
-      await Navigator.push(
+    if (result != null && mounted) {
+      final activityType = result['type'] as String;
+      final customName = result['customName'] as String?;
+
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => BlocProvider.value(
             value: context.read<ActivityBloc>(),
             child: AddActivityPage(
-              activityType: type,
+              activityType: activityType,
+              customActivityName: customName,
               initialDate: _selectedDate,
             ),
           ),

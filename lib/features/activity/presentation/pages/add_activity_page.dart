@@ -11,12 +11,14 @@ import '../../../../core/utils/snackbar_utils.dart';
 
 class AddActivityPage extends StatefulWidget {
   final String activityType;
+  final String? customActivityName;
   final DateTime initialDate;
   final ActivityLog? existingActivity;
 
   const AddActivityPage({
     super.key,
     required this.activityType,
+    this.customActivityName,
     required this.initialDate,
     this.existingActivity,
   });
@@ -133,7 +135,7 @@ class _AddActivityPageState extends State<AddActivityPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.activityType,
+                        widget.customActivityName ?? widget.activityType,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -346,6 +348,7 @@ class _AddActivityPageState extends State<AddActivityPage> {
                         id: widget.existingActivity?.id ?? const Uuid().v4(),
                         userId: '', // handled by repo
                         activityType: widget.activityType,
+                        customActivityName: widget.customActivityName,
                         startTime: _startTime,
                         durationMinutes: _durationHours * 60 + _durationMinutes,
                         caloriesBurned: _totalCalories,

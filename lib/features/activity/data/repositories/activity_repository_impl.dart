@@ -1,5 +1,5 @@
-import 'package:bench_profile_app/core/error/exceptions.dart';
-import 'package:bench_profile_app/core/error/failures.dart';
+import '../../../../../core/error/exceptions.dart';
+import '../../../../../core/error/failures.dart';
 import 'package:dartz/dartz.dart';
 import '../../domain/entities/activity_log.dart';
 import '../../domain/entities/daily_activity_summary.dart';

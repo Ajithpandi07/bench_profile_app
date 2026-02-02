@@ -10,6 +10,8 @@ class UserProfile extends Equatable {
   final String? displayName;
   final String? photoUrl;
   final DateTime? createdAt;
+  final double? targetCalories;
+  final double? targetWater;
 
   const UserProfile({
     required this.uid,
@@ -17,10 +19,20 @@ class UserProfile extends Equatable {
     this.displayName,
     this.photoUrl,
     this.createdAt,
+    this.targetCalories,
+    this.targetWater,
   });
 
   @override
-  List<Object?> get props => [uid, email, displayName, photoUrl, createdAt];
+  List<Object?> get props => [
+    uid,
+    email,
+    displayName,
+    photoUrl,
+    createdAt,
+    targetCalories,
+    targetWater,
+  ];
 
   UserProfile copyWith({
     String? uid,
@@ -28,6 +40,8 @@ class UserProfile extends Equatable {
     String? displayName,
     String? photoUrl,
     DateTime? createdAt,
+    double? targetCalories,
+    double? targetWater,
   }) {
     return UserProfile(
       uid: uid ?? this.uid,
@@ -35,6 +49,8 @@ class UserProfile extends Equatable {
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
+      targetCalories: targetCalories ?? this.targetCalories,
+      targetWater: targetWater ?? this.targetWater,
     );
   }
 
@@ -54,7 +70,9 @@ class UserProfile extends Equatable {
       email: json['email'] as String,
       displayName: json['displayName'] as String?,
       photoUrl: json['photoUrl'] as String?,
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
     );
   }
 }

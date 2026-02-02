@@ -16,11 +16,16 @@ class MealLoading extends MealState {}
 class MealsLoaded extends MealState {
   final List<MealLog> meals;
   final DateTime date;
+  final double? targetCalories;
 
-  const MealsLoaded(this.meals, this.date);
+  const MealsLoaded(this.meals, this.date, {this.targetCalories});
 
   @override
-  List<Object> get props => [meals, date];
+  List<Object> get props => [
+    meals,
+    date,
+    if (targetCalories != null) targetCalories!,
+  ];
 }
 
 class MealSaving extends MealState {} // For spinner during save

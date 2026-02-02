@@ -120,9 +120,14 @@ class _AddFoodPageState extends State<AddFoodPage> {
         double.tryParse(c.text.trim()) ?? 0.0;
     // int parseInt(TextEditingController c) => int.tryParse(c.text.trim()) ?? 1; // Removed as no longer needed
 
+    String capitalize(String s) {
+      if (s.isEmpty) return s;
+      return s[0].toUpperCase() + s.substring(1);
+    }
+
     final foodItem = FoodItem(
       id: widget.foodToEdit?.id ?? const Uuid().v4(),
-      name: _nameController.text.trim(),
+      name: capitalize(_nameController.text.trim()),
       calories: parse(_caloriesController),
       carbs: parse(_carbsController),
       protein: parse(_proteinController),
@@ -378,6 +383,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
       child: Center(
         child: TextField(
           controller: controller,
+          textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
             border: InputBorder.none,
             hintText: hint,

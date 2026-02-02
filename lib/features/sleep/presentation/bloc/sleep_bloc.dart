@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:developer' as dev;
 import 'package:intl/intl.dart';
 
-import 'package:bench_profile_app/core/error/failures.dart';
+import '../../../../../core/error/failures.dart';
 import '../../domain/repositories/sleep_repository.dart';
 import '../../domain/entities/sleep_log.dart';
 import 'sleep_event.dart';
@@ -14,10 +14,12 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
   SleepBloc({required this.repository}) : super(SleepInitial()) {
     on<LoadSleepLogs>(_onLoadSleepLogs);
     on<LoadSleepStats>(_onLoadSleepStats);
+    on<CheckLocalHealthConnectData>(_onCheckLocalHealthConnectData);
     on<LogSleep>(_onLogSleep);
     on<DeleteSleepLog>(_onDeleteSleepLog);
     on<DeleteAllSleepLogsForDate>(_onDeleteAllSleepLogsForDate);
     on<DeleteMultipleSleepLogs>(_onDeleteMultipleSleepLogs);
+    on<IgnoreSleepDraft>(_onIgnoreSleepDraft);
   }
 
   Future<void> _onDeleteAllSleepLogsForDate(
@@ -42,49 +44,30 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     Emitter<SleepState> emit,
   ) async {
     emit(SleepLoading());
-    final result = await repository.getSleepLogs(event.date);
-    await result.fold(
+
+    // parallel fetch
+    final logsFuture = repository.getSleepLogs(event.date);
+    final draftFuture = repository.checkLocalHealthConnectData(event.date);
+
+    final logsResult = await logsFuture;
+    final draftResult = await draftFuture;
+
+    List<SleepLog> localDrafts = [];
+    draftResult.fold((_) {}, (r) => localDrafts = r);
+
+    await logsResult.fold(
       (failure) async => emit(SleepError(_mapFailureToMessage(failure))),
       (logs) async {
+        final validDraft = _getBestValidDraft(localDrafts, logs);
+
         if (logs.isNotEmpty) {
-          emit(SleepLoaded(logs));
+          emit(SleepLoaded(logs, healthConnectDraft: validDraft));
         } else {
           dev.log(
-            '[SleepBloc] No local logs, checking Health Connect',
+            '[SleepBloc] No remote logs found. Draft found: ${validDraft != null}',
             name: 'SleepBloc',
           );
-          try {
-            final hcResult = await repository.fetchSleepFromHealthConnect(
-              event.date,
-            );
-            hcResult.fold(
-              (failure) {
-                dev.log(
-                  '[SleepBloc] HC connect returned failure: $failure',
-                  name: 'SleepBloc',
-                );
-                emit(SleepLoaded(logs));
-              },
-              (draft) {
-                if (draft != null) {
-                  dev.log(
-                    '[SleepBloc] HC connect returned draft',
-                    name: 'SleepBloc',
-                  );
-                  emit(SleepLoaded(logs, healthConnectDraft: draft));
-                } else {
-                  dev.log(
-                    '[SleepBloc] HC connect returned null',
-                    name: 'SleepBloc',
-                  );
-                  emit(SleepLoaded(logs));
-                }
-              },
-            );
-          } catch (e) {
-            dev.log('[SleepBloc] HC Exception: $e', name: 'SleepBloc');
-            emit(SleepLoaded(logs));
-          }
+          emit(SleepLoaded(logs, healthConnectDraft: validDraft));
         }
       },
     );
@@ -201,6 +184,20 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     });
   }
 
+  Future<void> _onIgnoreSleepDraft(
+    IgnoreSleepDraft event,
+    Emitter<SleepState> emit,
+  ) async {
+    // Just tell repo to ignore. The UI should have optimistically closed the dialog.
+    // But if we want to ensure state consistency, we could reload?
+    // User requested: "actually its getting added automatically i need to ask user with poup to confirm this log can be save lilke that even i delete the saved entry it got stored again better to keep the uuid in the remote server level to identlyify the sleep log entry"
+    // "keep the uuid in the remote server level" -> handled by using the ID.
+    // "No" on popup -> this event.
+    await repository.ignoreSleepDraft(event.uuid);
+    // Might want to reload to refresh drafts list (in case next draft should be shown)
+    // But let's assume UI handles the dialog close.
+  }
+
   Future<void> _onDeleteSleepLog(
     DeleteSleepLog event,
     Emitter<SleepState> emit,
@@ -233,6 +230,68 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     }
     emit(const SleepOperationSuccess(message: 'Sleep logs deleted'));
     add(LoadSleepLogs(event.date));
+  }
+
+  Future<void> _onCheckLocalHealthConnectData(
+    CheckLocalHealthConnectData event,
+    Emitter<SleepState> emit,
+  ) async {
+    // Check repository for LOCAL HC data
+    final result = await repository.checkLocalHealthConnectData(event.date);
+
+    result.fold(
+      (failure) {
+        // Ignore failure, just log?
+      },
+      (drafts) {
+        if (drafts.isNotEmpty) {
+          if (state is SleepLoaded) {
+            final currentLogs = (state as SleepLoaded).logs;
+            final validDraft = _getBestValidDraft(drafts, currentLogs);
+            emit(
+              (state as SleepLoaded).copyWith(healthConnectDraft: validDraft),
+            );
+          } else {
+            // Should not happen if flow is correct, but effectively we'd need logs to filter against.
+            // If we don't have logs, we assume all drafts are candidates, pick the first (longest).
+            final validDraft = drafts.first;
+            // Provide empty list for logs since we don't have them yet in this branch
+            emit(SleepLoaded(const [], healthConnectDraft: validDraft));
+          }
+        }
+      },
+    );
+  }
+
+  /// Selects the best draft (longest) that does NOT overlap with any existing log.
+  SleepLog? _getBestValidDraft(
+    List<SleepLog> drafts,
+    List<SleepLog> existingLogs,
+  ) {
+    if (drafts.isEmpty) return null;
+
+    for (final draft in drafts) {
+      bool hasOverlap = false;
+      for (final log in existingLogs) {
+        // Check matching ID (Remote check)
+        if (log.id == draft.id) {
+          hasOverlap = true; // Use same flag to invalidate
+          break;
+        }
+
+        // Check overlap
+        if (draft.startTime.isBefore(log.endTime) &&
+            draft.endTime.isAfter(log.startTime)) {
+          hasOverlap = true;
+          break;
+        }
+      }
+
+      if (!hasOverlap) {
+        return draft; // detailed drafts are already sorted by duration in Repo
+      }
+    }
+    return null; // All drafts overlap
   }
 
   String _mapFailureToMessage(Failure failure) {

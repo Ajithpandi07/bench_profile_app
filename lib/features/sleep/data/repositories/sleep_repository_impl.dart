@@ -8,18 +8,102 @@ import '../../domain/repositories/sleep_repository.dart';
 
 import 'package:health/health.dart';
 import '../../../../features/health_metrics/data/datasources/health_metrics_data_source.dart';
+import '../../../../features/health_metrics/data/datasources/local/health_metrics_local_data_source.dart';
+import '../../../../features/health_metrics/data/datasources/local/health_preferences_service.dart';
 import 'dart:developer' as dev;
 
 class SleepRepositoryImpl implements SleepRepository {
   final SleepRemoteDataSource remoteDataSource;
+  final HealthPreferencesService preferencesService;
   final HealthMetricsDataSource healthMetricsDataSource;
+  final HealthMetricsLocalDataSource localDataSource;
   final NetworkInfo networkInfo;
 
   SleepRepositoryImpl({
     required this.remoteDataSource,
     required this.healthMetricsDataSource,
+    required this.localDataSource,
     required this.networkInfo,
+    required this.preferencesService,
   });
+
+  @override
+  Future<Either<Failure, void>> ignoreSleepDraft(String uuid) async {
+    try {
+      await preferencesService.ignoreSleepUuid(uuid);
+      return const Right(null);
+    } catch (e) {
+      return const Right(null); // Fail silently
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<SleepLog>>> checkLocalHealthConnectData(
+    DateTime date,
+  ) async {
+    try {
+      // Logic: Query ISAR local cache directly.
+      // Do NOT use healthMetricsDataSource (Platform).
+      // Use localDataSource.
+
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+      final startWindow = normalizedDate.subtract(const Duration(hours: 6));
+      final endWindow = DateTime(
+        normalizedDate.year,
+        normalizedDate.month,
+        normalizedDate.day,
+        23,
+        59,
+        59,
+      ); // End: Today 11:59 PM
+
+      // Fetch all metrics in range from local cache
+      final metrics = await localDataSource.getMetricsForDateRange(
+        startWindow,
+        endWindow,
+      );
+
+      final sleepSessionMetrics = metrics.where((m) {
+        return m.type == HealthDataType.SLEEP_SESSION.name &&
+            m.dateTo.year == date.year &&
+            m.dateTo.month == date.month &&
+            m.dateTo.day == date.day;
+      }).toList();
+
+      if (sleepSessionMetrics.isEmpty) {
+        return const Right([]);
+      }
+
+      sleepSessionMetrics.sort((a, b) {
+        final durA = a.dateTo.difference(a.dateFrom);
+        final durB = b.dateTo.difference(b.dateFrom);
+        return durB.compareTo(durA); // Descending duration
+      });
+
+      final List<SleepLog> drafts = [];
+      for (final session in sleepSessionMetrics) {
+        // Filter ignored UUIDs
+        if (await preferencesService.isSleepUuidIgnored(session.uuid)) {
+          continue;
+        }
+
+        drafts.add(
+          SleepLog(
+            id: session.uuid, // Use actual UUID
+            startTime: session.dateFrom,
+            endTime: session.dateTo,
+            quality: 0,
+            notes: 'Health Connect (Local)',
+          ),
+        );
+      }
+
+      return Right(drafts);
+    } catch (e) {
+      // Local database error?
+      return const Right([]);
+    }
+  }
 
   @override
   Future<Either<Failure, void>> logSleep(
@@ -103,6 +187,13 @@ class SleepRepositoryImpl implements SleepRepository {
 
   @override
   Future<Either<Failure, void>> deleteSleepLog(String id, DateTime date) async {
+    // Add to ignore list immediately
+    try {
+      await preferencesService.ignoreSleepUuid(id);
+    } catch (_) {
+      // ignore
+    }
+
     if (await networkInfo.isConnected) {
       try {
         await remoteDataSource.deleteSleepLog(id, date);
@@ -123,10 +214,16 @@ class SleepRepositoryImpl implements SleepRepository {
       // Query window: 6 PM previous day to 11:59 PM current day
       // This ensures we catch sleep sessions starting the night before (e.g. 10 PM)
       // and ending on the query date.
-      final startWindow = date.subtract(const Duration(hours: 6));
-      final endWindow = date.add(
-        const Duration(hours: 24),
-      ); // Until next day 00:00?
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+      final startWindow = normalizedDate.subtract(const Duration(hours: 6));
+      final endWindow = DateTime(
+        normalizedDate.year,
+        normalizedDate.month,
+        normalizedDate.day,
+        23,
+        59,
+        59,
+      ); // End: Today 11:59 PM
       // Actually date is 00:00. date + 24h is next day 00:00. Correct.
 
       final metrics = await healthMetricsDataSource
@@ -181,7 +278,18 @@ class SleepRepositoryImpl implements SleepRepository {
           })
           .toList();
 
-      if (sleepMetrics.isEmpty) return const Right(null);
+      dev.log(
+        '[SleepRepo] After filtering by date: ${sleepMetrics.length} metrics remain',
+        name: 'SleepRepository',
+      );
+
+      if (sleepMetrics.isEmpty) {
+        dev.log(
+          '[SleepRepo] No metrics after date filter. Returning null.',
+          name: 'SleepRepository',
+        );
+        return const Right(null);
+      }
 
       // Find the range
       // Just double check min start and max end
@@ -195,6 +303,11 @@ class SleepRepositoryImpl implements SleepRepository {
 
       // Basic validation: Sleep should be at least 15 mins to matter?
       // User can confirm.
+
+      dev.log(
+        '[SleepRepo] Creating HC draft: Start=$start, End=$end',
+        name: 'SleepRepository',
+      );
 
       return Right(
         SleepLog(

@@ -206,11 +206,15 @@ class _MealReportPageState extends State<MealReportPage> {
                           return const MealReportShimmer();
                         } else if (state is MealsLoaded) {
                           final meals = state.meals;
-                          // Optional: verify date match, but usually Bloc is trustworthy if we cleared cache logic
+                          final targetCalories = state.targetCalories ?? 2000.0;
+
                           if (meals.isEmpty) {
-                            return _buildEmptyState();
+                            return _buildEmptyState(targetKcal: targetCalories);
                           } else {
-                            return _buildLoggedState(meals);
+                            return _buildLoggedState(
+                              meals,
+                              targetKcal: targetCalories,
+                            );
                           }
                         } else if (state is MealOperationFailure) {
                           return Center(
@@ -241,11 +245,11 @@ class _MealReportPageState extends State<MealReportPage> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState({double targetKcal = 2000.0}) {
     return Column(
       children: [
         const SizedBox(height: 32),
-        const MealSummaryCard(currentKcal: 0, targetKcal: 450),
+        MealSummaryCard(currentKcal: 0, targetKcal: targetKcal),
         const Spacer(flex: 2),
         Padding(
           padding: const EdgeInsets.only(bottom: 40.0),
@@ -285,7 +289,7 @@ class _MealReportPageState extends State<MealReportPage> {
     );
   }
 
-  Widget _buildLoggedState(List<MealLog> meals) {
+  Widget _buildLoggedState(List<MealLog> meals, {double targetKcal = 2000.0}) {
     final types = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
     // Calculate global properties for Insight Card
@@ -297,8 +301,6 @@ class _MealReportPageState extends State<MealReportPage> {
         lastMealTime = m.timestamp;
       }
     }
-    const double maxGoal = 2000;
-    const double targetKcal = 2000; // Updated to match global goal
 
     String? lastAddedTime;
     if (lastMealTime != null) {
@@ -660,7 +662,7 @@ class _MealReportPageState extends State<MealReportPage> {
                                 ),
                               ),
                               TextSpan(
-                                text: ' / ${maxGoal.toInt()}',
+                                text: ' / ${targetKcal.toInt()}',
                                 style: const TextStyle(
                                   fontSize: 24,
                                   color: Colors.grey,

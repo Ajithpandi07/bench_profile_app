@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
+
 import '../../domain/entities/entities.dart';
 import '../../../../core/utils/snackbar_utils.dart';
 import '../bloc/bloc.dart';
@@ -9,9 +11,8 @@ import 'add_food_page.dart';
 import 'create_meal_page.dart';
 import 'quick_log_page.dart';
 import 'review_meal_page.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
-import 'package:bench_profile_app/core/services/app_theme.dart';
+import '../../../../../core/services/app_theme.dart';
 
 class MealListingPage extends StatefulWidget {
   final String mealType;

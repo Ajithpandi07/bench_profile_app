@@ -1,8 +1,8 @@
 import 'package:dartz/dartz.dart';
-import 'package:bench_profile_app/core/core.dart';
-import 'package:bench_profile_app/features/hydration/domain/domain.dart';
-import 'package:bench_profile_app/features/hydration/domain/entities/hydration_daily_summary.dart';
-import 'package:bench_profile_app/features/hydration/data/datasources/hydration_remote_data_source.dart';
+import '../../../../../core/core.dart';
+import '../../domain/domain.dart';
+import '../../domain/entities/hydration_daily_summary.dart';
+import '../datasources/hydration_remote_data_source.dart';
 
 class HydrationRepositoryImpl implements HydrationRepository {
   final HydrationRemoteDataSource remoteDataSource;

@@ -183,14 +183,17 @@ class _HealthMetricsDashboardState extends State<HealthMetricsDashboard>
       case 'home':
         return const _HomeTab();
       case 'settings':
-        return BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
-          builder: (context, state) {
-            HealthMetricsSummary? metrics;
-            if (state is HealthMetricsLoaded) {
-              metrics = state.summary;
-            }
-            return ProfilePage(metrics: metrics);
-          },
+        return BlocProvider(
+          create: (context) => sl<UserProfileBloc>()..add(LoadUserProfile()),
+          child: BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
+            builder: (context, state) {
+              HealthMetricsSummary? metrics;
+              if (state is HealthMetricsLoaded) {
+                metrics = state.summary;
+              }
+              return ProfilePage(metrics: metrics);
+            },
+          ),
         );
       default:
         return Center(

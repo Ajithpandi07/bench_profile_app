@@ -23,7 +23,27 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
   @override
   void initState() {
     super.initState();
-    context.read<ActivityBloc>().add(const LoadActivityStats());
+    _loadStats();
+  }
+
+  void _loadStats() {
+    DateTime start;
+    DateTime end;
+    final now = DateTime.now();
+
+    if (_selectedView == 'Weekly') {
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      start = DateUtils.dateOnly(monday);
+      end = start.add(const Duration(days: 6));
+    } else if (_selectedView == 'Monthly') {
+      start = DateTime(now.year, now.month, 1);
+      end = DateTime(now.year, now.month + 1, 0);
+    } else {
+      start = DateTime(now.year, 1, 1);
+      end = DateTime(now.year, 12, 31);
+    }
+
+    context.read<ActivityBloc>().add(LoadActivityStats(start: start, end: end));
   }
 
   @override
@@ -63,6 +83,7 @@ class _ActivityStatsPageState extends State<ActivityStatsPage> {
                     _selectedView = view;
                     _selectedDate = DateTime.now();
                   });
+                  _loadStats();
                 },
                 activeColor: AppTheme.primaryColor,
               ),

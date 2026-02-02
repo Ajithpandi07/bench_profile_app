@@ -4,6 +4,9 @@ import 'reminder_remote_data_source.dart';
 import '../models/reminder_model.dart';
 
 class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
+  static const String _collectionName = 'bench_profile';
+  static const String _subCollection = 'userreminders';
+
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
@@ -13,16 +16,21 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
        _auth = auth ?? FirebaseAuth.instance;
 
+  CollectionReference<Map<String, dynamic>> _getReminderCollection(
+    String userId,
+  ) {
+    return _firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_subCollection);
+  }
+
   @override
   Future<String> addReminder(ReminderModel reminder) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('User not authenticated');
 
-    final docRef = await _firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('userreminders')
-        .add(reminder.toMap());
+    final docRef = await _getReminderCollection(user.uid).add(reminder.toMap());
 
     return docRef.id;
   }
@@ -35,12 +43,9 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
       if (reminder.id == null) {
         throw Exception('Reminder ID is null');
       }
-      await _firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('userreminders')
-          .doc(reminder.id)
-          .update(reminder.toMap());
+      await _getReminderCollection(
+        user.uid,
+      ).doc(reminder.id).update(reminder.toMap());
     } catch (e) {
       throw Exception('Failed to update reminder: $e');
     }
@@ -56,12 +61,7 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
       print('DEBUG: User ID: ${user.uid}');
       print('DEBUG: Path: bench_profile/${user.uid}/userreminders/$id');
 
-      await _firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('userreminders')
-          .doc(id)
-          .delete();
+      await _getReminderCollection(user.uid).doc(id).delete();
 
       print('DEBUG: Reminder deleted successfully');
     } catch (e) {
@@ -76,10 +76,7 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
       final user = _auth.currentUser;
       if (user == null) return [];
 
-      final snapshot = await _firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('userreminders')
+      final snapshot = await _getReminderCollection(user.uid)
           .where('endDate', isGreaterThanOrEqualTo: Timestamp.now())
           .orderBy('endDate')
           .get();

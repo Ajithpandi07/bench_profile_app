@@ -11,4 +11,8 @@ abstract class SleepRepository {
   );
   Future<Either<Failure, void>> deleteSleepLog(String id, DateTime date);
   Future<Either<Failure, SleepLog?>> fetchSleepFromHealthConnect(DateTime date);
+  Future<Either<Failure, List<SleepLog>>> checkLocalHealthConnectData(
+    DateTime date,
+  );
+  Future<Either<Failure, void>> ignoreSleepDraft(String uuid);
 }

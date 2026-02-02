@@ -509,7 +509,8 @@ class _SleepStatsPageState extends State<SleepStatsPage> {
       items: items,
       maxVal: maxVal,
       chartHeight: 250,
-      fitAll: _selectedView == 'Monthly', // Disable scrolling for monthly
+      fitAll:
+          false, // Allow scrolling for all views if needed, specifically Monthly
       highlightColor: Theme.of(context).primaryColor,
       formatValue: (val) {
         if (val % 1 == 0) return val.toInt().toString();

@@ -19,6 +19,20 @@ class HealthMetricsRemoteDataSourceImpl
     required this.aggregator,
   });
 
+  static const String _collectionName = 'fitnessprofile';
+
+  CollectionReference<Map<String, dynamic>> _getPlatformCollectionReference(
+    String userId,
+  ) {
+    final platformCollection = Platform.isIOS
+        ? 'healthmetriceios'
+        : 'healthmetricesandroid';
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(platformCollection);
+  }
+
   @override
   Future<void> uploadHealthMetrics(List<HealthMetrics> metrics) async {
     try {
@@ -28,9 +42,7 @@ class HealthMetricsRemoteDataSourceImpl
       }
       if (metrics.isEmpty) return;
 
-      final platformCollection = Platform.isIOS
-          ? 'healthmetriceios'
-          : 'healthmetricesandroid';
+      // Platform collection logic moved to helper
 
       // Group metrics by day to ensure they go into the correct document
       final Map<String, List<HealthMetrics>> groupedByDate = {};
@@ -51,11 +63,9 @@ class HealthMetricsRemoteDataSourceImpl
           int.parse(parts[2]),
         );
 
-        final summaryDocRef = firestore
-            .collection('bench_profile')
-            .doc(userId)
-            .collection(platformCollection)
-            .doc(docId);
+        final summaryDocRef = _getPlatformCollectionReference(
+          userId,
+        ).doc(docId);
 
         // final pointsCollectionRef = summaryDocRef.collection('health_metrics');
 
@@ -123,20 +133,12 @@ class HealthMetricsRemoteDataSourceImpl
     }
 
     try {
-      // 1. Fetch Existing Health Metrics (bench_profile/...)
-      final platformCollection = Platform.isIOS
-          ? 'healthmetriceios'
-          : 'healthmetricesandroid';
-
       final docId =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-      final pointsCollectionRef = firestore
-          .collection('bench_profile')
-          .doc(userId)
-          .collection(platformCollection)
-          .doc(docId)
-          .collection('health_metrics');
+      final pointsCollectionRef = _getPlatformCollectionReference(
+        userId,
+      ).doc(docId).collection('health_metrics');
 
       final snapshot = await pointsCollectionRef.orderBy('dateFrom').get();
       final healthMetrics = snapshot.docs
@@ -154,13 +156,7 @@ class HealthMetricsRemoteDataSourceImpl
     final userId = auth.currentUser?.uid;
     if (userId == null) throw ServerException('User is not authenticated.');
 
-    final platformCollection = Platform.isIOS
-        ? 'healthmetriceios'
-        : 'healthmetricesandroid';
-    final parentRef = firestore
-        .collection('bench_profile')
-        .doc(userId)
-        .collection(platformCollection);
+    final parentRef = _getPlatformCollectionReference(userId);
 
     final snapshot = await parentRef.get();
     final allPoints = <HealthMetrics>[];

@@ -11,6 +11,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'core.dart';
 import '../features/health_metrics/data/datasources/local/health_preferences_service.dart';
 import '../features/health_metrics/health_metrics.dart' hide SyncManager;
+import '../features/sleep/domain/entities/ignored_sleep_draft.dart';
 import 'services/notification_service.dart';
 
 import '../features/sleep/data/datasources/sleep_remote_data_source.dart';
@@ -23,16 +24,16 @@ import '../features/auth/auth.dart';
 
 // Reminder imports
 import '../features/reminder/reminder.dart';
-import 'package:bench_profile_app/features/hydration/domain/domain.dart';
-import 'package:bench_profile_app/features/hydration/data/data.dart';
-import 'package:bench_profile_app/features/hydration/presentation/presentation.dart';
-import 'package:bench_profile_app/features/meals/data/data.dart';
-import 'package:bench_profile_app/features/meals/domain/repositories/meal_repository.dart';
-import 'package:bench_profile_app/features/meals/presentation/bloc/bloc.dart';
-import 'package:bench_profile_app/features/activity/domain/repositories/activity_repository.dart';
-import 'package:bench_profile_app/features/activity/data/datasources/activity_remote_data_source.dart';
-import 'package:bench_profile_app/features/activity/data/repositories/activity_repository_impl.dart';
-import 'package:bench_profile_app/features/activity/presentation/bloc/activity_bloc.dart';
+import '../features/hydration/domain/domain.dart';
+import '../features/hydration/data/data.dart';
+import '../features/hydration/presentation/presentation.dart';
+import '../features/meals/data/data.dart';
+import '../features/meals/domain/repositories/meal_repository.dart';
+import '../features/meals/presentation/bloc/bloc.dart';
+import '../features/activity/domain/repositories/activity_repository.dart';
+import '../features/activity/data/datasources/activity_remote_data_source.dart';
+import '../features/activity/data/repositories/activity_repository_impl.dart';
+import '../features/activity/presentation/bloc/activity_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -56,7 +57,10 @@ Future<void> init() async {
     if (isar == null) {
       final dir = await getApplicationDocumentsDirectory();
       try {
-        isar = await Isar.open([HealthMetricsSchema], directory: dir.path);
+        isar = await Isar.open([
+          HealthMetricsSchema,
+          IgnoredSleepDraftSchema,
+        ], directory: dir.path);
       } catch (e) {
         if (e.toString().contains('MdbxError (11)')) {
           print(
@@ -78,7 +82,7 @@ Future<void> init() async {
     sl.registerLazySingleton<MetricAggregator>(() => MetricAggregator());
   if (!sl.isRegistered<HealthPreferencesService>())
     sl.registerLazySingleton<HealthPreferencesService>(
-      () => HealthPreferencesService(),
+      () => HealthPreferencesService(isar: sl<Isar>()),
     );
 
   // Data sources
@@ -164,6 +168,30 @@ Future<void> init() async {
     sl.registerFactory(() => AuthBloc(repository: sl<AuthRepository>()));
   }
 
+  // User Profile
+  if (!sl.isRegistered<UserProfileRemoteDataSource>()) {
+    sl.registerLazySingleton<UserProfileRemoteDataSource>(
+      () => UserProfileRemoteDataSourceImpl(
+        firestore: sl<FirebaseFirestore>(),
+        auth: sl<FirebaseAuth>(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<UserProfileRepository>()) {
+    sl.registerLazySingleton<UserProfileRepository>(
+      () => UserProfileRepositoryImpl(
+        remoteDataSource: sl<UserProfileRemoteDataSource>(),
+        networkInfo: sl<NetworkInfo>(),
+        auth: sl<FirebaseAuth>(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<UserProfileBloc>()) {
+    sl.registerFactory(
+      () => UserProfileBloc(repository: sl<UserProfileRepository>()),
+    );
+  }
+
   // SyncManager
   if (!sl.isRegistered<SyncManager>()) {
     sl.registerLazySingleton<SyncManager>(
@@ -214,7 +242,9 @@ Future<void> init() async {
     () => SleepRepositoryImpl(
       remoteDataSource: sl(),
       healthMetricsDataSource: sl(),
+      localDataSource: sl(), // Inject Local Source
       networkInfo: sl(),
+      preferencesService: sl(),
     ),
   );
   sl.registerLazySingleton<SleepRemoteDataSource>(
@@ -240,7 +270,10 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<HydrationBloc>()) {
     sl.registerFactory(
-      () => HydrationBloc(repository: sl<HydrationRepository>()),
+      () => HydrationBloc(
+        repository: sl<HydrationRepository>(),
+        userProfileRepository: sl<UserProfileRepository>(),
+      ),
     );
   }
 
@@ -262,7 +295,12 @@ Future<void> init() async {
     );
   }
   if (!sl.isRegistered<MealBloc>()) {
-    sl.registerFactory(() => MealBloc(repository: sl<MealRepository>()));
+    sl.registerFactory(
+      () => MealBloc(
+        repository: sl<MealRepository>(),
+        userProfileRepository: sl<UserProfileRepository>(),
+      ),
+    );
   }
 
   // Features - Activity
@@ -306,7 +344,10 @@ Future<void> initForBackground() async {
     Isar? isar = Isar.getInstance();
     if (isar == null) {
       final dir = await getApplicationDocumentsDirectory();
-      isar = await Isar.open([HealthMetricsSchema], directory: dir.path);
+      isar = await Isar.open([
+        HealthMetricsSchema,
+        IgnoredSleepDraftSchema,
+      ], directory: dir.path);
     }
     sl.registerSingleton<Isar>(isar);
   }
@@ -319,7 +360,7 @@ Future<void> initForBackground() async {
     sl.registerLazySingleton<MetricAggregator>(() => MetricAggregator());
   if (!sl.isRegistered<HealthPreferencesService>())
     sl.registerLazySingleton<HealthPreferencesService>(
-      () => HealthPreferencesService(),
+      () => HealthPreferencesService(isar: sl<Isar>()),
     );
 
   if (!sl.isRegistered<HealthMetricsLocalDataSource>()) {

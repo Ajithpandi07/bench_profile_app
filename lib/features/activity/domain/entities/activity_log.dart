@@ -4,6 +4,7 @@ class ActivityLog extends Equatable {
   final String id;
   final String userId;
   final String activityType; // Walking, Running, Cycling, etc.
+  final String? customActivityName; // User-entered name for custom activities
   final DateTime
   startTime; // Replaces timestamp in meal log for clarity, or keep timestamp
   final int durationMinutes;
@@ -16,6 +17,7 @@ class ActivityLog extends Equatable {
     required this.id,
     required this.userId,
     required this.activityType,
+    this.customActivityName,
     required this.startTime,
     required this.durationMinutes,
     required this.caloriesBurned,
@@ -29,6 +31,7 @@ class ActivityLog extends Equatable {
     id,
     userId,
     activityType,
+    customActivityName,
     startTime,
     durationMinutes,
     caloriesBurned,

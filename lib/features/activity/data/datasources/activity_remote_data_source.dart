@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:bench_profile_app/core/error/exceptions.dart';
+import '../../../../../core/error/exceptions.dart';
 import '../../domain/entities/activity_log.dart';
 
 import '../../domain/entities/daily_activity_summary.dart';
@@ -20,7 +20,31 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
 
+  // Collection variables
+  static const String _collectionName = 'fitnessprofile';
+  static const String _logSubCollection = 'activity_logs';
+  static const String _monthlySubCollection = 'activity_logs_monthly';
+
   ActivityRemoteDataSourceImpl({required this.firestore, required this.auth});
+
+  // Helper methods
+  CollectionReference<Map<String, dynamic>> _getActivityLogsCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_logSubCollection);
+  }
+
+  CollectionReference<Map<String, dynamic>> _getMonthlyCollection(
+    String userId,
+  ) {
+    return firestore
+        .collection(_collectionName)
+        .doc(userId)
+        .collection(_monthlySubCollection);
+  }
 
   @override
   Future<void> logActivity(ActivityLog activity) async {
@@ -33,13 +57,10 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final batch = firestore.batch();
 
     // 1. Save detailed log
-    final logRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs')
-        .doc(dateId)
-        .collection('logs')
-        .doc(activity.id);
+    // 1. Save detailed log
+    final logRef = _getActivityLogsCollection(
+      user.uid,
+    ).doc(dateId).collection('logs').doc(activity.id);
 
     batch.set(logRef, {
       'id': activity.id,
@@ -56,11 +77,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     });
 
     // 2. DAILY Total (Atomic Increment)
-    final dateDocRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs')
-        .doc(dateId);
+    // 2. DAILY Total (Atomic Increment)
+    final dateDocRef = _getActivityLogsCollection(user.uid).doc(dateId);
 
     batch.set(dateDocRef, {
       'totalCalories': FieldValue.increment(activity.caloriesBurned),
@@ -81,11 +99,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final day = activity.startTime.day;
     final summaryId = '${year}_$month';
 
-    final summaryRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs_monthly')
-        .doc(summaryId);
+    final summaryRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
     // Use set(merge:true) to ensure doc exists, then update() for nested increments.
     batch.set(summaryRef, {
@@ -115,14 +129,9 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    final query = await firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs')
-        .doc(dateId)
-        .collection('logs')
-        .orderBy('startTime')
-        .get();
+    final query = await _getActivityLogsCollection(
+      user.uid,
+    ).doc(dateId).collection('logs').orderBy('startTime').get();
 
     return query.docs.map((doc) {
       final data = doc.data();
@@ -152,13 +161,9 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final dateId =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    final logRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs')
-        .doc(dateId)
-        .collection('logs')
-        .doc(id);
+    final logRef = _getActivityLogsCollection(
+      user.uid,
+    ).doc(dateId).collection('logs').doc(id);
 
     final logSnapshot = await logRef.get();
     if (!logSnapshot.exists) return;
@@ -173,11 +178,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     batch.delete(logRef);
 
     // 2. Decrement Daily Total
-    final dateDocRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs')
-        .doc(dateId);
+    // 2. Decrement Daily Total
+    final dateDocRef = _getActivityLogsCollection(user.uid).doc(dateId);
 
     batch.set(dateDocRef, {
       'totalCalories': FieldValue.increment(-totalCalories),
@@ -191,11 +193,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final day = date.day;
     final summaryId = '${year}_$month';
 
-    final summaryRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs_monthly')
-        .doc(summaryId);
+    final summaryRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
     batch.set(summaryRef, {
       'id': summaryId,
@@ -222,13 +220,9 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     final dateId =
         '${activity.startTime.year}-${activity.startTime.month.toString().padLeft(2, '0')}-${activity.startTime.day.toString().padLeft(2, '0')}';
 
-    final logRef = firestore
-        .collection('bench_profile')
-        .doc(user.uid)
-        .collection('activity_logs')
-        .doc(dateId)
-        .collection('logs')
-        .doc(activity.id);
+    final logRef = _getActivityLogsCollection(
+      user.uid,
+    ).doc(dateId).collection('logs').doc(activity.id);
 
     await firestore.runTransaction((transaction) async {
       final doc = await transaction.get(logRef);
@@ -254,11 +248,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       });
 
       // Update Daily
-      final dateDocRef = firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('activity_logs')
-          .doc(dateId);
+      final dateDocRef = _getActivityLogsCollection(user.uid).doc(dateId);
 
       transaction.set(dateDocRef, {
         'totalCalories': FieldValue.increment(calDiff),
@@ -272,11 +262,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       final day = activity.startTime.day;
       final summaryId = '${year}_$month';
 
-      final summaryRef = firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('activity_logs_monthly')
-          .doc(summaryId);
+      final summaryRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
       transaction.set(summaryRef, {
         'id': summaryId,
@@ -311,11 +297,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     while (currentMonth.isBefore(endMonth) ||
         currentMonth.isAtSameMomentAs(endMonth)) {
       final summaryId = '${currentMonth.year}_${currentMonth.month}';
-      final docRef = firestore
-          .collection('bench_profile')
-          .doc(user.uid)
-          .collection('activity_logs_monthly')
-          .doc(summaryId);
+      final docRef = _getMonthlyCollection(user.uid).doc(summaryId);
 
       final doc = await docRef.get();
       if (doc.exists) {

@@ -430,7 +430,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                                   ),
                                 ),
                               Text(
-                                '${(selectedValue * 1000).toInt()} ml',
+                                '${(selectedValue * 1000).round()} ml',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -451,7 +451,7 @@ class _HydrationDashboardPageState extends State<HydrationDashboardPage> {
                         chartHeight: 250,
                         formatValue: (val) {
                           if (val % 1 == 0) return val.toInt().toString();
-                          return val.toStringAsFixed(1);
+                          return val.toStringAsFixed(2);
                         },
                         onBarTap: (index) {
                           setState(() {

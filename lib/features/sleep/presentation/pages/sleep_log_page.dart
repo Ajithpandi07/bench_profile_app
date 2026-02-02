@@ -6,6 +6,7 @@ import '../../../reminder/presentation/widgets/primary_button.dart';
 import '../../domain/entities/sleep_log.dart';
 import '../bloc/bloc.dart';
 import '../widgets/circular_sleep_timer.dart';
+import '../../../../core/utils/snackbar_utils.dart';
 
 class SleepLogPage extends StatefulWidget {
   final DateTime initialDate;
@@ -75,6 +76,49 @@ class _SleepLogPageState extends State<SleepLogPage> {
       );
       _quality = _calculateQuality(_startDateTime, _endDateTime);
     }
+
+    // Check for local Health Connect data (SLEEP_SESSION)
+    // using the new Bloc event that queries Isar directly without platform fetch.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.existingLog == null) {
+        context.read<SleepBloc>().add(
+          CheckLocalHealthConnectData(widget.initialDate),
+        );
+      }
+    });
+  }
+
+  // Helper method to show dialog, triggered by BlocListener state change
+  void _showHealthConnectDialog(SleepLog draft) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sleep Data Found'),
+        content: Text(
+          'We found sleep data from Health Connect (${DateFormat('h:mm a').format(draft.startTime)} - ${DateFormat('h:mm a').format(draft.endTime)}). Would you like to use it?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<SleepBloc>().add(IgnoreSleepDraft(draft.id));
+            },
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _startDateTime = draft.startTime;
+                _endDateTime = draft.endTime;
+                _quality = draft.quality;
+              });
+            },
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
   }
 
   int _calculateQuality(DateTime start, DateTime end) {
@@ -237,20 +281,7 @@ class _SleepLogPageState extends State<SleepLogPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Sleep'),
-        leading: BackButton(
-          color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.black,
-        ),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        titleTextStyle: TextStyle(
-          color: Theme.of(context).primaryColor,
-          fontWeight: FontWeight.bold,
-          fontSize: 20,
-        ),
-      ),
+      // ... (appBar)
       body: BlocListener<SleepBloc, SleepState>(
         listener: (context, state) {
           if (state is SleepOperationSuccess) {
@@ -263,6 +294,20 @@ class _SleepLogPageState extends State<SleepLogPage> {
               ),
             );
             setState(() => _isSaving = false);
+          } else if (state is SleepLoaded && state.healthConnectDraft != null) {
+            // Check if we should ignore this draft (e.g. if we already have local logs)
+            // The Bloc's CheckLocalHealthConnectData logic should have filtered this,
+            // but the SleepLoaded state might persist.
+            // We only want to show it ONCE or if specifically appropriate.
+            // Since we trigger the check in initState/postFrameCallback, likely we want to show it.
+
+            // Avoid showing if existingLog is being edited (though the check logic guards this too)
+            if (widget.existingLog == null && state.logs.isEmpty) {
+              // Wait a bit to not block UI rendering?
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _showHealthConnectDialog(state.healthConnectDraft!);
+              });
+            }
           }
         },
         child: SingleChildScrollView(
@@ -399,13 +444,9 @@ class _SleepLogPageState extends State<SleepLogPage> {
             continue;
 
           if (newStart.isBefore(log.endTime) && newEnd.isAfter(log.startTime)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Selection overlaps with existing log (${DateFormat('h:mm a').format(log.startTime)} - ${DateFormat('h:mm a').format(log.endTime)})',
-                ),
-                backgroundColor: Colors.red,
-              ),
+            showModernSnackbar(
+              context,
+              'Selection overlaps with existing log (${DateFormat('h:mm a').format(log.startTime)} - ${DateFormat('h:mm a').format(log.endTime)})',
             );
             return;
           }

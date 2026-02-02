@@ -7,7 +7,7 @@ import '../../../../core/core.dart';
 import '../bloc/bloc.dart';
 import 'sleep_log_page.dart';
 import 'sleep_stats_page.dart';
-import 'package:bench_profile_app/features/sleep/presentation/widgets/sleep_shimmer_loading.dart';
+import '../widgets/sleep_shimmer_loading.dart';
 import '../../domain/entities/sleep_log.dart';
 import '../widgets/sleep_summary_card.dart';
 import '../widgets/sleep_log_item.dart';

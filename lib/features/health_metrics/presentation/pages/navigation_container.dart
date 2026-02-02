@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../auth/auth.dart';
+import '../../domain/entities/health_metrics_summary.dart';
 import '../bloc/bloc.dart';
 import 'health_metrics_page.dart';
+import '../../../../core/injection_container.dart' as di;
 
 class NavigationContainer extends StatefulWidget {
   const NavigationContainer({super.key});
@@ -40,11 +42,12 @@ class _NavigationContainerState extends State<NavigationContainer> {
         actions: [
           if (_selectedIndex == 0) // Only show on Health Metrics tab
             IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  // Refresh the currently selected date logic via BLoC
-                  context.read<HealthMetricsBloc>().add(const RefreshMetrics());
-                }),
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                // Refresh the currently selected date logic via BLoC
+                context.read<HealthMetricsBloc>().add(const RefreshMetrics());
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -55,10 +58,7 @@ class _NavigationContainerState extends State<NavigationContainer> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _widgetOptions,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -89,23 +89,19 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
-      builder: (context, state) {
-        if (state is HealthMetricsLoaded) {
-          return ProfilePage(metrics: state.summary);
-        }
-        if (state is HealthMetricsLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (state is HealthMetricsError) {
-          return Center(
-              child: Text('Could not load profile data: ${state.message}'));
-        }
-        // For initial / empty
-        return const Center(
-            child: Text(
-                'No health data available. Visit the dashboard to fetch it.'));
-      },
+    return BlocProvider(
+      create: (context) => di.sl<UserProfileBloc>()..add(LoadUserProfile()),
+      child: BlocBuilder<HealthMetricsBloc, HealthMetricsState>(
+        builder: (context, state) {
+          HealthMetricsSummary? summary;
+          if (state is HealthMetricsLoaded) {
+            summary = state.summary;
+          }
+          // Always show ProfilePage, even if metrics are loading or failed.
+          // The ProfilePage can handle null metrics.
+          return ProfilePage(metrics: summary);
+        },
+      ),
     );
   }
 }
