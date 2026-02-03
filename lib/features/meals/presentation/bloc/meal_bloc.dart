@@ -148,6 +148,7 @@ class MealBloc extends Bloc<MealEvent, MealState> {
       emit(
         MealConsumptionLogged(
           message: '${event.log.mealType} added successfully',
+          wasTargetReached: event.wasTargetReached,
         ),
       );
       // Optionally reload the day's meals

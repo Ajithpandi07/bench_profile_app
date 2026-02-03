@@ -171,16 +171,17 @@ class _MealReportPageState extends State<MealReportPage> {
             },
             child: BlocListener<MealBloc, MealState>(
               listener: (context, state) {
-                if (state is MealConsumptionLogged) {
-                  showModernSnackbar(
-                    context,
-                    state.message ?? 'Meal logged successfully!',
-                  );
-                } else if (state is MealDeletedSuccess) {
-                  // Final success message
-                  showModernSnackbar(context, 'Meal deleted successfully');
-                } else if (state is MealOperationFailure) {
+                if (state is MealOperationFailure) {
                   showModernSnackbar(context, state.message, isError: true);
+                } else if (state is MealConsumptionLogged) {
+                  if (state.wasTargetReached) {
+                    showModernSnackbar(context, 'Goal Reached! 🎉');
+                  } else {
+                    showModernSnackbar(
+                      context,
+                      state.message ?? 'Meal logged successfully!',
+                    );
+                  }
                 }
               },
               child: Column(
@@ -632,10 +633,13 @@ class _MealReportPageState extends State<MealReportPage> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            'Needs Attention',
+                          child: Text(
+                            _getInsightTitle(globalTotalKcal, targetKcal),
                             style: TextStyle(
-                              color: AppTheme.primaryColor,
+                              color: _getInsightColor(
+                                globalTotalKcal,
+                                targetKcal,
+                              ),
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -674,7 +678,7 @@ class _MealReportPageState extends State<MealReportPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Your food quality was low.',
+                          _getInsightMessage(globalTotalKcal, targetKcal),
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 16,
@@ -756,6 +760,8 @@ class _MealReportPageState extends State<MealReportPage> {
                 child: QuickLogPage(
                   mealType: 'Morning Snack',
                   initialDate: _selectedDate,
+                  currentDailyTotal: _calculateCurrentTotal(),
+                  dailyTarget: _calculateDailyTarget(),
                 ),
               ),
             ),
@@ -807,5 +813,45 @@ class _MealReportPageState extends State<MealReportPage> {
         ),
       ),
     );
+  }
+
+  double _calculateCurrentTotal() {
+    final state = context.read<MealBloc>().state;
+    if (state is MealsLoaded) {
+      return state.meals.fold(0.0, (sum, m) => sum + m.totalCalories);
+    }
+    return 0.0;
+  }
+
+  double _calculateDailyTarget() {
+    final state = context.read<MealBloc>().state;
+    if (state is MealsLoaded) {
+      return state.targetCalories ?? 2000.0;
+    }
+    return 2000.0;
+  }
+
+  String _getInsightTitle(double current, double target) {
+    if (current >= target) return 'Goal Met!';
+    final percentage = (current / target) * 100;
+    if (percentage < 50) return 'Needs Attention';
+    if (percentage < 90) return 'Good';
+    return 'Perfect';
+  }
+
+  String _getInsightMessage(double current, double target) {
+    if (current >= target) return 'You hit your daily target!';
+    final percentage = (current / target) * 100;
+    if (percentage < 50) return 'Your food intake is low.';
+    if (percentage < 90) return 'You are doing well.';
+    return 'You are almost there.';
+  }
+
+  Color _getInsightColor(double current, double target) {
+    if (current >= target) return const Color(0xFF00C853); // Green
+    final percentage = (current / target) * 100;
+    if (percentage < 50) return AppTheme.primaryColor; // Redish
+    if (percentage < 90) return Colors.orange;
+    return Colors.green;
   }
 }

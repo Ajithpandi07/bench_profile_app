@@ -180,7 +180,7 @@ class SleepBloc extends Bloc<SleepEvent, SleepState> {
     result.fold((failure) => emit(SleepError(_mapFailureToMessage(failure))), (
       _,
     ) {
-      emit(SleepOperationSuccess());
+      emit(SleepOperationSuccess(wasTargetReached: event.wasTargetReached));
     });
   }
 

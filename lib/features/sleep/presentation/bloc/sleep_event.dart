@@ -30,11 +30,16 @@ class LoadSleepStats extends SleepEvent {
 class LogSleep extends SleepEvent {
   final SleepLog log;
   final SleepLog? previousLog;
+  final bool wasTargetReached;
 
-  const LogSleep(this.log, {this.previousLog});
+  const LogSleep(this.log, {this.previousLog, this.wasTargetReached = false});
 
   @override
-  List<Object> get props => [log, if (previousLog != null) previousLog!];
+  List<Object> get props => [
+    log,
+    if (previousLog != null) previousLog!,
+    wasTargetReached,
+  ];
 }
 
 class DeleteSleepLog extends SleepEvent {

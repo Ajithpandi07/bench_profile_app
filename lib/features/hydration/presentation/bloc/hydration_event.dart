@@ -10,11 +10,12 @@ abstract class HydrationEvent extends Equatable {
 
 class LogHydration extends HydrationEvent {
   final HydrationLog log;
+  final bool wasTargetReached;
 
-  const LogHydration(this.log);
+  const LogHydration(this.log, {this.wasTargetReached = false});
 
   @override
-  List<Object> get props => [log];
+  List<Object> get props => [log, wasTargetReached];
 }
 
 class LoadHydrationLogs extends HydrationEvent {

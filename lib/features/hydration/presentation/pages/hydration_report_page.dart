@@ -143,17 +143,27 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
                       });
                     }
                   },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'add',
-                          child: Text('Add new'),
+                  itemBuilder: (BuildContext context) {
+                    final isFuture = _selectedDate.isAfter(
+                      DateUtils.dateOnly(DateTime.now()),
+                    );
+                    return <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'add',
+                        enabled: !isFuture,
+                        child: Text(
+                          'Add new',
+                          style: TextStyle(
+                            color: isFuture ? Colors.grey : null,
+                          ),
                         ),
-                        const PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Text('Bulk delete'),
-                        ),
-                      ],
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Bulk delete'),
+                      ),
+                    ];
+                  },
                 ),
               ],
       ),
@@ -220,11 +230,12 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
   }
 
   Widget _buildManualEntryButton() {
+    final isFuture = _selectedDate.isAfter(DateUtils.dateOnly(DateTime.now()));
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isFuture ? Colors.grey.shade100 : Colors.white,
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
@@ -237,19 +248,33 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: _navigateToTracker,
+            onTap: () {
+              if (isFuture) {
+                showModernSnackbar(
+                  context,
+                  'Cannot log water for future dates',
+                  isError: true,
+                );
+                return;
+              }
+              _navigateToTracker();
+            },
             borderRadius: BorderRadius.circular(30),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
+                Icon(
+                  Icons.edit,
+                  color: isFuture ? Colors.grey : AppTheme.primaryColor,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Enter water manually',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.textDark,
+                    color: isFuture ? Colors.grey : AppTheme.textDark,
                   ),
                 ),
               ],
@@ -336,10 +361,14 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
       statusTitle = 'Average';
       statusMessage = 'Your water intake is average.';
       statusColor = Colors.orange;
-    } else {
+    } else if (percentage < 100) {
       statusTitle = 'Perfect';
       statusMessage = 'Your water intake is perfect.';
       statusColor = Colors.green;
+    } else {
+      statusTitle = 'Goal Met!';
+      statusMessage = 'You hit your daily target!';
+      statusColor = const Color(0xFF00C853);
     }
 
     return Container(
@@ -588,6 +617,21 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
   }
 
   Future<void> _navigateToTracker({HydrationLog? logToEdit}) async {
+    // Calculate current stats
+    double currentDailyTotal = 0;
+    double dailyTarget = 3.0;
+
+    final state = context.read<HydrationBloc>().state;
+    if (state is HydrationLogsLoaded) {
+      currentDailyTotal = state.logs.fold(
+        0.0,
+        (sum, log) => sum + log.amountLiters,
+      );
+      if (state.targetWater != null) {
+        dailyTarget = state.targetWater!;
+      }
+    }
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -596,6 +640,8 @@ class _HydrationReportPageState extends State<HydrationReportPage> {
           child: HydrationTrackerPage(
             initialDate: _selectedDate,
             logToEdit: logToEdit,
+            currentDailyTotal: currentDailyTotal,
+            dailyTarget: dailyTarget,
           ),
         ),
       ),

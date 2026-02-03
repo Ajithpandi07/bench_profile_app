@@ -15,7 +15,14 @@ class HydrationSaving extends HydrationState {}
 
 class HydrationLoading extends HydrationState {}
 
-class HydrationSuccess extends HydrationState {}
+class HydrationSuccess extends HydrationState {
+  final bool wasTargetReached;
+
+  const HydrationSuccess({this.wasTargetReached = false});
+
+  @override
+  List<Object> get props => [wasTargetReached];
+}
 
 class HydrationDeletedSuccess extends HydrationState {}
 

@@ -66,6 +66,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       'id': activity.id,
       'userId': user.uid,
       'activityType': activity.activityType,
+      'customActivityName': activity.customActivityName,
       'startTime': Timestamp.fromDate(activity.startTime),
       'durationMinutes': activity.durationMinutes,
       'caloriesBurned': activity.caloriesBurned,
@@ -139,6 +140,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         id: data['id'],
         userId: data['userId'],
         activityType: data['activityType'],
+        customActivityName: data['customActivityName'],
         startTime: (data['startTime'] as Timestamp).toDate(),
         durationMinutes: (data['durationMinutes'] as num).toInt(),
         caloriesBurned: (data['caloriesBurned'] as num).toDouble(),
@@ -240,6 +242,7 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
       // Update Log
       transaction.update(logRef, {
         'activityType': activity.activityType,
+        'customActivityName': activity.customActivityName,
         'startTime': Timestamp.fromDate(activity.startTime),
         'durationMinutes': activity.durationMinutes,
         'caloriesBurned': activity.caloriesBurned,

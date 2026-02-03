@@ -174,13 +174,12 @@ class _SleepPageState extends State<SleepPage> {
       ),
       body: BlocListener<SleepBloc, SleepState>(
         listener: (context, state) {
-          if (state is SleepOperationSuccess && state.message != null) {
-            showModernSnackbar(context, state.message!);
-          } else if (state is SleepError) {
-            // SnackbarUtils.showSnackbar(context, state.message);
-            // Error is handled by _buildContent usually, or we can handle it here and remove it from _buildContent?
-            // For now, let's keep _buildContent handling or add snackbar for error too if desired.
-            // But let's stick to the user request "Deleted successfully snackbar".
+          if (state is SleepOperationSuccess) {
+            if (state.wasTargetReached) {
+              showModernSnackbar(context, 'Goal Reached! 🎉');
+            } else if (state.message != null) {
+              showModernSnackbar(context, state.message!);
+            }
           }
         },
         child: BlocBuilder<SleepBloc, SleepState>(
@@ -312,7 +311,7 @@ class _SleepPageState extends State<SleepPage> {
       statusTitle = 'Good';
       statusColor = Colors.orange;
     } else {
-      statusTitle = 'Excellent';
+      statusTitle = 'Goal Met!';
       statusColor = Colors.green;
     }
 

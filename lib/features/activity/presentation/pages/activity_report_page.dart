@@ -187,7 +187,11 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
             child: BlocConsumer<ActivityBloc, ActivityState>(
               listener: (context, state) {
                 if (state is ActivityOperationSuccess) {
-                  showModernSnackbar(context, state.message);
+                  if (state.wasTargetReached) {
+                    showModernSnackbar(context, 'Goal Reached! 🎉');
+                  } else {
+                    showModernSnackbar(context, state.message);
+                  }
                 } else if (state is ActivityOperationFailure) {
                   showModernSnackbar(context, state.message, isError: true);
                 }
@@ -369,9 +373,9 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                     const SizedBox(height: 24),
 
                     if (activities.isNotEmpty) ...[
-                      const ActivityInsightCard(
-                        score: 40,
-                        title: 'Your activity quality was low.',
+                      ActivityInsightCard(
+                        score: _getActivityScore(totalCalories),
+                        title: _getActivityInsightTitle(totalCalories),
                       ),
                       const SizedBox(height: 40),
                     ],
@@ -469,6 +473,7 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                             value: context.read<ActivityBloc>(),
                             child: AddActivityPage(
                               activityType: activity.activityType,
+                              customActivityName: activity.customActivityName,
                               initialDate: _selectedDate,
                               existingActivity: activity,
                             ),
@@ -557,8 +562,8 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          activity.customActivityName ??
-                              activity.activityType.toUpperCase(),
+                          (activity.customActivityName ?? activity.activityType)
+                              .toUpperCase(),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -636,10 +641,34 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
               activityType: activityType,
               customActivityName: customName,
               initialDate: _selectedDate,
+              currentDailyTotal: _calculateCurrentTotalCalories(),
+              dailyTarget: 500, // Default Default Target
             ),
           ),
         ),
       );
     }
+  }
+
+  double _calculateCurrentTotalCalories() {
+    final state = context.read<ActivityBloc>().state;
+    if (state is ActivitiesLoaded) {
+      return state.activities.fold(0.0, (sum, a) => sum + a.caloriesBurned);
+    }
+    return 0.0;
+  }
+
+  int _getActivityScore(double totalCalories) {
+    const target = 500.0;
+    return ((totalCalories / target) * 100).clamp(0, 100).toInt();
+  }
+
+  String _getActivityInsightTitle(double totalCalories) {
+    const target = 500.0;
+    if (totalCalories >= target) return 'Goal Met!';
+    final percentage = (totalCalories / target) * 100;
+    if (percentage < 50) return 'Needs Attention';
+    if (percentage < 90) return 'Good';
+    return 'Perfect';
   }
 }

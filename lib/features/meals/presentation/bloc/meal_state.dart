@@ -32,10 +32,11 @@ class MealSaving extends MealState {} // For spinner during save
 
 class MealConsumptionLogged extends MealState {
   final String? message;
-  const MealConsumptionLogged({this.message});
+  final bool wasTargetReached;
+  const MealConsumptionLogged({this.message, this.wasTargetReached = false});
 
   @override
-  List<Object> get props => [if (message != null) message!];
+  List<Object> get props => [if (message != null) message!, wasTargetReached];
 }
 
 class MealDeletedSuccess extends MealState {}

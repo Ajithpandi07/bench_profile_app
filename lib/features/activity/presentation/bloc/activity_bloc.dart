@@ -70,7 +70,12 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     result.fold((failure) => emit(ActivityOperationFailure(failure.message)), (
       _,
     ) {
-      emit(const ActivityOperationSuccess('Activity added successfully'));
+      emit(
+        ActivityOperationSuccess(
+          'Activity added successfully',
+          wasTargetReached: event.wasTargetReached,
+        ),
+      );
       add(LoadActivitiesForDate(event.activity.startTime));
     });
   }
@@ -84,7 +89,12 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     result.fold((failure) => emit(ActivityOperationFailure(failure.message)), (
       _,
     ) {
-      emit(const ActivityOperationSuccess('Activity updated successfully'));
+      emit(
+        ActivityOperationSuccess(
+          'Activity updated successfully',
+          wasTargetReached: event.wasTargetReached,
+        ),
+      );
       add(LoadActivitiesForDate(event.activity.startTime));
     });
   }

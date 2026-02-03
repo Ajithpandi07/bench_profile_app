@@ -63,7 +63,7 @@ class HydrationBloc extends Bloc<HydrationEvent, HydrationState> {
     final result = await repository.logWaterIntake(event.log);
     result.fold(
       (failure) => emit(HydrationFailure(failure.message)),
-      (_) => emit(HydrationSuccess()),
+      (_) => emit(HydrationSuccess(wasTargetReached: event.wasTargetReached)),
     );
   }
 

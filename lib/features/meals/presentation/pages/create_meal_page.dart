@@ -25,6 +25,43 @@ class _CreateMealPageState extends State<CreateMealPage> {
     if (widget.mealToEdit != null) {
       _nameController.text = widget.mealToEdit!.name;
       _addedFoods.addAll(widget.mealToEdit!.foods);
+      // We will attempt to refresh these foods in the post-frame callback
+      // or whenever the library is loaded.
+    }
+
+    // Trigger a refresh after the first frame to ensure Bloc is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshFoodsFromLibrary();
+    });
+  }
+
+  void _refreshFoodsFromLibrary() {
+    final state = context.read<MealBloc>().state;
+    if (state is UserLibraryLoaded && _addedFoods.isNotEmpty) {
+      bool changed = false;
+      final freshFoodsMap = {for (var f in state.foods) f.id: f};
+
+      for (int i = 0; i < _addedFoods.length; i++) {
+        final current = _addedFoods[i];
+        final fresh = freshFoodsMap[current.id];
+
+        // If we found a newer version of the same food (ID matches)
+        // And it has different calories/macros
+        if (fresh != null) {
+          // We keep the QUANTITY from the meal, but update the INFO from the library
+          if (fresh.calories != current.calories ||
+              fresh.name != current.name || // In case name changed
+              fresh.protein != current.protein) {
+            _addedFoods[i] = fresh.copyWith(quantity: current.quantity);
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        setState(() {}); // Trigger rebuild to show updated values
+        showModernSnackbar(context, 'Meal items updated to latest food values');
+      }
     }
   }
 
@@ -180,7 +217,40 @@ class _CreateMealPageState extends State<CreateMealPage> {
 
     if (selectedFood != null) {
       setState(() {
-        _addedFoods.add(selectedFood);
+        // Check for exact ID match first
+        int existingIndex = _addedFoods.indexWhere(
+          (f) => f.id == selectedFood.id,
+        );
+
+        // If not found by ID, check by Name (case-insensitive)
+        // This handles cases where user deleted and re-created the same food (new ID)
+        if (existingIndex == -1) {
+          existingIndex = _addedFoods.indexWhere(
+            (f) =>
+                f.name.toLowerCase().trim() ==
+                selectedFood.name.toLowerCase().trim(),
+          );
+        }
+
+        if (existingIndex != -1) {
+          // Food exists (either same ID or same Name)
+          // We merge them, preferring the NEW selectedFood (fresh ID/stats)
+          final existingFood = _addedFoods[existingIndex];
+
+          _addedFoods[existingIndex] = selectedFood.copyWith(
+            quantity: existingFood.quantity + selectedFood.quantity,
+          );
+
+          if (existingFood.id != selectedFood.id) {
+            showModernSnackbar(
+              context,
+              'Merged with existing "${existingFood.name}"',
+            );
+          }
+        } else {
+          // New food, add to list
+          _addedFoods.add(selectedFood);
+        }
       });
     }
   }
@@ -385,7 +455,7 @@ class _CreateMealPageState extends State<CreateMealPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${(food.calories).toStringAsFixed(0)} kcal. ${food.quantity % 1 == 0 ? food.quantity.toInt() : food.quantity} serving',
+                                  '${(food.calories * food.quantity).toStringAsFixed(0)} kcal • ${food.quantity % 1 == 0 ? food.quantity.toInt() : food.quantity} serving',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey.shade500,

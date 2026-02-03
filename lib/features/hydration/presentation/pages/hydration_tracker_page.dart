@@ -11,8 +11,16 @@ import '../bloc/bloc.dart';
 class HydrationTrackerPage extends StatefulWidget {
   final DateTime? initialDate;
   final HydrationLog? logToEdit; // New parameter
+  final double currentDailyTotal;
+  final double dailyTarget;
 
-  const HydrationTrackerPage({super.key, this.initialDate, this.logToEdit});
+  const HydrationTrackerPage({
+    super.key,
+    this.initialDate,
+    this.logToEdit,
+    this.currentDailyTotal = 0,
+    this.dailyTarget = 3.0,
+  });
 
   @override
   State<HydrationTrackerPage> createState() => _HydrationTrackerPageState();
@@ -138,7 +146,11 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
       body: BlocListener<HydrationBloc, HydrationState>(
         listener: (context, state) {
           if (state is HydrationSuccess) {
-            showModernSnackbar(context, 'Hydration logged Successfully!');
+            if (state.wasTargetReached) {
+              showModernSnackbar(context, 'Goal Reached! 🎉');
+            } else {
+              showModernSnackbar(context, 'Hydration logged Successfully!');
+            }
             Navigator.pop(context, true);
           } else if (state is HydrationFailure) {
             setState(() => _isProcessing = false);
@@ -532,6 +544,57 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
       }
     }
 
+    // Goal Exceeded Check
+    final newTotal = widget.currentDailyTotal + volumeLiters;
+    // Only warn if they were under/at target and now going over
+    // Or just if they are going over target?
+    // "if actual target means goal reached insticator"
+    // "confirm box to user confirm when exceede the target"
+    if (widget.currentDailyTotal < widget.dailyTarget &&
+        newTotal > widget.dailyTarget) {
+      final bool? confirmExceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.emoji_events, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('Goal Exceeded'),
+            ],
+          ),
+          content: Text(
+            'You are about to exceed your daily target of ${widget.dailyTarget.toStringAsFixed(1)}L. Do you want to continue?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Continue',
+                style: TextStyle(
+                  color: Color(0xFFEE374D),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmExceed != true) {
+        if (mounted) {
+          setState(() => _isProcessing = false);
+        }
+        return;
+      }
+    }
+
     final log = HydrationLog(
       id:
           widget.logToEdit?.id ??
@@ -543,7 +606,12 @@ class _HydrationTrackerPageState extends State<HydrationTrackerPage> {
     );
 
     if (mounted) {
-      context.read<HydrationBloc>().add(LogHydration(log));
+      final wasTargetReached =
+          widget.currentDailyTotal < widget.dailyTarget &&
+          (widget.currentDailyTotal + volumeLiters) >= widget.dailyTarget;
+      context.read<HydrationBloc>().add(
+        LogHydration(log, wasTargetReached: wasTargetReached),
+      );
       // No need to reset _isProcessing here as HydrationSaving state will take over
       // and eventually HydrationSuccess will pop the page.
       // If failure happens, BlocListener will show error and button will re-enable.

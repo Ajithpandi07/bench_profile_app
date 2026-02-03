@@ -10,8 +10,16 @@ import 'add_food_page.dart';
 class QuickLogPage extends StatefulWidget {
   final String mealType;
   final DateTime? initialDate;
+  final double? currentDailyTotal;
+  final double? dailyTarget;
 
-  const QuickLogPage({super.key, required this.mealType, this.initialDate});
+  const QuickLogPage({
+    super.key,
+    required this.mealType,
+    this.initialDate,
+    this.currentDailyTotal,
+    this.dailyTarget,
+  });
 
   @override
   State<QuickLogPage> createState() => _QuickLogPageState();
@@ -235,6 +243,48 @@ class _QuickLogPageState extends State<QuickLogPage> {
       if (confirm != true) return;
     }
 
+    // Goal Exceeded Check
+    bool wasTargetReached = false;
+    if (widget.dailyTarget != null && widget.dailyTarget! > 0) {
+      final currentTotal = widget.currentDailyTotal ?? 0;
+      final target = widget.dailyTarget!;
+
+      // If previously under target, and new log puts us over/equal -> Celebration
+      if (currentTotal < target && (currentTotal + _calories) >= target) {
+        wasTargetReached = true;
+      }
+
+      // If exceeding target (warn user)
+      // Only warn if they were UNDER or AT limit before, and this PUSHES them clearly over.
+      // Or maybe warn if they are ALREADY over and adding more?
+      // Requirement: "Warning msg if you cross your daily limit"
+      if (currentTotal <= target && (currentTotal + _calories) > target) {
+        final bool? confirmExceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Target Exceeded'),
+            content: Text(
+              'You are about to exceed your daily target of ${target.toInt()} kcal. Do you want to continue?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(color: Color(0xFFE93448)),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (confirmExceed != true) return;
+      }
+    }
+
     // Logic: calculate total from foods.
     final log = MealLog(
       id: const Uuid().v4(),
@@ -248,7 +298,9 @@ class _QuickLogPageState extends State<QuickLogPage> {
     );
 
     if (mounted) {
-      context.read<MealBloc>().add(LogMealEvent(log));
+      context.read<MealBloc>().add(
+        LogMealEvent(log, wasTargetReached: wasTargetReached),
+      );
       Navigator.pop(context, true);
     }
   }

@@ -19,20 +19,22 @@ class LoadActivitiesForDate extends ActivityEvent {
 
 class AddActivityEvent extends ActivityEvent {
   final ActivityLog activity;
+  final bool wasTargetReached;
 
-  const AddActivityEvent(this.activity);
+  const AddActivityEvent(this.activity, {this.wasTargetReached = false});
 
   @override
-  List<Object> get props => [activity];
+  List<Object> get props => [activity, wasTargetReached];
 }
 
 class UpdateActivityEvent extends ActivityEvent {
   final ActivityLog activity;
+  final bool wasTargetReached;
 
-  const UpdateActivityEvent(this.activity);
+  const UpdateActivityEvent(this.activity, {this.wasTargetReached = false});
 
   @override
-  List<Object> get props => [activity];
+  List<Object> get props => [activity, wasTargetReached];
 }
 
 class DeleteActivityEvent extends ActivityEvent {

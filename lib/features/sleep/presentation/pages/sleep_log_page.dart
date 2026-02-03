@@ -467,8 +467,15 @@ class _SleepLogPageState extends State<SleepLogPage> {
       quality: _quality,
       notes: widget.existingLog?.notes,
     );
+    final durationMinutes = _endDateTime.difference(_startDateTime).inMinutes;
+    final bool wasTargetReached = durationMinutes >= 480; // 8 hours
+
     context.read<SleepBloc>().add(
-      LogSleep(log, previousLog: widget.existingLog),
+      LogSleep(
+        log,
+        previousLog: widget.existingLog,
+        wasTargetReached: wasTargetReached,
+      ),
     );
   }
 

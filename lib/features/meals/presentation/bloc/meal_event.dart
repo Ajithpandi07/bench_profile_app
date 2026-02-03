@@ -18,10 +18,11 @@ class LoadMealsForDate extends MealEvent {
 
 class LogMealEvent extends MealEvent {
   final MealLog log;
-  const LogMealEvent(this.log);
+  final bool wasTargetReached;
+  const LogMealEvent(this.log, {this.wasTargetReached = false});
 
   @override
-  List<Object> get props => [log];
+  List<Object> get props => [log, wasTargetReached];
 }
 
 class SearchFoodEvent extends MealEvent {

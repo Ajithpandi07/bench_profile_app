@@ -14,6 +14,8 @@ class AddActivityPage extends StatefulWidget {
   final String? customActivityName;
   final DateTime initialDate;
   final ActivityLog? existingActivity;
+  final double? currentDailyTotal;
+  final double? dailyTarget;
 
   const AddActivityPage({
     super.key,
@@ -21,6 +23,8 @@ class AddActivityPage extends StatefulWidget {
     this.customActivityName,
     required this.initialDate,
     this.existingActivity,
+    this.currentDailyTotal,
+    this.dailyTarget,
   });
 
   @override
@@ -34,6 +38,8 @@ class _AddActivityPageState extends State<AddActivityPage> {
   // Approximated calories per minute based on type (simple logic for now)
   // Walking: 4, Running: 11, Cycling: 8, Swimming: 10, Tennis: 7, Yoga: 3
   double _caloriesPerMinute = 5;
+  late final TextEditingController _customNameController;
+  bool _isCustom = false;
 
   @override
   void initState() {
@@ -48,10 +54,24 @@ class _AddActivityPageState extends State<AddActivityPage> {
         widget.initialDate.month,
         widget.initialDate.day,
         DateTime.now().hour,
-        DateTime.now().minute,
       );
     }
+    _isCustom = widget.activityType.toLowerCase() == 'custom';
+    _customNameController = TextEditingController(
+      text:
+          widget.customActivityName ??
+          widget.existingActivity?.customActivityName ??
+          (widget.activityType.toLowerCase() == 'custom'
+              ? ''
+              : widget.activityType),
+    );
     _updateCaloriesPerMinute();
+  }
+
+  @override
+  void dispose() {
+    _customNameController.dispose();
+    super.dispose();
   }
 
   void _updateCaloriesPerMinute() {
@@ -134,14 +154,32 @@ class _AddActivityPageState extends State<AddActivityPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.customActivityName ?? widget.activityType,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF131313),
-                        ),
-                      ),
+                      _isCustom
+                          ? SizedBox(
+                              width: 200,
+                              child: TextField(
+                                controller: _customNameController,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF131313),
+                                ),
+                                decoration: const InputDecoration(
+                                  hintText: 'Activity Name',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              widget.customActivityName ?? widget.activityType,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF131313),
+                              ),
+                            ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -323,6 +361,17 @@ class _AddActivityPageState extends State<AddActivityPage> {
                         return;
                       }
 
+                      // Check Custom Name
+                      if (_isCustom &&
+                          _customNameController.text.trim().isEmpty) {
+                        showModernSnackbar(
+                          context,
+                          'Please enter an activity name',
+                          isError: true,
+                        );
+                        return;
+                      }
+
                       // Check 2: Duration completion checks
                       final endTime = _startTime.add(durationFn);
 
@@ -348,20 +397,38 @@ class _AddActivityPageState extends State<AddActivityPage> {
                         id: widget.existingActivity?.id ?? const Uuid().v4(),
                         userId: '', // handled by repo
                         activityType: widget.activityType,
-                        customActivityName: widget.customActivityName,
+                        customActivityName: _isCustom
+                            ? _customNameController.text.trim()
+                            : (widget.customActivityName ??
+                                  widget.existingActivity?.customActivityName),
                         startTime: _startTime,
                         durationMinutes: _durationHours * 60 + _durationMinutes,
                         caloriesBurned: _totalCalories,
                         createdAt: DateTime.now(),
                       );
 
+                      bool wasTargetReached = false;
+                      if (widget.dailyTarget != null) {
+                        final current = widget.currentDailyTotal ?? 0;
+                        final target = widget.dailyTarget!;
+                        if ((current + _totalCalories) >= target) {
+                          wasTargetReached = true;
+                        }
+                      }
+
                       if (widget.existingActivity != null) {
                         context.read<ActivityBloc>().add(
-                          UpdateActivityEvent(activity),
+                          UpdateActivityEvent(
+                            activity,
+                            wasTargetReached: wasTargetReached,
+                          ),
                         );
                       } else {
                         context.read<ActivityBloc>().add(
-                          AddActivityEvent(activity),
+                          AddActivityEvent(
+                            activity,
+                            wasTargetReached: wasTargetReached,
+                          ),
                         );
                       }
                       Navigator.pop(context); // Close page

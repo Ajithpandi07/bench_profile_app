@@ -34,11 +34,12 @@ class ActivityOperationFailure extends ActivityState {
 
 class ActivityOperationSuccess extends ActivityState {
   final String message;
+  final bool wasTargetReached;
 
-  const ActivityOperationSuccess(this.message);
+  const ActivityOperationSuccess(this.message, {this.wasTargetReached = false});
 
   @override
-  List<Object> get props => [message];
+  List<Object> get props => [message, wasTargetReached];
 }
 
 class ActivityStatsLoaded extends ActivityState {
