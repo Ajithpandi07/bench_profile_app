@@ -316,6 +316,7 @@ Future<void> init() async {
     sl.registerLazySingleton<ActivityRepository>(
       () => ActivityRepositoryImpl(
         remoteDataSource: sl<ActivityRemoteDataSource>(),
+        healthMetricsDataSource: sl<HealthMetricsDataSource>(),
       ),
     );
   }

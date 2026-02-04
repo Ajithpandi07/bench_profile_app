@@ -22,7 +22,7 @@ class SleepPage extends StatefulWidget {
 }
 
 class _SleepPageState extends State<SleepPage> {
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   bool _isSelectionMode = false;
   final Set<String> _selectedIds = {};
 
@@ -156,17 +156,26 @@ class _SleepPageState extends State<SleepPage> {
                       });
                     }
                   },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'add',
-                          child: Text('Add new'),
+                  itemBuilder: (BuildContext context) {
+                    final today = DateUtils.dateOnly(DateTime.now());
+                    final isFuture = _selectedDate.isAfter(today);
+                    return <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'add',
+                        enabled: !isFuture,
+                        child: Text(
+                          'Add new',
+                          style: TextStyle(
+                            color: isFuture ? Colors.grey : null,
+                          ),
                         ),
-                        const PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Text('Bulk delete'),
-                        ),
-                      ],
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Bulk delete'),
+                      ),
+                    ];
+                  },
                 ),
               ],
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -224,10 +233,7 @@ class _SleepPageState extends State<SleepPage> {
         }
         return _buildEmptyState();
       }
-      // Assuming one main sleep per night for now, or summing them?
-      // Design implies single "Sleep time" block. Let's take the longest one or sum them.
-      // For now, take the first one or calculate total.
-      return _buildLoggedState(logs); // Pass all logs
+      return _buildLoggedState(logs);
     } else if (state is SleepError) {
       return Center(child: Text(state.message));
     }
@@ -235,6 +241,9 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   Widget _buildEmptyState() {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final isFuture = _selectedDate.isAfter(today);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
@@ -252,7 +261,9 @@ class _SleepPageState extends State<SleepPage> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  color: isFuture
+                      ? Colors.grey.shade100
+                      : Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
@@ -267,14 +278,18 @@ class _SleepPageState extends State<SleepPage> {
                   children: [
                     Icon(
                       Icons.edit,
-                      color: Theme.of(context).primaryColor,
+                      color: isFuture
+                          ? Colors.grey
+                          : Theme.of(context).primaryColor,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Enter manually',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: isFuture
+                            ? Colors.grey
+                            : Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -331,6 +346,9 @@ class _SleepPageState extends State<SleepPage> {
       endTime: latestEnd,
       quality: qualityScore,
     );
+
+    final today = DateUtils.dateOnly(DateTime.now());
+    final isFuture = _selectedDate.isAfter(today);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
@@ -434,15 +452,6 @@ class _SleepPageState extends State<SleepPage> {
                       Expanded(
                         child: SleepLogItem(
                           log: log,
-                          // Disable internal tap in selection mode if item has one,
-                          // but GestureDetector above handles it.
-                          // Pass null or handle? SleepLogItem likely has no internal tap
-                          // if we passed onTap previously?
-                          // Ah, we passed onTap: () => _navigateToLogPage(log: log).
-                          // We should disable that callback if selection mode, BUT
-                          // our GestureDetector above intercepts taps on the whole row?
-                          // Yes, but if SleepLogItem uses InkWell/GestureDetector it might compete.
-                          // The safest is to suppress the callback if selection mode.
                           onTap: _isSelectionMode
                               ? null
                               : () => _navigateToLogPage(log: log),
@@ -598,7 +607,9 @@ class _SleepPageState extends State<SleepPage> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  color: isFuture
+                      ? Colors.grey.shade100
+                      : Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
@@ -613,14 +624,18 @@ class _SleepPageState extends State<SleepPage> {
                   children: [
                     Icon(
                       Icons.edit,
-                      color: Theme.of(context).primaryColor,
+                      color: isFuture
+                          ? Colors.grey
+                          : Theme.of(context).primaryColor,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Enter manually',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: isFuture
+                            ? Colors.grey
+                            : Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -636,6 +651,20 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   void _navigateToLogPage({dynamic log}) async {
+    // Check for future date only if creating new log (log == null)
+    // If editing existing log, allow it (though it shouldn't exist in future ideally)
+    if (log == null) {
+      final today = DateUtils.dateOnly(DateTime.now());
+      if (_selectedDate.isAfter(today)) {
+        showModernSnackbar(
+          context,
+          'You cannot log sleep for a future date.',
+          isError: true,
+        );
+        return;
+      }
+    }
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(

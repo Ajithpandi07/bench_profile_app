@@ -150,17 +150,27 @@ class _MealReportPageState extends State<MealReportPage> {
                           });
                         }
                       },
-                      itemBuilder: (BuildContext context) =>
-                          <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(
-                              value: 'add',
-                              child: Text('Add new'),
+                      itemBuilder: (BuildContext context) {
+                        final now = DateTime.now();
+                        final today = DateTime(now.year, now.month, now.day);
+                        final isFuture = _selectedDate.isAfter(today);
+                        return <PopupMenuEntry<String>>[
+                          PopupMenuItem<String>(
+                            value: 'add',
+                            enabled: !isFuture,
+                            child: Text(
+                              'Add new',
+                              style: TextStyle(
+                                color: isFuture ? Colors.grey : null,
+                              ),
                             ),
-                            const PopupMenuItem<String>(
-                              value: 'delete',
-                              child: Text('Bulk delete'),
-                            ),
-                          ],
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Text('Bulk delete'),
+                          ),
+                        ];
+                      },
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -247,6 +257,10 @@ class _MealReportPageState extends State<MealReportPage> {
   }
 
   Widget _buildEmptyState({double targetKcal = 2000.0}) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final isFuture = _selectedDate.isAfter(today);
+
     return Column(
       children: [
         const SizedBox(height: 32),
@@ -259,7 +273,7 @@ class _MealReportPageState extends State<MealReportPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isFuture ? Colors.grey.shade100 : Colors.white,
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
@@ -271,13 +285,17 @@ class _MealReportPageState extends State<MealReportPage> {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
-                  SizedBox(width: 8),
+                children: [
+                  Icon(
+                    Icons.edit,
+                    color: isFuture ? Colors.grey : AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     'Enter food manually',
                     style: TextStyle(
-                      color: AppTheme.textDark,
+                      color: isFuture ? Colors.grey : AppTheme.textDark,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -408,31 +426,17 @@ class _MealReportPageState extends State<MealReportPage> {
                       }
                     });
                   } else {
-                    // Flatten foods for display
-                    final displayFoods = <FoodItem>[];
-                    for (var m in typeMeals) {
-                      displayFoods.addAll(m.items);
-                      for (var um in m.userMeals) {
-                        for (var f in um.foods) {
-                          displayFoods.add(
-                            f.copyWith(quantity: f.quantity * um.quantity),
-                          );
-                        }
-                      }
-                    }
-
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => MealDetailsPage(
                           mealType: type,
                           totalCalories: totalCals,
-                          timestamp: typeMeals.isNotEmpty
-                              ? typeMeals.first.timestamp
-                              : DateTime.now(),
-                          foodItems: displayFoods,
-                          onEdit: () {
-                            _navigateToReview(type, typeMeals);
+                          mealLogs: typeMeals,
+                          onEdit: (log) {
+                            _navigateToReview(type, [
+                              log,
+                            ], timestamp: log.timestamp);
                           },
                         ),
                       ),
@@ -527,23 +531,7 @@ class _MealReportPageState extends State<MealReportPage> {
                                       ),
                                     ],
                                   ),
-                                  if (typeMeals.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        top: 4.0,
-                                        left: 32.0,
-                                      ),
-                                      child: Text(
-                                        DateFormat(
-                                          'hh:mm a',
-                                        ).format(typeMeals.first.timestamp),
-                                        style: const TextStyle(
-                                          color: Color(0xFF909DAD),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
+                                  // Removed time display
                                 ],
                               ),
                               const Spacer(),
@@ -658,16 +646,17 @@ class _MealReportPageState extends State<MealReportPage> {
                           text: TextSpan(
                             children: [
                               TextSpan(
-                                text: '${globalTotalKcal.toInt()}',
+                                text:
+                                    '${((globalTotalKcal / targetKcal) * 100).clamp(0.0, 100.0).toInt()}',
                                 style: const TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF131313),
                                 ),
                               ),
-                              TextSpan(
-                                text: ' / ${targetKcal.toInt()}',
-                                style: const TextStyle(
+                              const TextSpan(
+                                text: ' / 100',
+                                style: TextStyle(
                                   fontSize: 24,
                                   color: Colors.grey,
                                   fontWeight: FontWeight.w500,
@@ -695,13 +684,23 @@ class _MealReportPageState extends State<MealReportPage> {
         ),
 
         const SizedBox(height: 40),
+        const SizedBox(height: 40),
         Center(
           child: GestureDetector(
             onTap: _showMealTypeSelector,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color:
+                    _selectedDate.isAfter(
+                      DateTime(
+                        DateTime.now().year,
+                        DateTime.now().month,
+                        DateTime.now().day,
+                      ),
+                    )
+                    ? Colors.grey.shade100
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
@@ -713,13 +712,35 @@ class _MealReportPageState extends State<MealReportPage> {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.edit, color: AppTheme.primaryColor, size: 20),
-                  SizedBox(width: 8),
+                children: [
+                  Icon(
+                    Icons.edit,
+                    color:
+                        _selectedDate.isAfter(
+                          DateTime(
+                            DateTime.now().year,
+                            DateTime.now().month,
+                            DateTime.now().day,
+                          ),
+                        )
+                        ? Colors.grey
+                        : AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     'Enter food manually',
                     style: TextStyle(
-                      color: Color(0xFF131313),
+                      color:
+                          _selectedDate.isAfter(
+                            DateTime(
+                              DateTime.now().year,
+                              DateTime.now().month,
+                              DateTime.now().day,
+                            ),
+                          )
+                          ? Colors.grey
+                          : const Color(0xFF131313),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -737,6 +758,22 @@ class _MealReportPageState extends State<MealReportPage> {
     setState(() {
       _isBlurActive = true;
     });
+
+    // Check for future date
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // _selectedDate is already dateOnly from the date selector
+    if (_selectedDate.isAfter(today)) {
+      setState(() {
+        _isBlurActive = false;
+      });
+      showModernSnackbar(
+        context,
+        'You cannot log meals for a future date.',
+        isError: true,
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -786,7 +823,11 @@ class _MealReportPageState extends State<MealReportPage> {
     });
   }
 
-  void _navigateToReview(String type, List<MealLog> typeMeals) {
+  void _navigateToReview(
+    String type,
+    List<MealLog> typeMeals, {
+    DateTime? timestamp,
+  }) {
     final allFoods = <FoodItem>[];
     final allUserMeals = <UserMeal>[];
     for (var m in typeMeals) {
@@ -803,7 +844,8 @@ class _MealReportPageState extends State<MealReportPage> {
             selectedFoods: allFoods,
             selectedMeals: allUserMeals,
             allFoods: const [],
-            logDate: _selectedDate,
+            // Use provided timestamp if editing specific log, otherwise fallback to _selectedDate
+            logDate: timestamp ?? _selectedDate,
             existingLogIds: typeMeals.map((e) => e.id).toList(),
             initialCalories: typeMeals.fold<double>(
               0,

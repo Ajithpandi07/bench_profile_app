@@ -9,6 +9,7 @@ class ActivityLog extends Equatable {
   startTime; // Replaces timestamp in meal log for clarity, or keep timestamp
   final int durationMinutes;
   final double caloriesBurned;
+  final int? avgHeartRate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String? notes;
@@ -21,6 +22,7 @@ class ActivityLog extends Equatable {
     required this.startTime,
     required this.durationMinutes,
     required this.caloriesBurned,
+    this.avgHeartRate,
     this.createdAt,
     this.updatedAt,
     this.notes,
@@ -35,6 +37,7 @@ class ActivityLog extends Equatable {
     startTime,
     durationMinutes,
     caloriesBurned,
+    avgHeartRate,
     createdAt,
     updatedAt,
     notes,

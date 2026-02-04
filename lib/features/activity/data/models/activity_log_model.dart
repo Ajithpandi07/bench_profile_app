@@ -9,6 +9,7 @@ class ActivityLogModel extends ActivityLog {
     required super.startTime,
     required super.durationMinutes,
     required super.caloriesBurned,
+    super.avgHeartRate,
     super.createdAt,
     super.updatedAt,
     super.notes,
@@ -23,6 +24,7 @@ class ActivityLogModel extends ActivityLog {
       startTime: DateTime.parse(json['startTime'] as String),
       durationMinutes: json['durationMinutes'] as int,
       caloriesBurned: (json['caloriesBurned'] as num).toDouble(),
+      avgHeartRate: json['avgHeartRate'] as int?,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : null,
@@ -42,6 +44,7 @@ class ActivityLogModel extends ActivityLog {
       'startTime': startTime.toIso8601String(),
       'durationMinutes': durationMinutes,
       'caloriesBurned': caloriesBurned,
+      'avgHeartRate': avgHeartRate,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
       'notes': notes,
@@ -57,6 +60,7 @@ class ActivityLogModel extends ActivityLog {
       startTime: entity.startTime,
       durationMinutes: entity.durationMinutes,
       caloriesBurned: entity.caloriesBurned,
+      avgHeartRate: entity.avgHeartRate,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       notes: entity.notes,

@@ -144,17 +144,27 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                       });
                     }
                   },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'add',
-                          child: Text('Add new'),
+                  itemBuilder: (BuildContext context) {
+                    final now = DateTime.now();
+                    final today = DateTime(now.year, now.month, now.day);
+                    final isFuture = _selectedDate.isAfter(today);
+                    return <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'add',
+                        enabled: !isFuture,
+                        child: Text(
+                          'Add new',
+                          style: TextStyle(
+                            color: isFuture ? Colors.grey : null,
+                          ),
                         ),
-                        const PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Text('Bulk delete'),
-                        ),
-                      ],
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Bulk delete'),
+                      ),
+                    ];
+                  },
                 ),
                 const SizedBox(width: 8),
               ],
@@ -389,7 +399,16 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color:
+                                _selectedDate.isAfter(
+                                  DateTime(
+                                    DateTime.now().year,
+                                    DateTime.now().month,
+                                    DateTime.now().day,
+                                  ),
+                                )
+                                ? Colors.grey.shade100
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(30),
                             boxShadow: [
                               BoxShadow(
@@ -401,17 +420,35 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
                                 Icons.edit,
-                                color: AppTheme.primaryColor,
+                                color:
+                                    _selectedDate.isAfter(
+                                      DateTime(
+                                        DateTime.now().year,
+                                        DateTime.now().month,
+                                        DateTime.now().day,
+                                      ),
+                                    )
+                                    ? Colors.grey
+                                    : AppTheme.primaryColor,
                                 size: 20,
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
                                 'Enter manually',
                                 style: TextStyle(
-                                  color: AppTheme.textDark,
+                                  color:
+                                      _selectedDate.isAfter(
+                                        DateTime(
+                                          DateTime.now().year,
+                                          DateTime.now().month,
+                                          DateTime.now().day,
+                                        ),
+                                      )
+                                      ? Colors.grey
+                                      : AppTheme.textDark,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -620,6 +657,18 @@ class _ActivityReportPageState extends State<ActivityReportPage> {
   }
 
   Future<void> _showActivityTypeSelector() async {
+    // Check for future date
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_selectedDate.isAfter(today)) {
+      showModernSnackbar(
+        context,
+        'You cannot log activity for a future date.',
+        isError: true,
+      );
+      return;
+    }
+
     final result = await showModalBottomSheet(
       context: context,
       barrierColor: Colors.black54,

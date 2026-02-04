@@ -7,23 +7,30 @@ import '../widgets/primary_button.dart';
 class MealDetailsPage extends StatelessWidget {
   final String mealType;
   final double totalCalories;
-  final DateTime timestamp;
-  final List<FoodItem> foodItems; // Assumed flattened list
-  final VoidCallback onEdit;
+  final List<MealLog> mealLogs;
+  final void Function(MealLog) onEdit;
 
   const MealDetailsPage({
     super.key,
     required this.mealType,
     required this.totalCalories,
-    required this.timestamp,
-    required this.foodItems,
+    required this.mealLogs,
     required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Group items by time.
+    // We can use the MealLog timestamp directly since each log has a timestamp.
+    // If multiple logs have same time (to the minute), they can be grouped visually if desired,
+    // or just list them as separate blocks.
+    // Given the user wants "grouped t time food items list", let's assume valid logging structure.
+    // We will sort logs by time.
+    final sortedLogs = List<MealLog>.from(mealLogs)
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
     return Scaffold(
-      backgroundColor: AppTheme.mealDetailsBackground, // Light grey background
+      backgroundColor: AppTheme.mealDetailsBackground,
       appBar: AppBar(
         backgroundColor: AppTheme.mealDetailsBackground,
         elevation: 0,
@@ -80,7 +87,7 @@ class MealDetailsPage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        mealType.toUpperCase(), // e.g. BREAKFAST
+                        mealType.toUpperCase(),
                         style: const TextStyle(
                           color: AppTheme.mealDetailsMetaText,
                           fontSize: 12,
@@ -128,24 +135,32 @@ class MealDetailsPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time_filled,
-                        size: 14,
-                        color: AppTheme.primaryColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Logged at ${DateFormat('hh:mm a').format(timestamp)}',
-                        style: const TextStyle(
-                          color: AppTheme.mealDetailsMetaText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                  if (sortedLogs.isNotEmpty)
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time_filled,
+                          size: 14,
+                          color: AppTheme.primaryColor,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 6),
+                        // Show range or first/last time?
+                        // Or just remove time from here too if detailed list has times?
+                        // User said "remove time, meal report page".
+                        // Keep simple "Logged today" or similar?
+                        // Or show range: "8:00 AM - 9:00 AM" if multiple?
+                        // Let's stick to simple "X items logged" or similar if time removed from report page to match.
+                        // Actually let's just show date or count.
+                        Text(
+                          '${sortedLogs.length} entries',
+                          style: const TextStyle(
+                            color: AppTheme.mealDetailsMetaText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -160,118 +175,208 @@ class MealDetailsPage extends StatelessWidget {
                     left: 24.0,
                     right: 24.0,
                     top: 24.0,
-                    bottom: 180.0, // Extra padding for fixed bottom buttons
+                    bottom: 90.0,
                   ),
                   child: Column(
                     children: [
-                      // Foods List
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            if (foodItems.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.all(20),
-                                child: Text('No food items listed'),
-                              )
-                            else
-                              ...foodItems.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final food = entry.value;
-                                return Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 24,
-                                        vertical: 20,
+                      if (sortedLogs.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text('No entries found'),
+                          ),
+                        )
+                      else
+                        ...sortedLogs.map((log) {
+                          // Prepare items for this log
+                          final displayFoods = <FoodItem>[];
+                          displayFoods.addAll(log.items);
+                          for (var um in log.userMeals) {
+                            for (var f in um.foods) {
+                              displayFoods.add(
+                                f.copyWith(quantity: f.quantity * um.quantity),
+                              );
+                            }
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Time Header
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 8.0,
+                                    bottom: 8.0,
+                                    right: 8.0,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        DateFormat(
+                                          'hh:mm a',
+                                        ).format(log.timestamp),
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.textDark,
+                                        ),
                                       ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  food.name,
-                                                  style: const TextStyle(
-                                                    color: AppTheme.textDark,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  '${food.quantity} serving',
-                                                  style: const TextStyle(
-                                                    color: AppTheme
-                                                        .mealDetailsMetaText,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                      GestureDetector(
+                                        onTap: () => onEdit(log),
+                                        child: Text(
+                                          'Edit',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.primaryColor,
                                           ),
-                                          const SizedBox(width: 16),
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Foods List Container
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.03),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      if (displayFoods.isEmpty)
+                                        const Padding(
+                                          padding: EdgeInsets.all(20),
+                                          child: Text('No food items'),
+                                        )
+                                      else
+                                        ...displayFoods.asMap().entries.map((
+                                          entry,
+                                        ) {
+                                          final index = entry.key;
+                                          final food = entry.value;
+                                          return Column(
                                             children: [
-                                              Text(
-                                                (food.calories * food.quantity)
-                                                    .toStringAsFixed(0),
-                                                style: const TextStyle(
-                                                  color: AppTheme.textDark,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 20,
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 24,
+                                                      vertical: 20,
+                                                    ),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            food.name,
+                                                            style:
+                                                                const TextStyle(
+                                                                  color: AppTheme
+                                                                      .textDark,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  fontSize: 16,
+                                                                ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 4,
+                                                          ),
+                                                          Text(
+                                                            '${food.quantity} serving',
+                                                            style: const TextStyle(
+                                                              color: AppTheme
+                                                                  .mealDetailsMetaText,
+                                                              fontSize: 12,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 16),
+                                                    Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .end,
+                                                      children: [
+                                                        Text(
+                                                          (food.calories *
+                                                                  food.quantity)
+                                                              .toStringAsFixed(
+                                                                0,
+                                                              ),
+                                                          style:
+                                                              const TextStyle(
+                                                                color: AppTheme
+                                                                    .textDark,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 20,
+                                                              ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 2,
+                                                        ),
+                                                        const Padding(
+                                                          padding:
+                                                              EdgeInsets.only(
+                                                                bottom: 2.0,
+                                                              ),
+                                                          child: Text(
+                                                            'Kcal',
+                                                            style: TextStyle(
+                                                              color: AppTheme
+                                                                  .mealDetailsMetaText,
+                                                              fontSize: 12,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                              const SizedBox(width: 2),
-                                              const Padding(
-                                                padding: EdgeInsets.only(
-                                                  bottom: 2.0,
+                                              if (index <
+                                                  displayFoods.length - 1)
+                                                Divider(
+                                                  height: 1,
+                                                  color: Colors.grey.shade100,
+                                                  indent: 24,
+                                                  endIndent: 24,
                                                 ),
-                                                child: Text(
-                                                  'Kcal',
-                                                  style: TextStyle(
-                                                    color: AppTheme
-                                                        .mealDetailsMetaText,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ),
                                             ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (index < foodItems.length - 1)
-                                      Divider(
-                                        height: 1,
-                                        color: Colors.grey.shade100,
-                                        indent: 24,
-                                        endIndent: 24,
-                                      ),
-                                  ],
-                                );
-                              }),
-                          ],
-                        ),
-                      ),
+                                          );
+                                        }),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                     ],
                   ),
                 ),
@@ -299,30 +404,6 @@ class MealDetailsPage extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: OutlinedButton.icon(
-                              onPressed: onEdit,
-                              icon: const Icon(Icons.edit, size: 20),
-                              label: const Text('Edit'),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: AppTheme.primaryColor,
-                                side: const BorderSide(
-                                  color: AppTheme.mealDetailsBorder,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
                           PrimaryButton(
                             text: 'Done',
                             onPressed: () => Navigator.pop(context),

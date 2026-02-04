@@ -52,6 +52,9 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
     // HealthDataType.SLEEP_IN_BED, // Removed: Not found in HC on some devices
     HealthDataType.SLEEP_ASLEEP,
     HealthDataType.SLEEP_AWAKE,
+    HealthDataType.SLEEP_REM,
+    HealthDataType.SLEEP_DEEP,
+    HealthDataType.SLEEP_LIGHT,
     HealthDataType.SLEEP_SESSION, // Modern Health Connect sleep session
   ];
 
@@ -320,6 +323,9 @@ class HealthMetricsDataSourceImpl implements HealthMetricsDataSource {
           // HealthDataType.SLEEP_IN_BED, // Removed
           HealthDataType.SLEEP_ASLEEP,
           HealthDataType.SLEEP_AWAKE,
+          HealthDataType.SLEEP_REM,
+          HealthDataType.SLEEP_DEEP,
+          HealthDataType.SLEEP_LIGHT,
         ];
         final sleep = await _fetchBatch(start, end, sleepTypes);
         dev.log(

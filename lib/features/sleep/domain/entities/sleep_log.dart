@@ -5,6 +5,10 @@ class SleepLog extends Equatable {
   final DateTime startTime;
   final DateTime endTime;
   final int quality; // 0-100
+  final Duration? remSleep;
+  final Duration? deepSleep;
+  final Duration? lightSleep;
+  final Duration? awakeSleep;
   final String? notes;
 
   const SleepLog({
@@ -12,11 +16,25 @@ class SleepLog extends Equatable {
     required this.startTime,
     required this.endTime,
     required this.quality,
+    this.remSleep,
+    this.deepSleep,
+    this.lightSleep,
+    this.awakeSleep,
     this.notes,
   });
 
   Duration get duration => endTime.difference(startTime);
 
   @override
-  List<Object?> get props => [id, startTime, endTime, quality, notes];
+  List<Object?> get props => [
+    id,
+    startTime,
+    endTime,
+    quality,
+    remSleep,
+    deepSleep,
+    lightSleep,
+    awakeSleep,
+    notes,
+  ];
 }

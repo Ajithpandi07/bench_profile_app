@@ -231,6 +231,9 @@ class SleepRepositoryImpl implements SleepRepository {
             HealthDataType.SLEEP_SESSION,
             HealthDataType.SLEEP_ASLEEP,
             HealthDataType.SLEEP_AWAKE,
+            HealthDataType.SLEEP_REM,
+            HealthDataType.SLEEP_DEEP,
+            HealthDataType.SLEEP_LIGHT,
           ]);
 
       dev.log(
@@ -249,8 +252,10 @@ class SleepRepositoryImpl implements SleepRepository {
           .where((m) {
             final isSleep =
                 m.type == HealthDataType.SLEEP_ASLEEP.name ||
-                // m.type == HealthDataType.SLEEP_IN_BED.name || // Removed
                 m.type == HealthDataType.SLEEP_AWAKE.name ||
+                m.type == HealthDataType.SLEEP_REM.name ||
+                m.type == HealthDataType.SLEEP_DEEP.name ||
+                m.type == HealthDataType.SLEEP_LIGHT.name ||
                 m.type == HealthDataType.SLEEP_SESSION.name;
             if (isSleep) {
               dev.log(
@@ -309,12 +314,35 @@ class SleepRepositoryImpl implements SleepRepository {
         name: 'SleepRepository',
       );
 
+      // Calculate stages
+      Duration rem = Duration.zero;
+      Duration deep = Duration.zero;
+      Duration light = Duration.zero;
+      Duration awake = Duration.zero;
+
+      for (final m in sleepMetrics) {
+        final duration = m.dateTo.difference(m.dateFrom);
+        if (m.type == HealthDataType.SLEEP_REM.name) {
+          rem += duration;
+        } else if (m.type == HealthDataType.SLEEP_DEEP.name) {
+          deep += duration;
+        } else if (m.type == HealthDataType.SLEEP_LIGHT.name) {
+          light += duration;
+        } else if (m.type == HealthDataType.SLEEP_AWAKE.name) {
+          awake += duration;
+        }
+      }
+
       return Right(
         SleepLog(
           id: 'health_connect_draft',
           startTime: start,
           endTime: end,
           quality: 0,
+          remSleep: rem > Duration.zero ? rem : null,
+          deepSleep: deep > Duration.zero ? deep : null,
+          lightSleep: light > Duration.zero ? light : null,
+          awakeSleep: awake > Duration.zero ? awake : null,
           notes: 'Imported from Health Connect',
         ),
       );

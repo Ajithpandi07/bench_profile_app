@@ -54,7 +54,11 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
     super.initState();
     _selectedMealType = widget.mealType;
     _currentFoods = List.from(widget.selectedFoods);
-    _selectedTime = TimeOfDay.now();
+    if (widget.existingLogIds.isNotEmpty && widget.logDate != null) {
+      _selectedTime = TimeOfDay.fromDateTime(widget.logDate!);
+    } else {
+      _selectedTime = TimeOfDay.now();
+    }
 
     // Flatten selected meals into individual food items
     for (var meal in widget.selectedMeals) {
