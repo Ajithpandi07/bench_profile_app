@@ -281,7 +281,20 @@ class _SleepLogPageState extends State<SleepLogPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ... (appBar)
+      appBar: AppBar(
+        title: Text(
+          DateFormat('E, MMM d').format(widget.initialDate),
+          style: TextStyle(
+            color: Theme.of(context).hintColor,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        centerTitle: true,
+        leading: BackButton(color: Theme.of(context).primaryColor),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: BlocListener<SleepBloc, SleepState>(
         listener: (context, state) {
           if (state is SleepOperationSuccess) {
@@ -315,17 +328,6 @@ class _SleepLogPageState extends State<SleepLogPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Header Date
-              Text(
-                DateFormat('E, MMM d').format(widget.initialDate),
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).hintColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 32),
-
               // Circular Timer
               Container(
                 height: 380,

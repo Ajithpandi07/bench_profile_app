@@ -41,6 +41,7 @@ dependencies:
   provider: ^6.1.2
   equatable: ^2.0.5
   health: ^13.2.1
+  pedometer: ^4.0.0
   firebase_auth: ^5.1.2
   dartz: ^0.10.1
   bloc: ^9.1.0

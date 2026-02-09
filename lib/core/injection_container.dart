@@ -11,6 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'core.dart';
 import '../features/health_metrics/data/datasources/local/health_preferences_service.dart';
 import '../features/health_metrics/health_metrics.dart' hide SyncManager;
+import '../features/health_metrics/domain/repositories/step_repository.dart';
+import '../features/health_metrics/data/repositories/step_repository_impl.dart';
 import '../features/sleep/domain/entities/ignored_sleep_draft.dart';
 import 'services/notification_service.dart';
 
@@ -138,6 +140,11 @@ Future<void> init() async {
     );
   }
 
+  // Step Repository
+  if (!sl.isRegistered<StepRepository>()) {
+    sl.registerLazySingleton<StepRepository>(() => StepRepositoryImpl());
+  }
+
   // Bloc
   if (!sl.isRegistered<HealthMetricsBloc>()) {
     sl.registerFactory<HealthMetricsBloc>(
@@ -149,6 +156,7 @@ Future<void> init() async {
         mealRepository: sl<MealRepository>(),
         reminderRepository: sl<ReminderRepository>(),
         hydrationRepository: sl<HydrationRepository>(),
+        stepRepository: sl<StepRepository>(), // Inject StepRepository
       ),
     );
   }

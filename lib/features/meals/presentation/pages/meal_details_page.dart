@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/entities.dart';
 import '../../../../core/core.dart';
+import '../../../../core/presentation/widgets/swipe_confirmation_dialog.dart';
+import '../bloc/bloc.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/meal_list_shimmer.dart';
 
 class MealDetailsPage extends StatelessWidget {
   final String mealType;
@@ -20,13 +24,54 @@ class MealDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to bloc state changes
+    final state = context.watch<MealBloc>().state;
+
+    List<MealLog> currentLogs = mealLogs;
+    double currentCalories = totalCalories;
+    bool isLoading = false;
+
+    if (state is MealLoading || state is MealDeletedSuccess) {
+      isLoading = true;
+    } else if (state is MealsLoaded) {
+      // Filter logs for this meal type
+      currentLogs = state.meals.where((m) {
+        if (mealType == 'Snack') {
+          return m.mealType.contains('Snack');
+        }
+        return m.mealType == mealType;
+      }).toList();
+
+      currentCalories = currentLogs.fold(0, (sum, m) => sum + m.totalCalories);
+    }
+
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.mealDetailsBackground,
+        appBar: AppBar(
+          backgroundColor: AppTheme.mealDetailsBackground,
+          elevation: 0,
+          leading: const BackButton(color: Colors.black),
+          title: const Text(
+            'Meal',
+            style: TextStyle(
+              color: AppTheme.primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+        ),
+        body: const MealListShimmer(),
+      );
+    }
+
     // Group items by time.
     // We can use the MealLog timestamp directly since each log has a timestamp.
     // If multiple logs have same time (to the minute), they can be grouped visually if desired,
     // or just list them as separate blocks.
     // Given the user wants "grouped t time food items list", let's assume valid logging structure.
     // We will sort logs by time.
-    final sortedLogs = List<MealLog>.from(mealLogs)
+    final sortedLogs = List<MealLog>.from(currentLogs)
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     return Scaffold(
@@ -44,11 +89,36 @@ class MealDetailsPage extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {
-              // Option menu placeholder
+            onSelected: (value) async {
+              if (value == 'delete') {
+                final confirm = await showDeleteConfirmationDialog(context);
+                if (confirm == true) {
+                  // Delete all logs for this meal type
+                  final ids = mealLogs.map((e) => e.id).toList();
+                  if (context.mounted) {
+                    // Assuming we have the date from the logs or passed in?
+                    // DeleteMultipleMeals requires 'date'.
+                    // We can take the date from the first log.
+                    final date = mealLogs.isNotEmpty
+                        ? mealLogs.first.timestamp
+                        : DateTime.now(); // Should have logs if here
+
+                    context.read<MealBloc>().add(
+                      DeleteMultipleMeals(ids, date),
+                    );
+                    Navigator.pop(context);
+                  }
+                }
+              }
             },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Text('Delete'),
+              ),
+            ],
           ),
         ],
       ),
@@ -116,7 +186,7 @@ class MealDetailsPage extends StatelessWidget {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        totalCalories.toStringAsFixed(0),
+                        currentCalories.toStringAsFixed(0),
                         style: const TextStyle(
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
@@ -225,16 +295,45 @@ class MealDetailsPage extends StatelessWidget {
                                           color: AppTheme.textDark,
                                         ),
                                       ),
-                                      GestureDetector(
-                                        onTap: () => onEdit(log),
-                                        child: Text(
-                                          'Edit',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppTheme.primaryColor,
+                                      Row(
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () => onEdit(log),
+                                            child: Text(
+                                              'Edit',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(width: 16),
+                                          GestureDetector(
+                                            onTap: () async {
+                                              final confirm =
+                                                  await showDeleteConfirmationDialog(
+                                                    context,
+                                                  );
+                                              if (confirm == true &&
+                                                  context.mounted) {
+                                                context.read<MealBloc>().add(
+                                                  DeleteMultipleMeals([
+                                                    log.id,
+                                                  ], log.timestamp),
+                                                );
+                                              }
+                                            },
+                                            child: Text(
+                                              'Delete',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

@@ -203,7 +203,7 @@ class _SleepPageState extends State<SleepPage> {
                     selectedDate: _selectedDate,
                     onDateSelected: (date) {
                       setState(() {
-                        _selectedDate = date;
+                        _selectedDate = DateUtils.dateOnly(date);
                       });
                       _loadLogs();
                     },
@@ -330,20 +330,24 @@ class _SleepPageState extends State<SleepPage> {
       statusColor = Colors.green;
     }
 
-    // Use earliest start and latest end for summary card times
-    final earliestStart = logs.fold(
-      logs.first.startTime,
-      (prev, curr) => curr.startTime.isBefore(prev) ? curr.startTime : prev,
-    );
-    final latestEnd = logs.fold(
-      logs.first.endTime,
-      (prev, curr) => curr.endTime.isAfter(prev) ? curr.endTime : prev,
-    );
+    // Identify the "Main Sleep" (longest session)
+    // We use the start/end time of the longest session for the card,
+    // but the total duration (calculated above) for the "9 h" display.
+    SleepLog? mainSleepLog;
+    int maxDuration = -1;
 
+    for (var log in logs) {
+      if (log.duration.inMinutes > maxDuration) {
+        maxDuration = log.duration.inMinutes;
+        mainSleepLog = log;
+      }
+    }
+
+    // Fallback if list is empty (shouldn't happen here)
     final summaryLog = SleepLog(
       id: 'summary',
-      startTime: earliestStart,
-      endTime: latestEnd,
+      startTime: mainSleepLog?.startTime ?? DateTime.now(),
+      endTime: mainSleepLog?.endTime ?? DateTime.now(),
       quality: qualityScore,
     );
 

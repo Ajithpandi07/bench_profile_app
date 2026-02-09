@@ -30,11 +30,14 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
     // (In case we came from a route that didn't load it fully, or just to be safe)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HealthMetricsBloc>().add(GetMetricsForDate(selectedDate));
+      // Subscribe to live updates (e.g. steps)
+      context.read<HealthMetricsBloc>().add(const SubscribeToLiveUpdates());
     });
   }
 
   @override
   void dispose() {
+    _bloc.add(const UnsubscribeFromLiveUpdates());
     super.dispose();
   }
 

@@ -101,17 +101,40 @@ class _ReviewMealPageState extends State<ReviewMealPage> {
   }
 
   void _updateFoodQuantity(int index, double delta) {
-    setState(() {
-      final item = _currentFoods[index];
-      final newQuantity = item.quantity + delta;
-      if (newQuantity > 0) {
+    final item = _currentFoods[index];
+    final newQuantity = item.quantity + delta;
+
+    if (newQuantity > 0) {
+      setState(() {
         _currentFoods[index] = item.copyWith(quantity: newQuantity);
         _calculateTotalCalories();
         _isCustomMealSaved = false;
-      } else if (newQuantity == 0) {
-        _removeFood(item);
-      }
-    });
+      });
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Remove Item'),
+          content: Text('Are you sure you want to remove ${item.name}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _removeFood(item);
+              },
+              child: const Text(
+                'Remove',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _pickTime() async {

@@ -202,7 +202,7 @@ class _MealReportPageState extends State<MealReportPage> {
                     selectedDate: _selectedDate,
                     onDateSelected: (date) {
                       setState(() {
-                        _selectedDate = date;
+                        _selectedDate = DateUtils.dateOnly(date);
                       });
                       _loadLogs();
                     },
@@ -429,15 +429,19 @@ class _MealReportPageState extends State<MealReportPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => MealDetailsPage(
-                          mealType: type,
-                          totalCalories: totalCals,
-                          mealLogs: typeMeals,
-                          onEdit: (log) {
-                            _navigateToReview(type, [
-                              log,
-                            ], timestamp: log.timestamp);
-                          },
+                        builder: (_) => BlocProvider.value(
+                          value: context
+                              .read<MealBloc>(), // Pass the existing bloc
+                          child: MealDetailsPage(
+                            mealType: type,
+                            totalCalories: totalCals,
+                            mealLogs: typeMeals,
+                            onEdit: (log) {
+                              _navigateToReview(type, [
+                                log,
+                              ], timestamp: log.timestamp);
+                            },
+                          ),
                         ),
                       ),
                     );

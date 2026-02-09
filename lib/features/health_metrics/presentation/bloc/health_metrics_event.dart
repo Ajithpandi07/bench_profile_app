@@ -73,10 +73,7 @@ class SyncMetrics extends HealthMetricsEvent {
   final int days;
   final DateTime? date;
 
-  const SyncMetrics({
-    this.days = 7,
-    this.date,
-  });
+  const SyncMetrics({this.days = 7, this.date});
 
   @override
   List<Object?> get props => [days, date];
@@ -160,4 +157,12 @@ class SubscribeToLiveUpdates extends HealthMetricsEvent {
 
 class UnsubscribeFromLiveUpdates extends HealthMetricsEvent {
   const UnsubscribeFromLiveUpdates();
+}
+
+class LiveStepUpdate extends HealthMetricsEvent {
+  final int delta;
+  const LiveStepUpdate(this.delta);
+
+  @override
+  List<Object> get props => [delta];
 }

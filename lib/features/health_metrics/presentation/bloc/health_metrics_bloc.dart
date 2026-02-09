@@ -15,6 +15,9 @@ import '../../../reminder/domain/repositories/reminder_repository.dart';
 import '../../../reminder/domain/entities/reminder.dart';
 import '../../../hydration/domain/repositories/hydration_repository.dart';
 import '../../../hydration/domain/entities/hydration_log.dart';
+import '../../../hydration/domain/entities/hydration_log.dart';
+import '../../domain/repositories/step_repository.dart'; // Import StepRepository
+import 'package:health/health.dart'; // Import Health package for HealthDataType
 
 /// Optional SyncManager interface - implement and register in DI if you want
 /// background sync capabilities. The bloc will call performSyncOnce(days).
@@ -31,7 +34,9 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
   final MealRepository? mealRepository;
   final ReminderRepository? reminderRepository;
   final HydrationRepository? hydrationRepository;
+  final StepRepository? stepRepository; // New injection
   StreamSubscription? _updatesSubscription;
+  StreamSubscription? _stepSubscription; // New subscription for pedometer
 
   HealthMetricsBloc({
     required this.getCachedMetrics,
@@ -42,6 +47,7 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     this.mealRepository,
     this.reminderRepository,
     this.hydrationRepository,
+    this.stepRepository, // Inject here
   }) : super(HealthMetricsEmpty(selectedDate: DateTime.now())) {
     on<GetMetrics>(_onGetMetrics);
     on<GetMetricsForDate>(_onGetMetricsForDate);
@@ -61,6 +67,62 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     on<ToggleMetricType>(_onToggleMetricType);
     on<SubscribeToLiveUpdates>(_onSubscribeToLiveUpdates);
     on<UnsubscribeFromLiveUpdates>(_onUnsubscribeFromLiveUpdates);
+    on<LiveStepUpdate>(_onLiveStepUpdate);
+  }
+
+  // ... (existing helper methods)
+
+  Future<void> _onLiveStepUpdate(
+    LiveStepUpdate event,
+    Emitter<HealthMetricsState> emit,
+  ) async {
+    if (state is! HealthMetricsLoaded) return;
+
+    final current = state as HealthMetricsLoaded;
+    final totalSteps = _baseSteps + event.delta;
+
+    // Update the Metrics List to include new step count
+    final List<HealthMetrics> updatedMetrics = List.from(current.metrics);
+    final stepIndex = updatedMetrics.indexWhere(
+      (m) => m.type == HealthDataType.STEPS.name,
+    );
+
+    final newMetric = HealthMetrics(
+      uuid: 'live_steps',
+      type: HealthDataType.STEPS.name,
+      value: totalSteps.toDouble(),
+      unit: 'COUNT',
+      dateFrom: DateTime.now(),
+      dateTo: DateTime.now(),
+      sourceName: 'Pedometer',
+      sourceId: 'pedometer_live',
+    );
+
+    if (stepIndex != -1) {
+      updatedMetrics[stepIndex] = newMetric;
+    } else {
+      updatedMetrics.add(newMetric);
+    }
+
+    // Re-aggregate summary
+    final summaryMap = aggregator.aggregate(updatedMetrics);
+    final newSummary = HealthMetricsSummary.fromMap(
+      summaryMap,
+      current.selectedDate,
+    );
+
+    emit(
+      HealthMetricsLoaded(
+        metrics: updatedMetrics,
+        summary: newSummary,
+        selectedDate: current.selectedDate,
+        mealCount: current.mealCount,
+        mealGoal: current.mealGoal,
+        waterConsumed: current.waterConsumed,
+        waterGoal: current.waterGoal,
+        isSyncing: current.isSyncing,
+      ),
+    );
   }
 
   // Helper: normalize various possible return types into List<HealthMetrics>.
@@ -799,13 +861,56 @@ class HealthMetricsBloc extends Bloc<HealthMetricsEvent, HealthMetricsState> {
     // This might require updating the HealthMetricsState to include a filter or visibility map.
   }
 
+  int _baseSteps = 0;
+
   Future<void> _onSubscribeToLiveUpdates(
     SubscribeToLiveUpdates event,
     Emitter<HealthMetricsState> emit,
   ) async {
-    // TODO: Implement subscription to real-time health data updates from the repository.
-    // This requires the repository to expose a Stream<List<HealthMetrics>>.
+    if (stepRepository == null) return;
+
+    // Only subscribe if viewing TODAY
+    final now = DateTime.now();
+    final isToday =
+        state.selectedDate.year == now.year &&
+        state.selectedDate.month == now.month &&
+        state.selectedDate.day == now.day;
+
+    if (!isToday) return;
+
+    // Initialize base steps from current state logic
+    if (state is HealthMetricsLoaded) {
+      final s = state as HealthMetricsLoaded;
+      final stepMetric = s.summary?.steps;
+      _baseSteps = stepMetric?.value.toInt() ?? 0;
+    } else {
+      _baseSteps = 0;
+    }
+
+    await stepRepository!.init();
+    await _stepSubscription?.cancel();
+    _stepSubscription = stepRepository!.stepCountStream.listen((delta) {
+      add(LiveStepUpdate(delta));
+    });
   }
+
+  // Create an internal event class/handler?
+  // Since I can't modify the Event file easily in this flow without context switching...
+  // I can just assume I can emit directly?
+  // No, `emit` is only valid within the handler.
+  // I CANNOT emit from inside the listen callback directly unless I use `add`.
+  // I should add `LiveStepUpdate` to the event file.
+  // OR... I can use `emit` if I use `await for` loop?
+  // `on<Subscribe...>` creates a handler.
+  // If I use `await for`, I block the handler?
+  // No, generally we use `add` to dispatch new events.
+
+  // Workaround: I will define `_LiveStepUpdate` as a private class inside the BLOC FILE (at bottom)
+  // and register it dynamically? No, that violates type safety of `HealthMetricsEvent`.
+  //
+  // I MUST modify `health_metrics_event.dart` first to add `LiveStepUpdate`.
+
+  // Abort this specific tool call. I need to add the event first.
 
   Future<void> _onUnsubscribeFromLiveUpdates(
     UnsubscribeFromLiveUpdates event,
